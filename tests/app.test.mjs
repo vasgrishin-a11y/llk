@@ -1,2 +1,91 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {filterData,DEMO_DATA} from '../src/data.js';
-test('index содержит основные области UI и canvas',()=>{let h=fs.readFileSync('index.html','utf8');assert.match(h,/id="app"/);assert.match(h,/xlsx.full.min.js/);assert.match(h,/canvas/)});test('фильтрация датасета не падает без данных',()=>{assert.deepEqual(filterData([],{}),[]);assert.equal(filterData(DEMO_DATA,{region:'Север'}).length,4)});test('демо-данные имеют базовые поля',()=>{assert.ok(DEMO_DATA.length>0);assert.ok(DEMO_DATA.every(x=>x.period&&x.plan>0))});
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {DASHBOARD_CONFIG as C} from '../src/config.js';
+import {MONTHLY,normalizeRows,filterData,summary} from '../src/data.js';
+import {drawChart,CHART_TYPES} from '../src/charts.js';
+import {HEATMAP,PLANS} from '../src/datasets.js';
+
+test('index содержит основные области UI и canvas',()=>{
+  const h=fs.readFileSync('index.html','utf8');
+  assert.match(h,/id="app"/);
+  assert.match(h,/xlsx.full.min.js/);
+  assert.match(h,/canvas/);
+});
+
+test('конфиг: вкладки ОППиУ и KPI для рабочих вкладок',()=>{
+  assert.equal(C.tabs.length,8);
+  assert.deepEqual(C.tabs.map(t=>t.id),['overview','segments','demand','stock','supply','plans','actions','quality']);
+  assert.equal(C.kpis.overview.length,8);
+  for(const t of ['segments','demand','stock','supply','plans'])assert.ok(C.kpis[t].length>=5,`KPI для ${t}`);
+});
+
+test('демо-данные: 12 месяцев, помесячные ряды и канонический YTD',()=>{
+  assert.equal(MONTHLY.length,12);
+  const f=MONTHLY.filter(r=>r.type==='Факт');
+  assert.equal(f.length,9);
+  assert.equal(f.reduce((a,x)=>a+x.planVol,0),900);
+  assert.ok(Math.abs(f.reduce((a,x)=>a+x.rev,0)-324.5)<0.01); // помесячные ряды — индексы динамики; YTD — CANON
+  assert.ok(MONTHLY.every(x=>x.valid));
+});
+
+test('сводка: канонический YTD 880/900, выручка и средняя цена из рядов',()=>{
+  const s=summary(MONTHLY);
+  assert.equal(s.vol,880);                 // официальный YTD отчёта
+  assert.ok(Math.abs(s.rev-320.5)<0.01);
+  assert.ok(Math.abs(s.volPct-97.78)<0.1);
+  assert.ok(Math.abs(s.revPct-93.7)<0.2);
+  assert.ok(!s.custom&&s.invalid===0);
+});
+
+test('normalizeRows понимает русские колонки и типы чисел',()=>{
+  const [r]=normalizeRows([{'Период':'Окт 2026','Тип':'Прогноз','План объема':'100','Факт объема':'101','План выручки':'38','Факт выручки':'36,2'}]);
+  assert.equal(r.type,'Прогноз');
+  assert.equal(r.planVol,100);
+  assert.ok(Math.abs(r.rev-36.2)<1e-9);
+  assert.ok(Math.abs(r.price-358.4)<0.2); // цена вычисляется из выручки/объёма
+  assert.ok(r.valid);
+});
+
+test('filterData фильтрует по типу строки',()=>{
+  assert.equal(filterData(MONTHLY,{type:'Прогноз'}).length,3);
+  assert.deepEqual(filterData([],{}),[]);
+});
+
+test('тепловая карта и планы имеют согласованную размерность',()=>{
+  const h=HEATMAP.A.cov;
+  assert.equal(h.m.length,HEATMAP.clients.length);
+  h.m.forEach(r=>assert.equal(r.length,HEATMAP.products.length));
+  assert.equal(Object.keys(PLANS).length,7);
+  const c=PLANS.sales.chart(0,3);
+  assert.equal(c.labels.length,3);
+  c.series.forEach(s=>assert.equal(s.data.length,3));
+});
+
+/* ── smoke-тест canvas-движка на заглушке контекста (без DOM) ── */
+const mkStub=()=>{
+  const ctx=new Proxy({},{get:(t,p)=>p==='measureText'?()=>({width:20}):(t[p]!==undefined?t[p]:()=>{}),set:(t,p,v)=>(t[p]=v,true)});
+  return {canvas:{clientWidth:420,style:{},width:0,height:0,getContext:()=>ctx}};
+};
+test('drawChart отрисовывает все зарегистрированные типы без ошибок',()=>{
+  const {canvas}=mkStub();
+  const labels=['Янв','Фев','Мар','Апр','Май','Июн','Июл'];
+  const cases={
+    line:[[10,20,15,25,30,28,32]],
+    bar:[{data:[10,20,15,25,30,28,32],kind:'bar',barValues:true}],
+    stacked:[[10,20,15,25,30,28,32],[5,5,5,5,5,5,5]],
+    hbar:[[8.2,5.1,-6.4,-6.7,1.2,-9.3,3]],
+    combo:[{data:[10,20,15,25,30,28,32],kind:'bar'},{data:[2,4,3,5,6,5,7],kind:'line',axis:1}],
+    area:[[80,85,90,95,100,105,110],[20,15,10,5,8,15,25]],
+    waterfall:[[350,30,20,400]],
+    band:[[47,50,51,48,47,45,44],[40,42,43,41,40,38,37],[35,37,38,36,35,33,33]],
+    donut:[[52,21,16,10,6]],
+    radar:[{data:[87.5,96,87,93,90,92,100],color:'#20A7C9'}],
+    scatter:[{data:[{x:10,y:90},{x:15,y:88},{x:75,y:20}],color:'#4CAF50'}],
+  };
+  for(const t of CHART_TYPES){
+    assert.ok(cases[t],`кейс для типа ${t}`);
+    drawChart(canvas,t,cases[t],t==='radar'?labels:t==='waterfall'?['Базовый','+Промо','+Корр.','Итого']:labels,
+      {legend:['ряд 1','ряд 2','ряд 3'],xTitle:'X',yTitle:'Y',compact:t==='line'});
+  }
+});

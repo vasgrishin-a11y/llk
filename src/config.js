@@ -1,1 +1,88 @@
-export const DASHBOARD_CONFIG={title:'Центр аналитики',subtitle:'Шаблон операционной аналитики',tabs:[{id:'overview',label:'Обзор выполнения плана'},{id:'segments',label:'Сегментация'},{id:'demand',label:'Спрос'},{id:'stock',label:'Запасы'},{id:'supply',label:'Обзор поставок'},{id:'plans',label:'Планы'},{id:'actions',label:'Действия'},{id:'quality',label:'Качество данных'}],filters:[{id:'period',label:'Период'},{id:'category',label:'Категория'},{id:'region',label:'Регион'}],kpis:[{id:'plan',label:'Выполнение плана',unit:'%',value:d=>d.length?d.reduce((a,x)=>a+x.actual/x.plan,0)/d.length*100:0,decimals:1},{id:'actual',label:'Фактический объём',unit:'ед.',value:d=>d.reduce((a,x)=>a+x.actual,0)},{id:'gap',label:'Отклонение',unit:'ед.',value:d=>d.reduce((a,x)=>a+x.actual-x.plan,0)},{id:'quality',label:'Качество данных',unit:'%',value:d=>d.length?d.filter(x=>x.valid).length/d.length*100:0,decimals:1}]};
+/* ═══════════════ Конфигурация дашборда ═══════════════
+   Название, вкладки, контекстная плашка и KPI-карточки.
+   KPI: значение/подпись/отклонение — строка или функция от сводки s (src/data.js),
+   поэтому при загрузке XLSX вычисляемые KPI пересчитываются автоматически. */
+import {OBJ as O} from './data.js';
+
+export const DASHBOARD_CONFIG={
+  title:'Дашборд ОППиУ | Лубри-Тех',
+  brand:'◆ Лубри-Тех',
+  brandSub:'дашборд ОППиУ',
+  subtitle:'Ежемесячный цикл интегрированного бизнес-планирования',
+  context:[
+    ['📅 Текущий месяц','Октябрь 2026'],
+    ['📊 Отчетный период','Январь–Сентябрь 2026'],
+    ['🎯 Горизонт','Октябрь 2026 – Март 2028'],
+    ['🏭 Фокус','Зимний сезон Q4 2026 – Q1 2027'],
+  ],
+  tabs:[
+    {id:'overview',label:'Обзор'},
+    {id:'segments',label:'1. Сегментация'},
+    {id:'demand',label:'2. Спрос'},
+    {id:'stock',label:'3. Запасы'},
+    {id:'supply',label:'4. Поставки'},
+    {id:'plans',label:'5. Планы'},
+    {id:'actions',label:'6. Действия'},
+    {id:'quality',label:'Качество данных'},
+  ],
+  kpis:{
+    overview:[
+      {label:'Объем с начала года',color:'green',tip:'Выполнение плана по объему продаж с начала года',
+        value:s=>s.custom?O.N(s.volPct,s.volPct%1?1:0)+'%':'98%',sub:s=>s.custom?O.N(s.vol)+' / '+O.N(s.planVol)+' тыс. кЛ':'880 / 900 тыс. кЛ',
+        dev:s=>s.custom?{text:O.signed(s.volPct-100)+' п.п. от плана',kind:s.volPct>=100?'pos':'neg'}:{text:'▼ −2% от плана',kind:'neg'}},
+      {label:'Выручка с начала года',color:'orange',tip:'Выполнение плана по выручке',
+        value:s=>s.custom?O.N(s.revPct,s.revPct%1?1:0)+'%':'94%',sub:s=>s.custom?O.N(s.rev,1)+' / '+O.N(s.planRev)+' млн руб.':'320 / 342 млн руб.',
+        dev:s=>s.custom?{text:O.signed(s.revPct-100)+' п.п. от плана',kind:s.revPct>=100?'pos':'neg'}:{text:'▼ −6% от плана',kind:'neg'}},
+      {label:'Валовая маржа',color:'orange',tip:'Валовая маржа с начала года',value:'22,8%',
+        sub:'План: 24,0%',dev:{text:'▼ −1,2 п.п.',kind:'neg'}},
+      {label:'Уровень сервиса',color:'blue',tip:'Доля заказов, доставленных вовремя',value:'92%',
+        sub:'Цель: 95%',dev:{text:'▼ −3 п.п.',kind:'neg'}},
+      {label:'Точность прогноза',color:'green',tip:'Взвешенная абсолютная ошибка прогноза (WAPE)',value:'6,5%',
+        sub:'Цель: ≤7%',dev:{text:'▲ −0,5 п.п.',kind:'pos'}},
+      {label:'Систематическая ошибка',color:'orange',tip:'Систематическая ошибка прогноза (bias)',value:'+1,5%',
+        sub:'Цель: ±2%',dev:{text:'● В норме',kind:'neu'}},
+      {label:'Оборачиваемость',color:'green',tip:'Оборачиваемость запасов',value:'9,5x',
+        sub:'План: 9,0x',dev:{text:'▲ +0,5x',kind:'pos'}},
+      {label:'Средняя цена, руб/л',color:'red',tip:'Средняя цена реализации по всему портфелю',
+        value:s=>s.custom?O.N(s.avgPrice):'347',sub:'План: 380 руб/л',
+        dev:s=>s.custom?{text:O.signed((s.avgPrice/380-1)*100)+' к плану',kind:s.avgPrice>=380?'pos':'neg'}:{text:'▼ −8,7%',kind:'neg'}},
+    ],
+    segments:[
+      {label:'Стратегические',color:'green',tip:'Уровень сервиса по стратегическим клиентам',value:'98%',sub:'Цель: 95%',dev:{text:'▲ +3 п.п.',kind:'pos'}},
+      {label:'Ядро',color:'green',tip:'Уровень сервиса по клиентам ядра',value:'96%',sub:'Цель: 95%',dev:{text:'▲ +1 п.п.',kind:'pos'}},
+      {label:'Перспективные',color:'orange',tip:'Уровень сервиса по перспективным клиентам',value:'89%',sub:'Цель: 92%',dev:{text:'▼ −3 п.п.',kind:'neg'}},
+      {label:'Транзакционные',color:'red',tip:'Уровень сервиса по транзакционным клиентам',value:'82%',sub:'Цель: 90%',dev:{text:'▼ −8 п.п.',kind:'neg'}},
+      {label:'Средний по базе',color:'blue',tip:'Средний уровень сервиса по всей базе',value:'92%',sub:'Цель: 95%',dev:{text:'▼ −3 п.п.',kind:'neg'}},
+    ],
+    demand:[
+      {label:'Неограниченный спрос 4 кв.',color:'blue',tip:'Неограниченный спрос на 4 квартал 2026',value:'400 тыс. кЛ',sub:'Без ограничений',dev:{text:'+25% к плану',kind:'neu'}},
+      {label:'Базовый прогноз',color:'',tip:'Базовый прогноз лучшими моделями',value:'350 тыс. кЛ',sub:'Статистический',dev:{text:'+10% к плану',kind:'neu'}},
+      {label:'Промо-прирост',color:'orange',tip:'Дополнительный объем от маркетинга',value:'+30 тыс. кЛ',sub:'Зимний старт',dev:{text:'+9% к базовому',kind:'pos'}},
+      {label:'Корректировка продаж',color:'orange',tip:'Ручная корректировка прогноза',value:'+20 тыс. кЛ',sub:'⚠️ Риск',dev:{text:'Вероятность 60%',kind:'neg'}},
+      {label:'Точность факт/план',color:'green',tip:'Точность прогноза факт/план',value:'94%',sub:'Цель: ≥90%',dev:{text:'▲ +4% к цели',kind:'pos'}},
+    ],
+    stock:[
+      {label:'Уровень сервиса',color:'orange',tip:'Текущий уровень сервиса по готовой продукции',value:'92%',sub:'Цель: 95%',dev:{text:'▼ −3 п.п.',kind:'neg'}},
+      {label:'Оборачиваемость',color:'green',tip:'Оборачиваемость запасов',value:'9,5x',sub:'План: 9,0x',dev:{text:'▲ +0,5x',kind:'pos'}},
+      {label:'Дней покрытия',color:'',tip:'Дней покрытия запасов готовой продукции',value:'37',sub:'Цель: 33 дня',dev:{text:'▼ +4 дня',kind:'neg'}},
+      {label:'Стоимость запасов',color:'',tip:'Стоимость запасов готовой продукции',value:'361 млн',sub:'План: 335 млн',dev:{text:'▼ +26 млн',kind:'neg'}},
+      {label:'Доля неликвидов',color:'red',tip:'Доля неликвидов в общем объеме запасов',value:'12%',sub:'Цель: <5%',dev:{text:'▼ +7 п.п.',kind:'neg'}},
+    ],
+    supply:[
+      {label:'Неограниченный спрос',color:'blue',tip:'Неограниченный спрос на 4 квартал 2026',value:'400 тыс. кЛ',sub:'Без ограничений',dev:{text:'Базовая цифра',kind:'neu'}},
+      {label:'Доступный объем',color:'',tip:'Доступный объем с ограничениями',value:'350 тыс. кЛ',sub:'С ограничениями',dev:{text:'▼ −50 тыс. кЛ',kind:'neg'}},
+      {label:'Разрыв',color:'red',tip:'Разрыв между спросом и предложением',value:'−50 тыс. кЛ',sub:'12,5% от спроса',dev:{text:'⚠ Критично',kind:'neg'}},
+      {label:'Загрузка мощностей',color:'red',tip:'Загрузка производственных мощностей',value:'94%',sub:'Цель: 85%',dev:{text:'▼ Перегрузка',kind:'neg'}},
+      {label:'Покрытие стратегических',color:'green',tip:'Покрытие стратегических клиентов',value:'100%',sub:'Приоритет №1',dev:{text:'▲ По цели',kind:'pos'}},
+      {label:'Эффективность оборудования',color:'',tip:'Общая эффективность оборудования (OEE)',value:'87%',sub:'Цель: 85%',dev:{text:'▲ +2 п.п.',kind:'pos'}},
+    ],
+    plans:[
+      {label:'План продаж (18 мес.)',color:'blue',tip:'План продаж на 18 месяцев',value:'2 230 тыс. кЛ',sub:'858 млн руб.',dev:{text:'Окт 2026 – Мар 2028',kind:'neu'}},
+      {label:'План производства',color:'',tip:'План производства на 18 месяцев',value:'2 260 тыс. кЛ',sub:'Загрузка 87%',dev:{text:'▲ +30 тыс. кЛ к продажам',kind:'pos'}},
+      {label:'План закупок',color:'',tip:'План закупок сырья на 18 месяцев',value:'377 млн',sub:'Группа III: 1005 тыс. кЛ',dev:{text:'Стандартный бюджет',kind:'neu'}},
+      {label:'План запасов',color:'',tip:'План запасов на конец марта 2028',value:'380 тыс. кЛ',sub:'38 дней покрытия',dev:{text:'▲ +5 дней к началу',kind:'pos'}},
+      {label:'План перемещений',color:'',tip:'План перемещений между складами на 18 месяцев',value:'510 тыс. кЛ',sub:'255 рейсов',dev:{text:'Авто: 65%, ЖД: 35%',kind:'neu'}},
+      {label:'Себестоимость',color:'',tip:'Структура себестоимости на 18 месяцев',value:'622 млн',sub:'72% от выручки',dev:{text:'Сырье: 60%, Произв.: 24%, Логист.: 11%, Хран.: 5%',kind:'neu'}},
+    ],
+  },
+};
