@@ -1,0 +1,1 @@
+export const clickhouse={config:{url:'',database:'',query:''},async query(sql,config=this.config){if(!config.url)throw new Error('ClickHouse не настроен: укажите URL адаптера');const r=await fetch(config.url,{method:'POST',body:sql,headers:{'Content-Type':'text/plain'}});if(!r.ok)throw new Error(`ClickHouse: HTTP ${r.status}`);return r.json()}};
