@@ -257,7 +257,7 @@ function vSupply(){
   const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4><div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</article>`).join('');
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
   const methKey=(hs==='A'?'A':'B')+(hm==='cov'?'cov':'mrg');
-  const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Максимальный)'],['C','Сценарий В (Маржинальный)']])
+  const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Маржинальный)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
     +(hs!=='A'?info('primary',S.kpiNote):'')
     +info('primary',S.heatmapMethodology[methKey])
@@ -267,7 +267,7 @@ function vSupply(){
     +tbl('tbl-heatmap',HEATMAP.flatTable.heads,HEATMAP.flatTable.rows);
   return kpis('supply')
     +card('🏭 Карта цепочки поставок и ограничений',info('primary',S.mapDesc)+`<div class="supplymap">${mapHTML()}</div>`
-      +`<div class="info info-danger"><b>🔴 Ключевые ограничения цепочки: gross −25 000 т, net −12 500 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
+      +`<div class="info info-danger"><b>🔴 Валовый разрыв цепочки: −25 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows))
     +card('📊 Базовый сценарий покрытия спроса',info('primary',S.gap.methodology)+`<div class="gap-chart">${gap}</div>`
       +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 12 500 т</b><br>${S.gap.reasons}`)
