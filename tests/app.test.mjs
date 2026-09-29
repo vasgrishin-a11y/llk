@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {DASHBOARD_CONFIG as C} from '../src/config.js';
 import {MONTHLY,normalizeRows,filterData,summary} from '../src/data.js';
 import {drawChart,CHART_TYPES} from '../src/charts.js';
-import {HEATMAP,PLANS} from '../src/datasets.js';
+import {HEATMAP,PLANS,DEMAND_KPIS} from '../src/datasets.js';
 
 test('index содержит основные области UI и canvas',()=>{
   const h=fs.readFileSync('index.html','utf8');
@@ -17,26 +17,29 @@ test('конфиг: 7 рабочих вкладок без раздела кач
   assert.equal(C.tabs.length,7);
   assert.deepEqual(C.tabs.map(t=>t.id),['overview','segments','demand','stock','supply','plans','actions']);
   assert.equal(C.kpis.overview.length,8);
-  for(const t of ['segments','demand','stock','supply','plans'])assert.ok(C.kpis[t].length>=5,`KPI для ${t}`);
+  for(const t of ['segments','stock','supply','plans'])assert.ok(C.kpis[t].length>=5,`KPI для ${t}`);
+  // KPI спроса — динамические по годам (src/datasets.js)
+  assert.deepEqual(Object.keys(DEMAND_KPIS),['y2025','y2026','y2027']);
+  Object.values(DEMAND_KPIS).forEach(list=>assert.ok(list.length>=5,'динамические KPI спроса'));
 });
 
 test('демо-данные: тонны, млн руб. и канонический YTD',()=>{
   assert.equal(MONTHLY.length,12);
   const f=MONTHLY.filter(r=>r.type==='Факт');
   assert.equal(f.length,9);
-  assert.equal(f.reduce((a,x)=>a+x.planVol,0),245000);
-  assert.equal(f.reduce((a,x)=>a+x.vol,0),225500);
-  assert.ok(Math.abs(f.reduce((a,x)=>a+x.rev,0)-1849.1)<0.01);
+  assert.equal(f.reduce((a,x)=>a+x.planVol,0),415000);
+  assert.equal(f.reduce((a,x)=>a+x.vol,0),390000);
+  assert.ok(Math.abs(f.reduce((a,x)=>a+x.rev,0)-55185.3)<1.5);
   assert.ok(MONTHLY.every(x=>x.valid));
 });
 
-test('сводка: YTD 225500/245000, выручка и средняя цена руб/т',()=>{
+test('сводка: YTD 390000/415000, выручка и средняя цена руб/т',()=>{
   const s=summary(MONTHLY);
-  assert.equal(s.vol,225500);
-  assert.ok(Math.abs(s.rev-1849.1)<0.01);
-  assert.ok(Math.abs(s.volPct-92.04)<0.1);
-  assert.ok(Math.abs(s.revPct-88.79)<0.2);
-  assert.ok(Math.abs(s.avgPrice-8200)<0.2);
+  assert.equal(s.vol,390000);
+  assert.ok(Math.abs(s.rev-55185)<1);
+  assert.ok(Math.abs(s.volPct-93.98)<0.1);
+  assert.ok(Math.abs(s.revPct-92.34)<0.2);
+  assert.ok(Math.abs(s.avgPrice-141500)<2);
   assert.ok(!s.custom&&s.invalid===0);
 });
 

@@ -51,7 +51,8 @@ test('приложение рендерит все рабочие вкладки
   click('[data-sw="pq"][data-val="q4-2026"]');
   assert.ok($('#c-plan'),'chart плана остатков');
   assert.match($('#content').textContent,/План запасов: Запасы растут/);
-  assert.match($('#content').textContent,/4 кв\. 2026 в среднем/);
+  assert.match($('#content').textContent,/Дек 2026 — итого/,'детализация по месяцам есть');
+  assert.match($('#content').textContent,/ПС Интесмо/,'детализация до складов есть');
 
   click('[data-tab="actions"]');
   assert.ok(!$('#theme'),'переключателя темы нет');
