@@ -1,4 +1,4 @@
-/* ═══════════════ Дашборд ОППиУ «Лубри-Тех» — компоновка экранов ═══════════════
+/* ═══════════════ Дашборд In.Plan S&OP — компоновка экранов ═══════════════
    Тот же подход, что и в базовом шаблоне: config.js задаёт вкладки/KPI,
    data.js — загружаемое ядро данных (XLSX), datasets.js — отчётные демо-данные,
    charts.js — canvas-рендеринг. Состояние (вкладка) — в localStorage,
@@ -39,12 +39,7 @@ const kpis=tid=>(C.kpis[tid]||[]).length?`<section class="kpis">${C.kpis[tid].ma
 function perfRows(m){
   const rr=(r,cls)=>({cells:[r.period,r.type,N(r.planVol),N(r.vol),N(r.planVol?r.vol/r.planVol*100:0,0)+'%',NF(r.planRev),NF(r.rev),N(r.planRev?r.rev/r.planRev*100:0,0)+'%',N(r.price)],cls});
   const tot=(list,label,type)=>{const pv=list.reduce((a,x)=>a+x.planVol,0),v=list.reduce((a,x)=>a+x.vol,0),pr=list.reduce((a,x)=>a+x.planRev,0),rv2=list.reduce((a,x)=>a+x.rev,0);
-    return {cells:[label,type,N(pv),N(v),N(pv?v/pv*100:0,0)+'%',NF(pr),NF(rv2),N(pr?rv2/pr*100:0,0)+'%',N(v?rv2/v*1000:0)],cls:'row-sum'};};
-  if(m===MONTHLY){ // канонические итоги отчёта (см. CANON в data.js)
-    return [...MONTHLY.map(r=>rr(r,r.type==='Прогноз'?'row-fc':'')),
-      {cells:['Янв–Сен 2026 факт','Факт','900','880','98%','342,0','320,5','94%','347'],cls:'row-sum'},
-      {cells:['Окт–Дек 2026 прогноз','Прогноз','300','303','101%','114,0','109,0','96%','360'],cls:'row-sum'},
-      {cells:['Год 2026 итого (план/факт)','План/Факт','1 200','1 183','99%','456,0','429,5','94%','363'],cls:'row-total'}];}
+    return {cells:[label,type,N(pv),N(v),N(pv?v/pv*100:0,0)+'%',NF(pr),NF(rv2),N(pr?rv2/pr*100:0,0)+'%',N(v?rv2/v*1_000_000:0)],cls:'row-sum'};};
   const f=m.filter(r=>r.type!=='Прогноз'),fc=m.filter(r=>r.type==='Прогноз');
   const rows=m.map(r=>rr(r,r.type==='Прогноз'?'row-fc':''));
   if(f.length>1)rows.splice(f.length,0,tot(f,f[0].period+'–'+f.at(-1).period,'Факт'));
@@ -54,7 +49,7 @@ function perfRows(m){
 }
 function vOverview(){
   const m=data,p=ui.ovp??'2026';
-  const perfH=['Месяц','Тип','План объема (тыс. кЛ)','Факт/Прогноз объема (тыс. кЛ)','Выполнение %','План выручки (млн руб.)','Факт/Прогноз выручки (млн руб.)','Выполнение %','Средняя цена (руб/л)'];
+  const perfH=['Месяц','Тип','План объема (т)','Факт/Прогноз объема (т)','Выполнение %','План выручки (млн руб.)','Факт/Прогноз выручки (млн руб.)','Выполнение %','Средняя цена (руб/т)'];
   let chartHtml='',ins='';
   if(p==='2026'){
     const labels=m.map(r=>shortM(r.period));
@@ -64,7 +59,7 @@ function vOverview(){
       {data:m.map(r=>r.planVol),kind:'bar',color:'#e8ecef'},
       {data:m.map(r=>r.type==='Прогноз'?null:r.rev),kind:'line',axis:1,color:'#D93025'},
       {data:m.map(r=>r.type==='Прогноз'?r.rev:null),kind:'line',axis:1,color:'#FF8A80',dash:true},
-    ],labels,{height:340,legend:['Объем факт (тыс. кЛ)','Объем прогноз (тыс. кЛ)','Объем план (тыс. кЛ)','Выручка факт (млн руб.)','Выручка прогноз (млн руб.)'],yTitle:'Объем (тыс. кЛ)',y1Title:'Выручка (млн руб.)'});
+    ],labels,{height:340,legend:['Объем факт (т)','Объем прогноз (т)','Объем план (т)','Выручка факт (млн руб.)','Выручка прогноз (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
     ins=OVERVIEW.insight2026;
   }else{
     const d=OVERVIEW.perf2027;
@@ -73,7 +68,7 @@ function vOverview(){
       {data:d.vol,kind:'bar',color:'#90CAF9'},
       {data:d.planRev,kind:'line',axis:1,color:'#8c9bae',dash:true},
       {data:d.rev,kind:'line',axis:1,color:'#4CAF50'},
-    ],M12_LABELS,{height:340,legend:['Объем план 2027 (тыс. кЛ)','Объем прогноз прошлого цикла (тыс. кЛ)','Выручка план 2027 (млн руб.)','Выручка прогноз прошлого цикла (млн руб.)'],yTitle:'Объем (тыс. кЛ)',y1Title:'Выручка (млн руб.)'});
+    ],M12_LABELS,{height:340,legend:['Объем план 2027 (т)','Объем прогноз прошлого цикла (т)','Выручка план 2027 (млн руб.)','Выручка прогноз прошлого цикла (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
     ins=OVERVIEW.insight2027;
   }
   const V=OVERVIEW.volYoy,R=OVERVIEW.revYoy,A=OVERVIEW.accuracy;
@@ -81,7 +76,7 @@ function vOverview(){
     {data:V.y2025,kind:'bar',color:'#e8ecef'},
     {data:V.y2026,kind:'bar',color:'#20A7C9'},
     {data:V.plan,kind:'line',color:'#D93025',dash:true},
-  ],V.labels,{height:280,legend:['Объем 2025 (тыс. кЛ)','Объем 2026 (тыс. кЛ)','План 2026 (тыс. кЛ)']});
+  ],V.labels,{height:280,legend:['Объем 2025 (т)','Объем 2026 (т)','План 2026 (т)']});
   J('#c-ovrev','combo',[
     {data:R.y2025,kind:'bar',color:'#e8ecef'},
     {data:R.y2026,kind:'bar',color:'#FF9800'},
@@ -126,15 +121,15 @@ function vSegments(){
 function vDemand(){
   const D=DEMAND,p=ui.dmp??'2026';
   if(p==='2026'){
-    const facts=MONTHLY.filter(r=>r.type==='Факт'),UNC=[130,135,135],RF=[48,50,50];
-    const vol=[...facts.map(r=>r.vol),...UNC],rev=[...facts.map(r=>r.rev),...RF];
-    const pc=[...facts.map(()=>'#20A7C9'),...UNC.map(()=>'#90CAF9')];
+    const facts=MONTHLY.filter(r=>r.type==='Факт'),unc=[32500,33750,33750];
+    const vol=[...facts.map(r=>r.vol),...unc],rev=[...facts.map(r=>r.rev),...unc.map(v=>v*8200/1_000_000)];
+    const pc=[...facts.map(()=>'#20A7C9'),...unc.map(()=>'#90CAF9')];
     J('#c-demand','combo',[
-      {data:Array(12).fill(100),kind:'bar',color:'#e8ecef'},
+      {data:MONTHLY.map(r=>r.planVol),kind:'bar',color:'#e8ecef'},
       {data:vol,kind:'bar',pointColors:pc,color:'#20A7C9'},
-      {data:Array(12).fill(38),kind:'line',axis:1,color:'#8c9bae',dash:true},
+      {data:MONTHLY.map(r=>r.planRev),kind:'line',axis:1,color:'#8c9bae',dash:true},
       {data:rev,kind:'line',axis:1,color:'#D93025'},
-    ],M12_LABELS,{height:340,legend:['План объема (тыс. кЛ)','Факт / неограниченный спрос (тыс. кЛ)','План выручки (млн руб.)','Факт/Прогноз выручки (млн руб.)'],yTitle:'Объем (тыс. кЛ)',y1Title:'Выручка (млн руб.)'});
+    ],M12_LABELS,{height:340,legend:['План объема (т)','Факт / неограниченный спрос (т)','План выручки (млн руб.)','Факт/Прогноз выручки (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
   }else{
     const d=D.demand2027;
     J('#c-demand','combo',[
@@ -142,7 +137,7 @@ function vDemand(){
       {data:d.demand,kind:'bar',color:'#90CAF9'},
       {data:d.planRev,kind:'line',axis:1,color:'#8c9bae',dash:true},
       {data:d.rev,kind:'line',axis:1,color:'#4CAF50'},
-    ],M12_LABELS,{height:340,legend:['План объема 2027 (тыс. кЛ)','Неограниченный спрос 2027 (тыс. кЛ)','План выручки 2027 (млн руб.)','Прогноз выручки 2027 (млн руб.)'],yTitle:'Объем (тыс. кЛ)',y1Title:'Выручка (млн руб.)'});
+    ],M12_LABELS,{height:340,legend:['План объема 2027 (т)','Неограниченный спрос 2027 (т)','План выручки 2027 (млн руб.)','Прогноз выручки 2027 (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
   }
   const W=D.waterfall,AC=D.accCat,B=D.bias,F=D.fva,SE=D.seasonal;
   J('#c-wf','waterfall',[W.values],W.labels,{height:280});
@@ -191,7 +186,7 @@ function vStock(){
     {data:IP.reorder,color:'#FF9800',dash:true},
     {data:IP.target,color:'#4CAF50'},
     {data:IP.actual,color:'#1a2b4a',fill:true},
-  ],IP.labels,{height:340,legend:['Страховой запас','Точка заказа','Целевой запас','Запас на конец периода'],yTitle:'тыс. кЛ',max:450});
+  ],IP.labels,{height:340,legend:['Страховой запас','Точка заказа','Целевой запас','Запас на конец периода'],yTitle:'т',max:120000});
   const DD=S.dead[dm];
   J('#c-dead','bar',DD.series.map(([n,d,c])=>({data:d,color:c})),DD.labels,{height:280,legend:DD.series.map(x=>x[0]),yTitle:DD.unit});
   const AX=S.abcxyz;
@@ -257,7 +252,7 @@ function vSupply(){
     {data:F.best,color:'#20A7C9'},
     {data:F.base,color:'#1a2b4a'},
     {data:F.worst,color:'#8c9bae'},
-  ],F.labels,{height:340,legend:['Лучший (+18%, маржа 25,8%)','Базовый (маржа 24,0%)','Худший (−12%, маржа 19,5%)'],yTitle:'Объем (тыс. кЛ)'});
+  ],F.labels,{height:340,legend:['Лучший (+18%, маржа 25,8%)','Базовый (маржа 24,0%)','Худший (−12%, маржа 19,5%)'],yTitle:'Объем (т)'});
   const fanRows=F.labels.map((m,i)=>[m,String(F.worst[i]),String(F.base[i]),String(F.best[i]),F.marginWorst[i],'24,0%',F.marginBest[i],F.drivers[i]]);
   const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4><div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</article>`).join('');
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
@@ -272,10 +267,10 @@ function vSupply(){
     +tbl('tbl-heatmap',HEATMAP.flatTable.heads,HEATMAP.flatTable.rows);
   return kpis('supply')
     +card('🏭 Карта цепочки поставок и ограничений',info('primary',S.mapDesc)+`<div class="supplymap">${mapHTML()}</div>`
-      +`<div class="info info-danger"><b>🔴 Ключевые ограничения цепочки (итого −100 тыс. кЛ):</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
+      +`<div class="info info-danger"><b>🔴 Ключевые ограничения цепочки: gross −25 000 т, net −12 500 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows))
     +card('📊 Базовый сценарий покрытия спроса',info('primary',S.gap.methodology)+`<div class="gap-chart">${gap}</div>`
-      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 50 тыс. кЛ</b><br>${S.gap.reasons}`)
+      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 12 500 т</b><br>${S.gap.reasons}`)
       +tbl('tbl-gap',S.gap.table.heads,S.gap.table.rows))
     +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
     +`<h3 class="section-h">🎯 Сценарии покрытия спроса</h3><div class="grid-3">${scenCards}</div>`
@@ -313,19 +308,10 @@ function vActions(){
     +`<div class="info info-success decision">${A.decision}</div>`;
 }
 
-/* ═══════════════ Качество данных ═══════════════ */
-function vQuality(){
-  const inv=data.filter(x=>!x.valid);
-  const msg=inv.length?`Есть ${inv.length} строк с ошибками — проверьте заполненность периода и числовых полей.`:'Данные готовы к анализу.';
-  const src=summ.custom?'загруженный XLSX':'демо-данные';
-  return card('Качество данных',`<p class="notice">${msg} Проверено строк: ${data.length}. Источник: ${src}. Схема XLSX: Период, Тип (Факт/Прогноз), План объема, Факт объема, План выручки, Факт выручки, Цена.</p>`)
-    +card('📋 Текущий набор данных',tbl('tbl-quality',['Период','Тип','План объема','Объем','План выручки','Выручка','Цена','Статус'],data.map(r=>({cells:[esc(r.period),esc(r.type),N(r.planVol),N(r.vol),NF(r.planRev),NF(r.rev),N(r.price),r.valid?'🟢 ОК':'🔴 Ошибка'],cls:r.valid?'':'dead'}))));
-}
-
-/* ═══════════════ Каркас: верхний рельс-меню + шапка (стиль In.Plan) ═══════════════
-   Меню только сверху (сайдбара нет), единственная тема — светлая,
+/* ═══════════════ Каркас: тёмный rail In.Plan + рабочая область ═══════════════
+   На широких экранах меню слева, на узких — сверху; тема светлая,
    действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
-const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions,quality:vQuality};
+const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions};
 function renderContent(){
   jobs=[];
   const el=document.querySelector('#content');
@@ -335,12 +321,13 @@ function renderContent(){
 }
 const ICON_UPLOAD='<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
 const ICON_RESET='<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
-const BADGE='<div class="inplan-badge" title="Лубри-Тех · ОППиУ"><span class="ip-sq ip-s1"></span><span class="ip-sq ip-s2"></span><span class="ip-sq ip-s3"></span><span class="ip-sq ip-s4"></span></div>';
+const BADGE='<div class="inplan-badge" title="In.Plan"><span class="ip-sq ip-s1"></span><span class="ip-sq ip-s2"></span><span class="ip-sq ip-s3"></span><span class="ip-sq ip-s4"></span></div>';
 function render(){
+  if(!C.tabs.some(x=>x.id===tab)){tab='overview';storage.set('tab',tab);}
   summ=summary(data);
   const t=C.tabs.find(x=>x.id===tab)||C.tabs[0];
   document.title=C.title;
-  document.querySelector('#app').innerHTML=`<div class="app"><aside class="rail"><div class="rail-logo">${BADGE}</div><div class="rail-brand"><span class="rb-t">Дашборд ОППиУ</span><span class="rb-s">Лубри-Тех · интегрированный план</span></div><nav class="rail-nav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav><div class="rail-ver">Цикл: <b>Октябрь 2026</b></div></aside><header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${C.subtitle}</div></div></div><div class="stat">${summ.rows} строк данных<br>${summ.custom?'Источник: загруженный XLSX':'Источник: демо-данные'}</div><div class="hdr-actions"><button class="icon-btn" id="upload" data-tip="Загрузить Excel (лист SIOP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button><input type="file" id="xlsx" accept=".xlsx,.xls" hidden><button class="icon-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button></div></header><div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div><main id="content"></main></div>`;
+  document.querySelector('#app').innerHTML=`<div class="app"><aside class="rail"><div class="rail-logo">${BADGE}</div><div class="rail-brand"><span class="rb-t">In.Plan</span><span class="rb-s">Integrated Business Planning</span></div><nav class="rail-nav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav><div class="rail-ver">Цикл: <b>Октябрь 2026</b></div></aside><div class="wrap"><header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${C.subtitle}</div></div></div><div class="stat">${summ.rows} строк данных<br>${summ.custom?'Источник: загруженный XLSX':'Источник: демо-данные'}</div><div class="hdr-actions"><button class="icon-btn" id="upload" data-tip="Загрузить Excel (лист SIOP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button><input type="file" id="xlsx" accept=".xlsx,.xls" hidden><button class="icon-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button></div></header><div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div><main id="content"></main></div></div>`;
   renderContent();
 }
 async function readXlsx(e){
