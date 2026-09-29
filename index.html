@@ -244,38 +244,32 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .bubble-perspective{background:#FF9800}.bubble-transactional{background:#D93025}
 .bubble-outlier{background:#9C27B0;border:3px solid #FFD700}
 
-/* ── Интерактивная матрица сегментации (маржа × ценность) ── */
-.segmatrix{position:relative;height:440px;border:1px solid var(--scp-line-2);border-radius:var(--r-m);
-  margin-top:10px;background:linear-gradient(0deg,#fbfbfd,#fff);overflow:hidden}
-.sm-plot{position:absolute;left:56px;right:18px;top:14px;bottom:44px}
-.sm-axis-x{position:absolute;left:56px;right:18px;bottom:16px;text-align:center;font-size:11px;color:var(--scp-text-3);font-weight:600}
-.sm-axis-y{position:absolute;left:8px;top:50%;transform:rotate(-90deg) translateX(50%);transform-origin:left center;
-  font-size:11px;color:var(--scp-text-3);font-weight:600;white-space:nowrap}
-.sm-z{position:absolute;left:1.2%;top:2.5%;width:18.5%;border:1px dashed;border-radius:10px;padding:7px 9px 8px;box-sizing:border-box;pointer-events:none}
-.sm-z-title{font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:5px;line-height:1.2}
-.sm-z-sub{font-size:9.5px;color:var(--scp-text-3);margin-top:2px;line-height:1.35}
-.sm-z-diamond{border-color:#0082a9;background:rgba(0,130,169,.07)}.sm-z-diamond .sm-z-title{color:#005f7a}
-.sm-z-platinum{border-color:#7c3aed;background:rgba(124,58,237,.06)}.sm-z-platinum .sm-z-title{color:#5b21b6}
-.sm-z-gold{border-color:#d97706;background:rgba(217,119,6,.06)}.sm-z-gold .sm-z-title{color:#92400e}
-.sm-z-silver{border-color:#94a3b8;background:rgba(100,116,139,.06)}.sm-z-silver .sm-z-title{color:#475569}
-.sm-z-bronze{border-color:#b45309;background:rgba(180,83,9,.07)}.sm-z-bronze .sm-z-title{color:#8c3f06}
-.sm-outer{position:absolute;left:1.2%;bottom:2.5%;width:97.6%;min-height:6%;border:2px dashed #d6455b;border-radius:10px;background:rgba(214,69,91,.05);padding:5px 10px 6px;font-size:10.5px;font-weight:700;color:#b32439;box-sizing:border-box;pointer-events:none}
-.sm-quad{display:none}
-.sm-dot{position:absolute;border-radius:50%;transform:translate(-50%,50%);display:flex;flex-direction:column;align-items:center;
-  justify-content:center;font-size:10px;font-weight:700;text-align:center;line-height:1.15;cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);border:1.5px solid;color:var(--scp-text);background:#fff;transition:transform .15s,box-shadow .15s}
-.sm-dot:hover,.sm-dot.on{transform:translate(-50%,50%) scale(1.16);box-shadow:0 4px 16px rgba(0,0,0,.32);z-index:20}
-.sm-dot.dim{opacity:.22}
-.sm-strategic{background:#4CAF50}.sm-core{background:#20A7C9}.sm-perspective{background:#FF9800}
-.sm-transactional{background:#D93025}.sm-outlier{background:#9C27B0;border-color:#FFD700}
-.sm-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--scp-text-2)}
-.sm-legend button{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:inherit;cursor:pointer;padding:2px 4px;border-radius:4px}
+/* ── Матрица сегментации: горизонтальные полосы-сегменты ── */
+.segbands{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.sm-band{display:flex;align-items:stretch;border:1px solid var(--scp-line-2);border-left:5px solid var(--sc);
+  border-radius:12px;background:linear-gradient(90deg,color-mix(in srgb,var(--sc) 7%,#fff),#fff 55%);overflow:hidden}
+.sm-band-off{opacity:.45}
+.sm-band-head{flex:0 0 200px;display:flex;align-items:center;gap:10px;padding:16px 14px;
+  border-right:1px dashed var(--scp-line-2);box-sizing:border-box}
+.sm-band-chip{width:14px;height:14px;border-radius:50%;background:var(--sc);flex:0 0 auto;box-shadow:0 0 0 4px color-mix(in srgb,var(--sc) 18%,transparent)}
+.sm-band-t{font-size:15px;font-weight:700;color:var(--scp-text);line-height:1.25}
+.sm-band-meta{display:block;font-size:11px;font-weight:600;color:var(--scp-text-3);margin-top:3px;line-height:1.4}
+.sm-band-plot{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:16px 18px;min-height:96px}
+.sm-band-hidden{font-size:12px;color:var(--scp-text-3)}
+.sm-dot{border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;line-height:1.12;cursor:pointer;color:#fff;font-weight:700;padding:2px;box-sizing:border-box;
+  box-shadow:0 2px 10px rgba(0,0,0,.16);transition:transform .15s,box-shadow .15s;flex:0 0 auto;overflow:hidden}
+.sm-dot:hover{transform:scale(1.09);box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:20}
+.sm-dot.dim{opacity:.2}
+.sm-dot.sm-rev{box-shadow:0 0 0 3px #fff,0 0 0 5px #d6455b,0 2px 10px rgba(0,0,0,.16)}
+.sm-dot-n{display:block;padding:0 3px;word-break:break-word}
+.sm-dot-v{display:block;opacity:.82;font-weight:600}
+.sm-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:12px;color:var(--scp-text-2)}
+.sm-legend button{display:inline-flex;align-items:center;gap:7px;background:none;border:0;color:inherit;cursor:pointer;padding:3px 6px;border-radius:5px;font-size:12px;font-weight:600}
 .sm-legend button:hover{background:var(--scp-b-50)}
 .sm-legend button.off{opacity:.4;text-decoration:line-through}
-.sm-legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
-.sm-tip{position:fixed;z-index:9999;display:none;background:#1f1f20;color:#fff;font-size:12px;line-height:1.5;
-  padding:9px 11px;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:250px;pointer-events:none}
-.sm-tip b{color:#fff}.sm-tip .r{color:#c8c4ce}
+.sm-legend i{width:13px;height:13px;border-radius:50%;display:inline-block}
+@media (max-width:820px){.sm-band{flex-direction:column}.sm-band-head{flex:0 0 auto;border-right:0;border-bottom:1px dashed var(--scp-line-2)}}
 
 /* ── Интерактивная схема-граф цепочки поставок ── */
 .chaingraph{position:relative;border:1px solid var(--scp-line-2);border-radius:var(--r-m);margin-top:10px;
@@ -356,6 +350,25 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .model canvas.chart{background:var(--scp-surface-2);border:1px solid var(--scp-line);
   border-radius:var(--r-s);margin:6px 0}
 
+/* ── Сравнение сценариев: радар + выполнение годового плана ── */
+.scen-split{display:grid;grid-template-columns:minmax(300px,1fr) minmax(320px,1.15fr);gap:18px;align-items:start}
+@media (max-width:980px){.scen-split{grid-template-columns:1fr}}
+.scen-year{border:1px solid var(--scp-line-2);border-radius:var(--r-m);padding:12px 14px;background:var(--scp-surface)}
+.sy-head{font-size:12px;color:var(--scp-text-2);line-height:1.5;padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--scp-line)}
+.sy-head .muted{font-size:11px;margin-top:3px}
+.sy-row{display:grid;grid-template-columns:1fr;gap:5px;padding:9px 10px;border-radius:9px;margin-bottom:7px;
+  border:1px solid var(--scp-line);background:#fcfcfe}
+.sy-row.sy-prev{background:#f6f7f9;opacity:.9}
+.sy-row.sy-best{border:1.5px solid #4CAF50;background:rgba(76,175,80,.06)}
+.sy-name{font-size:12.5px;font-weight:700;color:var(--scp-text);margin-bottom:2px}
+.sy-m{display:grid;grid-template-columns:104px auto auto 1fr;align-items:center;gap:8px;font-size:11.5px;color:var(--scp-text-2)}
+.sy-m b{font-variant-numeric:tabular-nums;color:var(--scp-text);white-space:nowrap}
+.sy-k{color:var(--scp-text-3);font-size:10.5px;text-transform:uppercase;letter-spacing:.2px}
+.sy-p{color:var(--scp-text-3);font-size:11px;white-space:nowrap}
+.sy-bar{display:block;height:7px;border-radius:4px;background:var(--scp-n-50);overflow:hidden;min-width:60px}
+.sy-bar i{display:block;height:100%;border-radius:4px}
+.sy-note{font-size:11.5px;color:var(--scp-text-2);margin-top:8px;padding-top:8px;border-top:1px dashed var(--scp-line)}
+
 /* ── Тепловая карта ── */
 .hm-scroll{overflow-x:auto;margin-top:12px}
 .hm{width:100%;min-width:900px;border-collapse:collapse;font-size:11px}
@@ -385,6 +398,16 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .hm-lg{display:inline-block;width:14px;height:14px;border-radius:3px;
   margin:0 4px 0 10px;vertical-align:-3px}
 .hm tr.row-sum td.row-header{background:var(--scp-surface-2)}
+/* тепловая карта точности прогноза (WAPE) */
+.hm.wape{min-width:720px;font-size:12px}
+.hm.wape th,.hm.wape td{padding:9px 10px}
+.hm.wape td.row-header{min-width:190px}
+.wp{font-weight:700;color:#fff;cursor:default}
+.wp-ok{background:#137333}.wp-good{background:#8BC34A;color:#1f3323}
+.wp-mid{background:#FFC107;color:#3d2c00}.wp-bad{background:#FF9800}
+.wp-worst{background:#D93025}
+.wp-num{font-variant-numeric:tabular-nums;color:var(--scp-text-2);font-weight:600}
+.wp-mode{text-align:left!important;color:var(--scp-text-3);font-weight:600;white-space:nowrap}
 
 /* ── Действия / результаты ── */
 .st-done{color:var(--scp-ok-tx);font-weight:600}

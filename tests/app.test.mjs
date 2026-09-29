@@ -20,7 +20,10 @@ test('конфиг: 7 рабочих вкладок без раздела кач
   for(const t of ['segments','stock','supply','plans'])assert.ok(C.kpis[t].length>=5,`KPI для ${t}`);
   // KPI спроса — динамические по годам (src/datasets.js)
   assert.deepEqual(Object.keys(DEMAND_KPIS),['y2025','y2026','y2027']);
-  Object.values(DEMAND_KPIS).forEach(list=>assert.ok(list.length>=5,'динамические KPI спроса'));
+  Object.values(DEMAND_KPIS).forEach(list=>assert.ok(list.length>=4,'динамические KPI спроса'));
+  // 2026: карточки годового неограниченного спроса нет, квартальная — первая
+  assert.ok(/4 кв\. 2026/.test(DEMAND_KPIS.y2026[0].label),'первая карточка 2026 — неогр. спрос 4 кв.');
+  assert.ok(!DEMAND_KPIS.y2026.some(k=>k.label==='Неограниченный спрос 2026'),'нет годовой карточки неогр. спроса');
 });
 
 test('демо-данные: тонны, млн руб. и канонический YTD',()=>{
