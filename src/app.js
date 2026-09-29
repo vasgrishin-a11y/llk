@@ -5,7 +5,7 @@
    локальные переключатели вкладок — в `ui` (в памяти), открытые таблицы — `open`. */
 import {DASHBOARD_CONFIG as C} from './config.js';
 import {MONTHLY,normalizeRows,summary} from './data.js';
-import {OVERVIEW,SEGMENTS,DEMAND,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,QUARTERS,QRANGE} from './datasets.js';
+import {OVERVIEW,SEGMENTS,DEMAND,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView} from './datasets.js';
 import {drawChart} from './charts.js';
 import {storage} from './storage.js';
 
@@ -32,7 +32,7 @@ const tbl=(id,heads,rows)=>{
   const isOpen=open.has(id);
   return `<button class="toggle" data-toggle="${id}">${isOpen?'📋 Скрыть данные ▲':'📋 Данные ▼'}</button><div class="tbl-wrap${isOpen?' show':''}" id="${id}"><table class="dense"><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>{const o=Array.isArray(r)?{cells:r}:r;return `<tr${o.cls?` class="${o.cls}"`:''}>${o.cells.map(c=>`<td>${c}</td>`).join('')}</tr>`}).join('')}</tbody></table></div>`};
 const sw=(group,items)=>{const cur=ui[group]??items[0][0];return `<div class="switch">${items.map(([v,l])=>`<button class="${cur===v?'active':''}" data-sw="${group}" data-val="${v}">${l}</button>`).join('')}</div>`};
-const kpiCard=k=>{const dev=rv(k.dev);return `<article class="kpi"${k.tip?` aria-label="${esc(k.tip)}"`:''}>${k.tip?`<div class="tooltip">${esc(k.tip)}</div>`:''}<div class="muted kpi-label">${rv(k.label)}</div><div class="value ${k.color||''}">${rv(k.value)}</div><div class="kpi-sub">${rv(k.sub)}</div>${dev?`<div class="dev dev-${dev.kind||'neu'}">${dev.text}</div>`:''}</article>`};
+const kpiCard=k=>{const dev=rv(k.dev),foot=rv(k.foot);return `<article class="kpi"${k.tip?` aria-label="${esc(k.tip)}"`:''}>${k.tip?`<div class="tooltip">${esc(k.tip)}</div>`:''}<div class="muted kpi-label">${rv(k.label)}${k.tip?` <span class="infodot" data-info="${esc(k.tip)}">i</span>`:''}</div><div class="value ${k.color||''}">${rv(k.value)}</div><div class="kpi-sub">${rv(k.sub)}</div>${foot?`<div class="kpi-foot">${foot}</div>`:''}${dev?`<div class="dev dev-${dev.kind||'neu'}">${dev.text}</div>`:''}</article>`};
 const kpis=tid=>(C.kpis[tid]||[]).length?`<section class="kpis">${C.kpis[tid].map(kpiCard).join('')}</section>`:'';
 
 /* ═══════════════ Обзор ═══════════════ */
@@ -48,27 +48,37 @@ function perfRows(m){
   return rows;
 }
 function vOverview(){
-  const m=data,p=ui.ovp??'2026';
+  if(ui.ovp==null)ui.ovp='2026';
+  const m=data,p=ui.ovp;
   const perfH=['Месяц','Тип','План объема (т)','Факт/Прогноз объема (т)','Выполнение %','План выручки (млн руб.)','Факт/Прогноз выручки (млн руб.)','Выполнение %','Средняя цена (руб/т)'];
-  let chartHtml='',ins='';
+  let ins='';
   if(p==='2026'){
     const labels=m.map(r=>shortM(r.period));
+    const volColors=m.map(r=>r.type==='Прогноз'?'#90CAF9':'#20A7C9');
     J('#c-ovperf','combo',[
-      {data:m.map(r=>r.type==='Прогноз'?null:r.vol),kind:'bar',color:'#20A7C9'},
-      {data:m.map(r=>r.type==='Прогноз'?r.vol:null),kind:'bar',color:'#90CAF9'},
-      {data:m.map(r=>r.planVol),kind:'bar',color:'#e8ecef'},
-      {data:m.map(r=>r.type==='Прогноз'?null:r.rev),kind:'line',axis:1,color:'#D93025'},
-      {data:m.map(r=>r.type==='Прогноз'?r.rev:null),kind:'line',axis:1,color:'#FF8A80',dash:true},
-    ],labels,{height:340,legend:['Объем факт (т)','Объем прогноз (т)','Объем план (т)','Выручка факт (млн руб.)','Выручка прогноз (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
-    ins=OVERVIEW.insight2026;
+      {data:m.map(r=>r.planVol),kind:'bar',color:'#e3e7ec'},
+      {data:m.map(r=>r.vol),kind:'bar',color:'#20A7C9',pointColors:volColors},
+      {data:m.map(r=>r.planRev),kind:'line',axis:1,color:'#9aa6b6',dash:true},
+      {data:m.map(r=>r.rev),kind:'line',axis:1,color:'#D93025'},
+    ],labels,{height:340,legend:['План объёма (т)','Факт/прогноз объёма (т)','План выручки (млн руб.)','Факт/прогноз выручки (млн руб.)'],yTitle:'Объём (т)',y1Title:'Выручка (млн руб.)'});
+    ins=OVERVIEW.insight2026+' <span class="muted">Светлые столбцы — прогноз S&amp;OP на 4 кв.</span>';
+  }else if(p==='2025'){
+    const d=OVERVIEW.perf2025;
+    J('#c-ovperf','combo',[
+      {data:d.planVol,kind:'bar',color:'#e3e7ec'},
+      {data:d.vol,kind:'bar',color:'#20A7C9'},
+      {data:d.planRev,kind:'line',axis:1,color:'#9aa6b6',dash:true},
+      {data:d.rev,kind:'line',axis:1,color:'#4CAF50'},
+    ],M12_LABELS,{height:340,legend:['План объёма 2025 (т)','Факт объёма 2025 (т)','План выручки 2025 (млн руб.)','Факт выручки 2025 (млн руб.)'],yTitle:'Объём (т)',y1Title:'Выручка (млн руб.)'});
+    ins=OVERVIEW.insight2025;
   }else{
     const d=OVERVIEW.perf2027;
     J('#c-ovperf','combo',[
-      {data:d.planVol,kind:'bar',color:'#e8ecef'},
+      {data:d.planVol,kind:'bar',color:'#e3e7ec'},
       {data:d.vol,kind:'bar',color:'#90CAF9'},
-      {data:d.planRev,kind:'line',axis:1,color:'#8c9bae',dash:true},
+      {data:d.planRev,kind:'line',axis:1,color:'#9aa6b6',dash:true},
       {data:d.rev,kind:'line',axis:1,color:'#4CAF50'},
-    ],M12_LABELS,{height:340,legend:['Объем план 2027 (т)','Объем прогноз прошлого цикла (т)','Выручка план 2027 (млн руб.)','Выручка прогноз прошлого цикла (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
+    ],M12_LABELS,{height:340,legend:['План объёма 2027 (т)','Прогноз объёма 2027 (т)','План выручки 2027 (млн руб.)','Прогноз выручки 2027 (млн руб.)'],yTitle:'Объём (т)',y1Title:'Выручка (млн руб.)'});
     ins=OVERVIEW.insight2027;
   }
   const V=OVERVIEW.volYoy,R=OVERVIEW.revYoy,A=OVERVIEW.accuracy;
@@ -88,7 +98,7 @@ function vOverview(){
     {data:Array(A.labels.length).fill(A.target),color:'#D93025',dash:true},
   ],A.labels,{height:280,legend:['Точность (%)','Целевая точность'],max:12});
   return kpis('overview')
-    +card('📈 Объем и выручка: факт и план',sw('ovp',[['2026','2026 год'],['2027','2027 год']])+canvas('c-ovperf','Столбчато-линейный график объема и выручки: план, факт, прогноз')+insight(ins)+tbl('tbl-ov-perf',perfH,perfRows(m)))
+    +card('📈 Объём и выручка: факт и план',sw('ovp',[['2025','2025 год'],['2026','2026 год'],['2027','2027 год']])+canvas('c-ovperf','Столбчато-линейный график объёма и выручки: план, факт, прогноз')+insight(ins)+(p==='2026'?tbl('tbl-ov-perf',perfH,perfRows(m)):''))
     +`<div class="grid">`
     +card('📊 Объем: сравнение с прошлым годом',canvas('c-ovyoy','Столбчатая диаграмма: объем 2025 и 2026 по кварталам')+insight(V.insight)+tbl('tbl-vol-yoy',V.heads,V.rows))
     +card('💰 Выручка и маржа: сравнение с прошлым годом',canvas('c-ovrev','Столбчато-линейный график: выручка и маржа по кварталам')+insight(R.insight)+tbl('tbl-rev-yoy',R.heads,R.rows))
@@ -98,19 +108,32 @@ function vOverview(){
 }
 
 /* ═══════════════ 1. Сегментация ═══════════════ */
+function segMatrixHTML(){
+  const M=SEGMENTS.matrix,off=ui.segOff||new Set();
+  const X=v=>Math.max(1.5,Math.min(98.5,v/M.maxX*100));
+  const Y=v=>Math.max(2,Math.min(98,(v-M.minY)/(M.maxY-M.minY)*100));
+  const dots=M.data.map((d,i)=>{const r=12+Math.sqrt(Math.abs(d.marginMln))*7;
+    const dim=off.has(d.cls)?' dim':'';
+    const tip=`<b>${esc(d.name)}</b><br><span class="r">${esc(d.channel)}</span><br>Ценность: ${NF(d.value,1)} млн руб/год<br>Валовая маржа: ${NF(d.margin,0)}% · ${NF(d.marginMln,1)} млн руб.<br>Cost-to-serve: ${NF(d.cost,0)}% · Сервис: ${NF(d.service,0)}%<br>Приоритет: ${esc(d.priority)}`;
+    return `<div class="sm-dot sm-${d.cls}${dim}" data-smtip="${esc(tip)}" style="left:${X(d.value)}%;bottom:${Y(d.margin)}%;width:${r}px;height:${r}px">${r>26?esc(d.name.split(' ')[0]):''}</div>`;}).join('');
+  const splitLeft=X(M.splitX),splitBottom=Y(M.splitY);
+  const legend=Object.entries(M.segLabels).map(([cls,lbl])=>`<button data-segtoggle="${cls}" class="${off.has(cls)?'off':''}"><i class="sm-${cls}" style="background:${({strategic:'#4CAF50',core:'#20A7C9',perspective:'#FF9800',transactional:'#D93025',outlier:'#9C27B0'})[cls]}"></i>${lbl}</button>`).join('');
+  return `<div class="segmatrix">`
+    +`<div class="sm-quad sm-q-tl" style="width:${splitLeft}%;height:${100-splitBottom}%"><span>Растить ↗</span></div>`
+    +`<div class="sm-quad sm-q-tr" style="width:${100-splitLeft}%;height:${100-splitBottom}%;left:${splitLeft}%"><span>Защищать ★</span></div>`
+    +`<div class="sm-quad sm-q-bl" style="width:${splitLeft}%;height:${splitBottom}%"><span>Транзакционные</span></div>`
+    +`<div class="sm-quad sm-q-br" style="width:${100-splitLeft}%;height:${splitBottom}%;left:${splitLeft}%"><span>Оптимизировать маржу</span></div>`
+    +`<div class="sm-plot">${dots}</div>`
+    +`<div class="sm-axis-x">Ценность клиента → выручка, млн руб/год</div>`
+    +`<div class="sm-axis-y">Валовая маржа, %</div>`
+    +`</div><div class="sm-legend">${legend}</div>`;
+}
 function vSegments(){
   const S=SEGMENTS;
-  const bubbles='<div class="bubblemap">'
-    +'<div class="zone zone-strategic"><span>Стратегические</span></div>'
-    +'<div class="zone zone-core"><span>Ядро</span></div>'
-    +'<div class="zone zone-perspective"><span>Перспективные</span></div>'
-    +'<div class="zone zone-transactional"><span>Транзакционные</span></div>'
-    +S.bubbles.map(b=>`<div class="bubble bubble-${b.cls}" style="${b.st}" title="${esc(b.t)}">${b.n}<br>${b.v}</div>`).join('')
-    +'</div>';
   J('#c-segrev','donut',[S.revDonut.data],S.revDonut.labels,{height:300,colors:['#4CAF50','#20A7C9','#FF9800','#D93025','#9C27B0']});
   J('#c-segcost','stacked',S.costStack.series.map(([n,d,c])=>({data:d,color:c})),S.costStack.labels,{height:300,legend:S.costStack.series.map(x=>x[0])});
   return kpis('segments')
-    +card('📊 Сегментация клиентов',bubbles+insight(S.bubbleInsight)+tbl('tbl-seg',S.clients.heads,S.clients.rows))
+    +card('📊 Сегментация клиентов · матрица «маржа × ценность» (2026)',segMatrixHTML()+insight(S.matrix.insight)+insight(S.bubbleInsight)+tbl('tbl-seg',S.clients.heads,S.clients.rows))
     +`<div class="grid">`
     +card('🥧 Распределение выручки по сегментам',canvas('c-segrev','Кольцевая диаграмма распределения выручки по сегментам')+insight(S.revDonut.insight)+tbl('tbl-rev',S.revDonut.heads,S.revDonut.rows))
     +card('📊 Структура затрат по сегментам за текущий год',canvas('c-segcost','Стековая диаграмма структуры затрат по сегментам')+insight(S.costStack.insight)+tbl('tbl-cost',S.costStack.heads,S.costStack.rows))
@@ -119,25 +142,38 @@ function vSegments(){
 
 /* ═══════════════ 2. Спрос ═══════════════ */
 function vDemand(){
-  const D=DEMAND,p=ui.dmp??'2026';
+  if(ui.dmp==null)ui.dmp='2026';
+  const D=DEMAND,p=ui.dmp;
+  let dins='';
   if(p==='2026'){
     const facts=MONTHLY.filter(r=>r.type==='Факт'),unc=[32500,33750,33750];
     const vol=[...facts.map(r=>r.vol),...unc],rev=[...facts.map(r=>r.rev),...unc.map(v=>v*8200/1_000_000)];
     const pc=[...facts.map(()=>'#20A7C9'),...unc.map(()=>'#90CAF9')];
     J('#c-demand','combo',[
-      {data:MONTHLY.map(r=>r.planVol),kind:'bar',color:'#e8ecef'},
+      {data:MONTHLY.map(r=>r.planVol),kind:'bar',color:'#e3e7ec'},
       {data:vol,kind:'bar',pointColors:pc,color:'#20A7C9'},
-      {data:MONTHLY.map(r=>r.planRev),kind:'line',axis:1,color:'#8c9bae',dash:true},
+      {data:MONTHLY.map(r=>r.planRev),kind:'line',axis:1,color:'#9aa6b6',dash:true},
       {data:rev,kind:'line',axis:1,color:'#D93025'},
-    ],M12_LABELS,{height:340,legend:['План объема (т)','Факт / неограниченный спрос (т)','План выручки (млн руб.)','Факт/Прогноз выручки (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
+    ],M12_LABELS,{height:340,legend:['План объёма (т)','Факт / неогр. спрос (т)','План выручки (млн руб.)','Факт/прогноз выручки (млн руб.)'],yTitle:'Объём (т)',y1Title:'Выручка (млн руб.)'});
+    dins=D.insight2026;
+  }else if(p==='2025'){
+    const d=D.demand2025;
+    J('#c-demand','combo',[
+      {data:d.planVol,kind:'bar',color:'#e3e7ec'},
+      {data:d.demand,kind:'bar',color:'#20A7C9'},
+      {data:d.planRev,kind:'line',axis:1,color:'#9aa6b6',dash:true},
+      {data:d.rev,kind:'line',axis:1,color:'#4CAF50'},
+    ],M12_LABELS,{height:340,legend:['План объёма 2025 (т)','Факт объёма 2025 (т)','План выручки 2025 (млн руб.)','Факт выручки 2025 (млн руб.)'],yTitle:'Объём (т)',y1Title:'Выручка (млн руб.)'});
+    dins=D.insight2025;
   }else{
     const d=D.demand2027;
     J('#c-demand','combo',[
-      {data:d.planVol,kind:'bar',color:'#e8ecef'},
+      {data:d.planVol,kind:'bar',color:'#e3e7ec'},
       {data:d.demand,kind:'bar',color:'#90CAF9'},
       {data:d.planRev,kind:'line',axis:1,color:'#8c9bae',dash:true},
       {data:d.rev,kind:'line',axis:1,color:'#4CAF50'},
-    ],M12_LABELS,{height:340,legend:['План объема 2027 (т)','Неограниченный спрос 2027 (т)','План выручки 2027 (млн руб.)','Прогноз выручки 2027 (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'});
+    ],M12_LABELS,{height:340,legend:['План объёма 2027 (т)','Неогр. спрос 2027 (т)','План выручки 2027 (млн руб.)','Прогноз выручки 2027 (млн руб.)'],yTitle:'Объём (т)',y1Title:'Выручка (млн руб.)'});
+    dins=D.insight2027;
   }
   const W=D.waterfall,AC=D.accCat,B=D.bias,F=D.fva,SE=D.seasonal;
   J('#c-wf','waterfall',[W.values],W.labels,{height:280});
@@ -159,7 +195,7 @@ function vDemand(){
   const modelCards=D.models.map((m,i)=>`<article class="model champ"><h5>${m.name} <span class="badge">ЛУЧШАЯ</span></h5><canvas id="c-mini${i}" class="chart" role="img" aria-label="Мини-график: факт и прогноз модели ${esc(m.model)}"></canvas><div class="stat"><b>Модель:</b> ${m.model}</div><div class="stat"><b>Точность:</b> ${m.acc}</div><div class="stat"><b>Систематическая ошибка:</b> ${m.bias}</div><div class="stat"><b>Почему:</b> ${m.why}</div><div class="stat dim">${m.others}</div></article>`).join('')
     +`<article class="model"><h5>📊 Сводка по моделям</h5><div class="info">${D.modelsSummary.map(([k,v])=>`<div class="stat"><b>${k}</b> ${v}</div>`).join('')}</div><div class="info info-success">${D.modelsDecision}</div></article>`;
   return kpis('demand')
-    +card('📈 Спрос против годового бизнес-плана',sw('dmp',[['2026','2026 год'],['2027','2027 год']])+canvas('c-demand','Столбчато-линейный график спроса против плана')+insight(p==='2026'?D.insight2026:D.insight2027)+tbl('tbl-demand-period',D.periodTable.heads,D.periodTable.rows))
+    +card('📈 Спрос против годового бизнес-плана',sw('dmp',[['2025','2025 год'],['2026','2026 год'],['2027','2027 год']])+canvas('c-demand','Столбчато-линейный график спроса против плана')+insight(dins)+(p==='2026'?tbl('tbl-demand-period',D.periodTable.heads,D.periodTable.rows):''))
     +`<div class="grid">`
     +card('📉 Формирование согласованного прогноза',canvas('c-wf','Водопад: формирование согласованного прогноза')+insight(W.insight)+tbl('tbl-wf',W.heads,W.rows))
     +card('📊 Точность прогноза по категориям',canvas('c-accat','Столбчатая диаграмма точности прогноза по категориям')+insight(AC.insight)+tbl('tbl-acc2',AC.heads,AC.rows))
@@ -188,7 +224,7 @@ function vStock(){
     {data:IP.actual,color:'#1a2b4a',fill:true},
   ],IP.labels,{height:340,legend:['Страховой запас','Точка заказа','Целевой запас','Запас на конец периода'],yTitle:'т',max:120000});
   const DD=S.dead[dm];
-  J('#c-dead','bar',DD.series.map(([n,d,c])=>({data:d,color:c})),DD.labels,{height:280,legend:DD.series.map(x=>x[0]),yTitle:DD.unit});
+  J('#c-dead','hbar',DD.series.map(([n,d,c])=>({data:d,color:c})),DD.labels,{height:300,legend:DD.series.map(x=>x[0])});
   const AX=S.abcxyz;
   J('#c-abc','scatter',AX.scatter.map(s=>({data:s.points,color:s.color,r:7})),[],{height:340,legend:AX.scatter.map(s=>s.name),xTitle:'Вариативность спроса (XYZ)',yTitle:'Доля маржи (ABC)'});
   J('#c-mto','donut',[S.mtomts.data],S.mtomts.labels,{height:340,colors:S.mtomts.colors});
@@ -206,17 +242,34 @@ function vStock(){
 }
 
 /* ═══════════════ 4. Поставки ═══════════════ */
-function mapHTML(){
-  const R=SUPPLY.mapRows;
-  const conn=(x1,y1,x2,y2,cls)=>{const dx=x2-x1,dy=y2-y1,d=Math.round(Math.hypot(dx,dy)),a=(Math.atan2(dy,dx)*180/Math.PI).toFixed(1);return `<div class="map-connection ${cls}" style="width:${d}px;left:${x1}px;top:${y1}px;transform:rotate(${a}deg)"></div>`;};
-  let h='<div class="map-inner">';
-  R.forEach(row=>{h+=`<div class="map-row-label" style="top:${row.y+30}px">${row.label}</div>`;});
-  R[0].nodes.forEach((s,i)=>{const p=R[1].nodes[i%R[1].nodes.length];h+=conn(s.x+35,R[0].y+30,p.x+35,R[1].y+30,'rail');});
-  R[1].nodes.forEach((p,i)=>{const w=R[2].nodes[i];if(w)h+=conn(p.x+35,R[1].y+30,w.x+35,R[2].y+30,'auto');});
-  R[2].nodes.forEach((w,i)=>{const c3=R[3].nodes[i*2]||R[3].nodes[0];h+=conn(w.x+35,R[2].y+30,c3.x+35,R[3].y+30,(w.r||c3.r)?'restricted':'auto');});
-  R.forEach(row=>{row.nodes.forEach(n=>{const nm=n.n.split('|').join(' ');
-    h+=`<div class="map-node${n.r?' restricted':''}" style="left:${n.x}px;top:${row.y}px" title="${esc(nm)}${n.r?' | Ограничение: '+esc(n.r):''}"><div class="node-icon">${n.icon}</div><div class="node-name">${n.n.split('|').join('<br>')}</div>${n.r?`<div class="restriction-badge">${n.r}</div>`:''}</div>`;});});
-  return h+'</div>';
+/* Интерактивная схема-граф цепочки поставок (SVG): узлы → потоки, подсветка ограничений */
+function chainGraphHTML(){
+  const R=SUPPLY.mapRows;const VW=1440,NW=92,NH=48,leftPad=118,rightPad=24,top=52,rowGap=120;
+  const VH=top+rowGap*(R.length-1)+NH+40;
+  const cx=(tierIdx,i)=>{const c=R[tierIdx].nodes.length;return leftPad+(i+0.5)*((VW-leftPad-rightPad)/c);};
+  const cy=t=>top+t*rowGap+NH/2;
+  const RAIL='#9000ff',AUTO='#ff9a3b',BAD='#f22a41';
+  let edges='',nodes='',labels='';
+  const edge=(x1,y1,x2,y2,color,bad)=>`<line x1="${x1.toFixed(1)}" y1="${(y1+NH/2).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${(y2-NH/2).toFixed(1)}" stroke="${bad?BAD:color}" stroke-width="${bad?2.4:1.6}" ${bad?'stroke-dasharray="6 4"':''} opacity="${bad?0.9:0.5}"/>`;
+  // t0 -> t1 (rail)
+  R[0].nodes.forEach((s,i)=>{const p=i%R[1].nodes.length;edges+=edge(cx(0,i),cy(0),cx(1,p),cy(1),RAIL,!!(s.r||R[1].nodes[p].r));});
+  // t1 -> t2 (auto)
+  R[1].nodes.forEach((p,i)=>{const w=Math.min(i,R[2].nodes.length-1);edges+=edge(cx(1,i),cy(1),cx(2,w),cy(2),AUTO,!!(p.r||R[2].nodes[w].r));});
+  // t2 -> t3 (auto, fan to 2 hubs)
+  R[2].nodes.forEach((w,i)=>{[i*2,i*2+1].forEach(k=>{const c3=R[3].nodes[k];if(!c3)return;edges+=edge(cx(2,i),cy(2),cx(3,k),cy(3),AUTO,!!(w.r||c3.r));});});
+  R.forEach((row,t)=>{
+    labels+=`<text x="10" y="${(cy(t)+3).toFixed(1)}" font-size="12" font-weight="700" fill="#5a5a5c">${esc(row.label)}</text>`;
+    row.nodes.forEach((n,i)=>{const x=cx(t,i)-NW/2,y=top+t*rowGap;const nm=n.n.split('|');
+      const tip=`<b>${esc(n.n.split('|').join(' '))}</b><br><span class="r">${esc(row.label)}</span>${n.r?`<br>🔴 Ограничение: ${esc(n.r)}`:'<br>🟢 Без ограничений'}`;
+      nodes+=`<g class="cg-node" data-smtip="${esc(tip)}">`
+        +`<rect x="${x.toFixed(1)}" y="${y}" width="${NW}" height="${NH}" rx="7" fill="${n.r?'#fff5f6':'#ffffff'}" stroke="${n.r?BAD:'#dedce5'}" stroke-width="${n.r?2:1.2}"/>`
+        +`<text x="${(x+NW/2).toFixed(1)}" y="${y+19}" text-anchor="middle" font-size="15">${n.icon}</text>`
+        +`<text x="${(x+NW/2).toFixed(1)}" y="${y+32}" text-anchor="middle" font-size="8.5" fill="#5a5a5c">${esc(nm[0])}</text>`
+        +(nm[1]?`<text x="${(x+NW/2).toFixed(1)}" y="${y+42}" text-anchor="middle" font-size="8.5" fill="#8c9096">${esc(nm[1])}</text>`:'')
+        +(n.r?`<rect x="${(x+NW-30).toFixed(1)}" y="${y-8}" width="34" height="15" rx="4" fill="${BAD}"/><text x="${(x+NW-13).toFixed(1)}" y="${y+3}" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">${esc(String(n.r).replace(/[^0-9−\-]/g,'').slice(0,6)||'!')}</text>`:'')
+        +`</g>`;});});
+  return `<div class="chaingraph"><svg class="cg-svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Схема цепочки поставок">${edges}${labels}${nodes}</svg>`
+    +`<div class="cg-legend"><span><i style="border-top-color:${RAIL}"></i>ЖД / поставка сырья</span><span><i style="border-top-color:${AUTO}"></i>Авто-логистика</span><span><i style="border-top-color:${BAD};border-top-style:dashed"></i>Поток с ограничением</span><span><span class="dotc" style="background:#fff5f6;border:2px solid ${BAD}"></span>Узел с ограничением</span></div></div>`;
 }
 const fmtM1=v=>Number(v).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1}).replace('-','−');
 function hmCell(cell,mode,scen){
@@ -245,7 +298,7 @@ function hmTable(scen,mode){
 function vSupply(){
   const S=SUPPLY;
   const gap=S.gap.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div></div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.pct?` <small>${r.pct}</small>`:''}</div></div>`).join('');
-  J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:220});
+  J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:240});
   J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:380,legend:S.radar.series.map(x=>x[0]),max:120});
   const F=S.fan;
   J('#c-fan','band',[
@@ -254,10 +307,10 @@ function vSupply(){
     {data:F.worst,color:'#8c9bae'},
   ],F.labels,{height:340,legend:['Лучший (+18%, маржа 25,8%)','Базовый (маржа 24,0%)','Худший (−12%, маржа 19,5%)'],yTitle:'Объем (т)'});
   const fanRows=F.labels.map((m,i)=>[m,String(F.worst[i]),String(F.base[i]),String(F.best[i]),F.marginWorst[i],'24,0%',F.marginBest[i],F.drivers[i]]);
-  const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4><div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</article>`).join('');
+  const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4>${s.rank?`<div class="scen-rank">${s.rank}</div>`:''}<div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</article>`).join('');
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
   const methKey=(hs==='A'?'A':'B')+(hm==='cov'?'cov':'mrg');
-  const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Маржинальный)']])
+  const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Фокус на марже)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
     +(hs!=='A'?info('primary',S.kpiNote):'')
     +info('primary',S.heatmapMethodology[methKey])
@@ -266,14 +319,14 @@ function vSupply(){
     +insight(hs==='A'?S.heatmapInsights[hm]:S.heatmapInsights.delta)
     +tbl('tbl-heatmap',HEATMAP.flatTable.heads,HEATMAP.flatTable.rows);
   return kpis('supply')
-    +card('🏭 Карта цепочки поставок и ограничений',info('primary',S.mapDesc)+`<div class="supplymap">${mapHTML()}</div>`
-      +`<div class="info info-danger"><b>🔴 Валовый разрыв цепочки: −25 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
+    +card('🏭 Карта цепочки поставок и ограничений',info('primary',S.mapDesc)+chainGraphHTML()
+      +`<div class="info info-danger"><b>🔴 Разрыв цепочки без митигации: −25 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows))
-    +card('📊 Базовый сценарий покрытия спроса',info('primary',S.gap.methodology)+`<div class="gap-chart">${gap}</div>`
-      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 12 500 т</b><br>${S.gap.reasons}`)
+    +card('📊 Покрытие спроса без митигации',info('primary',S.gap.methodology)+`<div class="gap-chart">${gap}</div>`
+      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 25 000 т</b> · доступно 75 000 из 100 000 т<br>${S.gap.reasons}`)
       +tbl('tbl-gap',S.gap.table.heads,S.gap.table.rows))
     +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
-    +`<h3 class="section-h">🎯 Сценарии покрытия спроса</h3><div class="grid-3">${scenCards}</div>`
+    +`<h3 class="section-h">🎯 Сценарии покрытия спроса (митигация разрыва внутри сценария)</h3><div class="grid-3">${scenCards}</div>`
     +card('📊 Сравнение сценариев: объем против маржи',canvas('c-radar','Радарная диаграмма сравнения сценариев')+insight(S.radar.insight)+tbl('tbl-scen',S.radar.heads,S.radar.rows))
     +card('🌊 Сценарное планирование: лучший / базовый / худший (18 месяцев)',canvas('c-fan','Веерный график сценариев на 18 месяцев')+insight(F.insight)+tbl('tbl-fan',F.heads,fanRows))
     +card('🗺️ Тепловая карта по клиентам и продуктам (4 квартал 2026)',heatmapHtml);
@@ -281,17 +334,29 @@ function vSupply(){
 
 /* ═══════════════ 5. Планы ═══════════════ */
 function vPlans(){
-  const q=ui.pq??'all',pl=ui.plan??'sales';
-  const [a,b]=(QRANGE[q]||QRANGE.all);
+  if(ui.pq==null)ui.pq='all';
+  const pl=ui.plan??'sales';
+  const q=ui.pq;
+  const [a,b]=planRange(q,ui.pcFrom,ui.pcTo);
   const P=PLANS[pl],cdef=P.chart(a,b);
   J('#c-plan',cdef.type,cdef.series,cdef.labels,cdef.opts);
-  return kpis('plans')
-    +card('📊 Планы на горизонт 18 месяцев (Окт 2026 – Мар 2028)',
-      sw('pq',QUARTERS)
-      +`<div class="switch">${Object.entries(PLANS).map(([id,p])=>`<button class="${pl===id?'active':''}" data-sw="plan" data-val="${id}">${p.tab}</button>`).join('')}</div>`
-      +canvas('c-plan','График: '+P.tab)
+  const view=planView(pl,a,b);
+  const kpiStrip=`<section class="kpis">${view.kpis.map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div></article>`).join('')}</section>`;
+  // быстрые фильтры + выбор произвольного периода
+  const monthOpts=(sel)=>MONTHS18.map((m,i)=>`<option value="${i}"${i===sel?' selected':''}>${m}</option>`).join('');
+  const cf=Math.max(0,Math.min(17,+ui.pcFrom||0)),ct=Math.max(cf,Math.min(17,ui.pcTo==null?2:+ui.pcTo));
+  const custom=`<div class="pb-custom"><span>Произвольный период:</span><select data-pcustom="from">${monthOpts(cf)}</select><span>—</span><select data-pcustom="to">${monthOpts(ct)}</select></div>`;
+  const periodBar=`<div class="periodbar"><span class="pb-lbl">Период планирования</span>`
+    +`<div class="switch">${PLAN_PERIODS.map(([v,l])=>`<button class="${q===v?'active':''}" data-sw="pq" data-val="${v}">${l}</button>`).join('')}</div>`
+    +custom
+    +`</div><div class="pb-summary">Показан период: <b>${MONTHS18[a]} – ${MONTHS18[b-1]}</b> (${b-a} мес.). Карточки, график и таблица обновляются вместе.</div>`;
+  return periodBar
+    +`<div class="switch" style="margin-bottom:12px">${Object.entries(PLANS).map(([id,p])=>`<button class="${pl===id?'active':''}" data-sw="plan" data-val="${id}">${p.tab}</button>`).join('')}</div>`
+    +kpiStrip
+    +card('📊 '+P.tab+' · '+MONTHS18[a]+' – '+MONTHS18[b-1],
+      canvas('c-plan','График: '+P.tab)
       +insight(P.insight)
-      +tbl('tbl-plan-'+pl,P.table.heads,P.table.rows));
+      +tbl('tbl-plan-'+pl,view.table.heads,view.table.rows));
 }
 
 /* ═══════════════ 6. Действия ═══════════════ */
@@ -327,11 +392,19 @@ function render(){
   const t=C.tabs.find(x=>x.id===tab)||C.tabs[0];
   document.title=C.title;
   document.querySelector('#app').innerHTML=`<div class="app">`
+    +`<div class="topbar">`
+      +`<a class="brand" href="#" title="In.Plan · интегрированное бизнес-планирование">`
+        +`<span class="brand-badge"><i class="bb1"></i><i class="bb2"></i><i class="bb3"></i><i class="bb4"></i></span>`
+        +`<span><span class="brand-name">In<span>.</span>Plan</span><span class="brand-tag">S&amp;OP / IBP · Цикл Октябрь 2026</span></span></a>`
+      +`<div class="topbar-actions">`
+        +`<button class="tb-btn" id="upload" data-tip="Загрузить Excel (лист S&OP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button>`
+        +`<input type="file" id="xlsx" accept=".xlsx,.xls" hidden>`
+        +`<button class="tb-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button>`
+      +`</div></div>`
     +`<nav class="topnav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav>`
     +`<div class="wrap">`
-    +`<header><div class="hdr-left"><div><h1>${C.title}</h1><div class="h-sub">${t.label} · Цикл: Октябрь 2026</div></div></div>`
-    +`<div class="stat">${summ.rows} строк данных<br>${summ.custom?'Источник: загруженный XLSX':'Источник: демо-данные'}</div>`
-    +`<div class="hdr-actions"><button class="icon-btn" id="upload" data-tip="Загрузить Excel (лист SIOP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button><input type="file" id="xlsx" accept=".xlsx,.xls" hidden><button class="icon-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button></div></header>`
+    +`<header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${esc(t.desc||C.subtitle)}</div></div></div>`
+    +`<div class="stat">${summ.rows} строк данных · ${summ.custom?'источник: загруженный XLSX':'источник: демо-данные'}</div></header>`
     +`<div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div>`
     +`<main id="content"></main></div></div>`;
   renderContent();
@@ -349,6 +422,8 @@ async function readXlsx(e){
 document.addEventListener('click',e=>{
   const tb=e.target.closest('[data-tab]');
   if(tb){tab=tb.dataset.tab;storage.set('tab',tab);render();window.scrollTo({top:0,behavior:'smooth'});return;}
+  const sg=e.target.closest('[data-segtoggle]');
+  if(sg){if(!ui.segOff)ui.segOff=new Set();const c=sg.dataset.segtoggle;ui.segOff.has(c)?ui.segOff.delete(c):ui.segOff.add(c);renderContent();return;}
   const s=e.target.closest('[data-sw]');
   if(s){ui[s.dataset.sw]=s.dataset.val;renderContent();return;}
   const tg=e.target.closest('[data-toggle]');
@@ -357,7 +432,27 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#upload')){const inp=document.querySelector('#xlsx');if(inp)inp.click();return;}
   if(e.target.closest('#reset')){data=MONTHLY;Object.keys(ui).forEach(k=>delete ui[k]);open.clear();render();return;}
 });
-document.addEventListener('change',e=>{if(e.target.id==='xlsx')readXlsx(e);});
+document.addEventListener('change',e=>{
+  if(e.target.id==='xlsx'){readXlsx(e);return;}
+  const pc=e.target.closest?.('[data-pcustom]');
+  if(pc){const which=pc.dataset.pcustom,v=+pc.value;
+    if(which==='from'){ui.pcFrom=v;if((ui.pcTo==null?2:ui.pcTo)<v)ui.pcTo=v;}
+    else{ui.pcTo=v;if((ui.pcFrom||0)>v)ui.pcFrom=v;}
+    ui.pq='custom';renderContent();return;}
+});
+/* ── Плавающий информационный тултип для расчётных показателей [data-info] ── */
+function infoTipEl(){let t=document.getElementById('__infoTip');if(!t){t=document.createElement('div');t.id='__infoTip';
+  t.style.cssText='position:fixed;z-index:10000;pointer-events:none;display:none;background:#1f1f20;color:#fff;'
+    +"font:400 12px/1.55 'Open Sans',sans-serif;padding:9px 11px;border-radius:6px;max-width:300px;"
+    +'box-shadow:0 8px 28px rgba(0,0,0,.32)';document.body.appendChild(t);}return t;}
+function moveInfoTip(x,y){const t=document.getElementById('__infoTip');if(!t||t.style.display==='none')return;
+  const w=t.offsetWidth,h=t.offsetHeight,vw=innerWidth,vh=innerHeight;let nx=x+14,ny=y+14;
+  if(nx+w>vw-8)nx=x-w-14;if(ny+h>vh-8)ny=y-h-14;t.style.left=Math.max(6,nx)+'px';t.style.top=Math.max(6,ny)+'px';}
+document.addEventListener('mouseover',e=>{const el=e.target.closest?.('[data-info],[data-smtip]');if(!el)return;
+  const t=infoTipEl();const html=el.getAttribute('data-smtip');if(html!=null)t.innerHTML=html;else t.textContent=el.getAttribute('data-info');
+  t.style.display='block';moveInfoTip(e.clientX,e.clientY);});
+document.addEventListener('mousemove',e=>{if(e.target.closest?.('[data-info],[data-smtip]'))moveInfoTip(e.clientX,e.clientY);});
+document.addEventListener('mouseout',e=>{if(e.target.closest?.('[data-info],[data-smtip]')){const t=document.getElementById('__infoTip');if(t)t.style.display='none';}});
 /* перерисовка canvas при изменении ширины (дебаунс) */
 let rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(renderContent,220);});
