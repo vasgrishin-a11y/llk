@@ -12,9 +12,8 @@
    Расширяемый реестр типов ядра: новые отрисовщики добавляются сюда же,
    без смены API (см. README). */
 const PALETTE=['#20A7C9','#4CAF50','#FF9800','#D93025','#8c9bae','#90CAF9','#9C27B0','#1a2b4a'];
-const DARK_ADAPT={'#1a2b4a':'#8fb0e8','#e8ecef':'#4b5563','#f0f2f5':'#4b5563'};
 export const CHART_TYPES=['line','bar','stacked','hbar','combo','area','waterfall','band','donut','radar','scatter'];
-const FONT='system-ui,-apple-system,sans-serif';
+const FONT="'Open Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
 const nf=(v,d=0)=>Number(v||0).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
 const fm=v=>{const a=Math.abs(v);if(a>=10000)return nf(v/1000,0)+' тыс.';if(a>=1000)return nf(v/1000,1)+' тыс.';return nf(v,Number.isInteger(v)?0:1);};
 
@@ -26,8 +25,7 @@ export function drawChart(canvas,type,series,labels=[],opts={}){
   const MUTED=(css.getPropertyValue('--muted')||'').trim()||'#64748b';
   const LINE=(css.getPropertyValue('--line')||'').trim()||'#dbe4ef';
   const CARD=(css.getPropertyValue('--card')||'').trim()||'#ffffff';
-  const dark=doc&&doc.dataset&&doc.dataset.theme==='dark';
-  const adapt=c=>{if(!c||typeof c!=='string')return c;const k=c.toLowerCase();return dark&&DARK_ADAPT[k]?DARK_ADAPT[k]:c;};
+  const adapt=c=>c; // только светлая тема — палитра используется как есть
   const pal=(opts.colors||PALETTE).map(adapt);
   const S=(series||[]).map((s,i)=>{const o=Array.isArray(s)?{data:s}:Object.assign({},s);o.data=o.data||[];o.color=adapt(o.color||pal[i%pal.length]);o.kind=o.kind||(type==='combo'?'bar':'line');if(o.pointColors)o.pointColors=o.pointColors.map(adapt);return o;});
   const H=opts.height||280,W=Math.max(canvas.clientWidth||0,240),dpr=2;

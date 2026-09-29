@@ -58,10 +58,14 @@ test('приложение рендерит все вкладки и их эле
   assert.match($('#content').textContent,/План запасов: Запасы снижаются/);
   assert.match($('#content').textContent,/4 кв\. 2026 в среднем/); // квартальный фильтр срезал горизонт до Окт–Дек
 
-  // тема и сброс
+  // только светлая тема: переключателя темы нет
   click('[data-tab="actions"]');
-  click('#theme');
-  assert.equal(w.document.documentElement.dataset.theme,'dark');
+  assert.ok(!$('#theme'),'переключатель темы удалён — единственная тема светлая');
+  assert.ok($('.rail-nav'),'меню сверху (тёмный рельс), сайдбара нет');
+  assert.ok(!$('.side'),'бокового меню нет');
+  // действия в шапке — икон-кнопки
+  assert.ok($('#upload.icon-btn'),'загрузка Excel — икон-кнопка');
+  assert.ok($('#reset.icon-btn'),'сброс — икон-кнопка');
   click('#reset');
   assert.ok($('[data-tab="overview"]'),'сброс вернул обзор');
 });

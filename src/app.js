@@ -1,7 +1,7 @@
 /* ═══════════════ Дашборд ОППиУ «Лубри-Тех» — компоновка экранов ═══════════════
    Тот же подход, что и в базовом шаблоне: config.js задаёт вкладки/KPI,
    data.js — загружаемое ядро данных (XLSX), datasets.js — отчётные демо-данные,
-   charts.js — canvas-рендеринг. Состояние (вкладка, тема, меню) — в localStorage,
+   charts.js — canvas-рендеринг. Состояние (вкладка) — в localStorage,
    локальные переключатели вкладок — в `ui` (в памяти), открытые таблицы — `open`. */
 import {DASHBOARD_CONFIG as C} from './config.js';
 import {MONTHLY,normalizeRows,summary} from './data.js';
@@ -322,7 +322,9 @@ function vQuality(){
     +card('📋 Текущий набор данных',tbl('tbl-quality',['Период','Тип','План объема','Объем','План выручки','Выручка','Цена','Статус'],data.map(r=>({cells:[esc(r.period),esc(r.type),N(r.planVol),N(r.vol),NF(r.planRev),NF(r.rev),N(r.price),r.valid?'🟢 ОК':'🔴 Ошибка'],cls:r.valid?'':'dead'}))));
 }
 
-/* ═══════════════ Каркас ═══════════════ */
+/* ═══════════════ Каркас: верхний рельс-меню + шапка (стиль In.Plan) ═══════════════
+   Меню только сверху (сайдбара нет), единственная тема — светлая,
+   действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
 const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions,quality:vQuality};
 function renderContent(){
   jobs=[];
@@ -331,11 +333,14 @@ function renderContent(){
   jobs.forEach(([sel,...rest])=>drawChart(el.querySelector(sel),...rest));
   jobs=[];
 }
+const ICON_UPLOAD='<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+const ICON_RESET='<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+const BADGE='<div class="inplan-badge" title="Лубри-Тех · ОППиУ"><span class="ip-sq ip-s1"></span><span class="ip-sq ip-s2"></span><span class="ip-sq ip-s3"></span><span class="ip-sq ip-s4"></span></div>';
 function render(){
   summ=summary(data);
   const t=C.tabs.find(x=>x.id===tab)||C.tabs[0];
   document.title=C.title;
-  document.querySelector('#app').innerHTML=`<div class="app"><aside class="side ${storage.get('compact',false)?'compact':''}"><div class="brand"><span class="label">${C.brand}</span><small> ${C.brandSub}</small></div><nav>${C.tabs.map(x=>`<button class="${x.id===tab?'active':''}" data-tab="${x.id}">▸ <span class="label">${x.label}</span></button>`).join('')}</nav><button id="compact" title="Положение меню">☰ <span class="label">Меню</span></button></aside><main><header class="top"><div><h1>${t.label}</h1><div class="muted">${C.subtitle} · ${summ.rows} строк данных${summ.custom?' (XLSX)':' (демо)'}</div><div class="context">${C.context.map(([k,v])=>`<span class="chip">${k}: <b>${v}</b></span>`).join('')}</div></div><div class="actions"><button id="theme">☾ Тема</button><label><button>Загрузить XLSX<input id="xlsx" type="file" accept=".xlsx,.xls" hidden></button></label><button id="reset">Сбросить</button></div></header><div id="content"></div></main></div>`;
+  document.querySelector('#app').innerHTML=`<div class="app"><aside class="rail"><div class="rail-logo">${BADGE}</div><div class="rail-brand"><span class="rb-t">Дашборд ОППиУ</span><span class="rb-s">Лубри-Тех · интегрированный план</span></div><nav class="rail-nav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav><div class="rail-ver">Цикл: <b>Октябрь 2026</b></div></aside><header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${C.subtitle}</div></div></div><div class="stat">${summ.rows} строк данных<br>${summ.custom?'Источник: загруженный XLSX':'Источник: демо-данные'}</div><div class="hdr-actions"><button class="icon-btn" id="upload" data-tip="Загрузить Excel (лист SIOP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button><input type="file" id="xlsx" accept=".xlsx,.xls" hidden><button class="icon-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button></div></header><div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div><main id="content"></main></div>`;
   renderContent();
 }
 async function readXlsx(e){
@@ -356,13 +361,11 @@ document.addEventListener('click',e=>{
   const tg=e.target.closest('[data-toggle]');
   if(tg){const id=tg.dataset.toggle;if(open.has(id))open.delete(id);else open.add(id);
     const w=document.getElementById(id);if(w){w.classList.toggle('show');tg.textContent=w.classList.contains('show')?'📋 Скрыть данные ▲':'📋 Данные ▼';}return;}
-  if(e.target.closest('#theme')){const n=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=n;storage.set('theme',n);renderContent();return;}
-  if(e.target.closest('#compact')){storage.set('compact',!storage.get('compact',false));render();return;}
+  if(e.target.closest('#upload')){const inp=document.querySelector('#xlsx');if(inp)inp.click();return;}
   if(e.target.closest('#reset')){data=MONTHLY;Object.keys(ui).forEach(k=>delete ui[k]);open.clear();render();return;}
 });
 document.addEventListener('change',e=>{if(e.target.id==='xlsx')readXlsx(e);});
 /* перерисовка canvas при изменении ширины (дебаунс) */
 let rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(renderContent,220);});
-document.documentElement.dataset.theme=storage.get('theme','light');
 render();
