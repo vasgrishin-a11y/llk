@@ -20,6 +20,18 @@ const fm=v=>{const a=Math.abs(v);if(a>=10000)return nf(v/1000,0)+' тыс.';if(a
 export function drawChart(canvas,type,series,labels=[],opts={}){
   if(!canvas||typeof canvas.getContext!=='function')return;
   const ctx=canvas.getContext('2d');if(!ctx)return;
+  // Нативный tooltip по ближайшей точке графика — без тяжелой chart-библиотеки.
+  if(!canvas.__inplanInteractive && typeof canvas.addEventListener==='function'){
+    canvas.__inplanInteractive=true;
+    canvas.addEventListener('mousemove',e=>{
+      const rect=canvas.getBoundingClientRect(), x=e.clientX-rect.left;
+      const labels=canvas.__inplanLabels||[], rows=canvas.__inplanSeries||[];
+      if(!labels.length||!rows.length)return;
+      const i=Math.max(0,Math.min(labels.length-1,Math.round(x/Math.max(rect.width,1)*(labels.length-1))));
+      canvas.title=String(labels[i])+' — '+rows.map((s,n)=>{const v=(s.data||[])[i];return v==null?null:(canvas.__inplanLegend?.[n]||('Серия '+(n+1)))+': '+nf(v,Number.isInteger(v)?0:1)}).filter(Boolean).join(' · ');
+    });
+  }
+  canvas.__inplanLabels=labels;canvas.__inplanSeries=series;canvas.__inplanLegend=opts.legend;
   const doc=typeof document!=='undefined'?document.documentElement:null;
   const css=doc&&typeof getComputedStyle==='function'?getComputedStyle(doc):{getPropertyValue:()=>''};
   const MUTED=(css.getPropertyValue('--muted')||'').trim()||'#64748b';
