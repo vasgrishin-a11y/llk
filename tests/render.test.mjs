@@ -56,9 +56,10 @@ test('приложение рендерит все рабочие вкладки
   click('[data-tab="actions"]');
   assert.ok(!$('#theme'),'переключателя темы нет');
   assert.ok($('.topnav'),'верхнее меню есть');
+  assert.ok($('.topbar .brand'),'брендовый топбар есть');
   assert.ok(!$('.rail'),'левого меню нет');
-  assert.ok($('#upload.icon-btn'),'загрузка Excel — икон-кнопка');
-  assert.ok($('#reset.icon-btn'),'сброс — икон-кнопка');
+  assert.ok($('#upload.tb-btn'),'загрузка Excel — икон-кнопка');
+  assert.ok($('#reset.tb-btn'),'сброс — икон-кнопка');
   click('#reset');
   assert.ok($('[data-tab="overview"]'),'сброс вернул обзор');
 });
