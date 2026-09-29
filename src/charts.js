@@ -101,18 +101,35 @@ function paint(canvas){
 
   /* ─────────── donut ─────────── */
   if(type==='donut'){
-    const vals=(S[0]?S[0].data:[]);const total=vals.reduce((a,b)=>a+(b||0),0)||1;
-    const lg=layoutLegend((labels&&labels.length?labels:vals.map((_,i)=>String(i+1))).map((l,i)=>l+' — '+nf(vals[i])+' ('+nf((vals[i]||0)/total*100,(vals[i]||0)%1?1:0)+'%)'));
+    const raw=(S[0]?S[0].data:[]).map(v=>v||0);
+    const labs=(labels&&labels.length?labels:raw.map((_,i)=>String(i+1)));
+    const shownTotal=raw.reduce((a,v,i)=>a+(st.hidden.has(i)?0:v),0)||1;
+    const lg=layoutLegend(raw.map((v,i)=>({
+      t:labs[i]+' — '+nf(v)+(st.hidden.has(i)?'':' ('+nf(v/shownTotal*100,1)+'%)'),
+      i,color:pal[i%pal.length],hidden:st.hidden.has(i)})));
     const cx=W/2,cy=(H-lg.h)/2+2,r=Math.min(W,H-lg.h)*0.36;let a0=-Math.PI/2;
-    geom.donut={cx,cy,r,r0:r*0.55,total,vals,labels:labels||[]};
-    vals.forEach((v,i)=>{const a1=a0+(v||0)/total*Math.PI*2;const on=st.hover===i;
-      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,on?r+4:r,a0,a1);ctx.closePath();ctx.fillStyle=pal[i%pal.length];ctx.fill();a0=a1;});
+    const arcs=[];
+    raw.forEach((v,i)=>{if(st.hidden.has(i))return;const a1=a0+v/shownTotal*Math.PI*2;const on=st.hover===i;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,on?r+5:r,a0,a1);ctx.closePath();
+      ctx.fillStyle=pal[i%pal.length];ctx.globalAlpha=st.hover==null||on?1:.55;ctx.fill();ctx.globalAlpha=1;
+      if(on){ctx.strokeStyle=CARD;ctx.lineWidth=2;ctx.stroke();}
+      arcs.push({i,a0,a1});a0=a1;});
+    geom.donut={cx,cy,r,r0:r*0.55,total:shownTotal,vals:raw,labels:labs,arcs};
     ctx.fillStyle=CARD;ctx.beginPath();ctx.arc(cx,cy,r*0.55,0,7);ctx.fill();
     ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.font=(compact?11:14)+'px '+FONT;
-    ctx.fillText(opts.center!=null?String(opts.center):fm(total),cx,cy+4);
+    ctx.fillText(opts.center!=null&&st.hidden.size===0?String(opts.center):fm(shownTotal),cx,cy+4);
+    if(opts.centerSub&&st.hidden.size===0){ctx.font=(compact?8:10)+'px '+FONT;ctx.fillStyle=MUTED;ctx.fillText(String(opts.centerSub),cx,cy+18);}
     ctx.font=fs+'px '+FONT;
-    // легенда доната
-    ctx.textAlign='left';lg.items.forEach(it=>{const y=(H-lg.h)+it.row*lg.lh+lg.lh-4;ctx.fillStyle=pal[it.i%pal.length];ctx.fillRect(it.x,y-lg.sw,lg.sw,lg.sw);ctx.fillStyle=MUTED;ctx.fillText(it.t,it.x+lg.sw+5,y);});
+    // легенда доната — кликабельная (скрыть/показать сегмент), с подсветкой при наведении
+    ctx.textAlign='left';geom.legendRects=[];
+    lg.items.forEach(it=>{const y=(H-lg.h)+it.row*lg.lh+lg.lh-4;
+      ctx.globalAlpha=it.hidden?.4:1;
+      ctx.fillStyle=pal[it.i%pal.length];ctx.fillRect(it.x,y-lg.sw,lg.sw,lg.sw);
+      ctx.fillStyle=it.hidden?MUTED:(st.hover===it.i?TEXT:MUTED);ctx.fillText(it.t,it.x+lg.sw+5,y);
+      if(it.hidden){const tw=ctx.measureText(it.t).width;ctx.strokeStyle=MUTED;ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(it.x+lg.sw+5,y-4);ctx.lineTo(it.x+lg.sw+5+tw,y-4);ctx.stroke();}
+      ctx.globalAlpha=1;
+      geom.legendRects.push({i:it.i,x:it.x-2,y:y-lg.sw-3,w:lg.sw+9+ctx.measureText(it.t).width,h:lg.sw+7});});
     ctx.textAlign='left';return;
   }
 
@@ -212,8 +229,12 @@ function paint(canvas){
   const n=Math.max(labels.length,...vis.map(s=>s.data.length),1);
   const rangeOf=list=>{const v=flat(list);return{min:Math.min(0,...v),max:Math.max(0,...v,1)};};
   let rg0,rg1=null;
-  if(type==='stacked'){const sums=[];for(let i=0;i<n;i++)sums.push(vis.reduce((a,s)=>a+(s.data[i]||0),0));rg0=rangeOf(sums);}
-  else if(type==='waterfall'){const d=(vis[0]||{data:[]}).data,cum=[0];for(let i=0;i<d.length-1;i++)cum.push(cum[i]+(d[i]||0));rg0=rangeOf([cum,d]);}
+  if(type==='stacked'||type==='area'){const sums=[];for(let i=0;i<n;i++)sums.push(vis.reduce((a,s)=>a+(s.data[i]||0),0));rg0=rangeOf(sums);}
+  else if(type==='waterfall'){
+    /* накопление: первый столбец — база, промежуточные приросты идут от неё, последний — итог */
+    const d=(vis[0]||{data:[]}).data,pts=[0];let acc=d[0]||0;pts.push(acc);
+    for(let i=1;i<d.length-1;i++){acc+=(d[i]||0);pts.push(acc);}
+    pts.push(d.length?(d[d.length-1]||0):0);rg0=rangeOf([pts]);}
   else rg0=rangeOf(vis.filter(s=>(s.axis||0)!==1).map(s=>s.data));
   if(vis.some(s=>s.axis===1))rg1=rangeOf(vis.filter(s=>s.axis===1).map(s=>s.data));
   if(opts.max!=null)rg0.max=opts.max;if(opts.min!=null)rg0.min=opts.min;
@@ -275,16 +296,22 @@ function paint(canvas){
       tops.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.setLineDash([]);});
   }
   else if(type==='waterfall'){
-    const d=(vis[0]||{data:[]}).data,bw=slot*0.56;let acc=0,prevY=null,prevCx=null;
+    const d=(vis[0]||{data:[]}).data,bw=slot*0.54;let acc=0,prevY=null,prevCx=null;
     d.forEach((v,i)=>{const isFirst=i===0,isLast=i===d.length-1;
+      /* база и итог рисуются от нуля; промежуточные — приростом от накопленного уровня */
       const b0=isFirst||isLast?0:acc,b1=isFirst||isLast?Math.max(v,0):acc+v;
-      if(!isFirst&&!isLast)acc+=v;
+      if(isFirst)acc=v;else if(!isLast)acc+=v;
       const col=isLast?(opts.wfTotalColor||'#4CAF50'):(isFirst?vis[0].color:(v>=0?(opts.wfUpColor||'#FF9800'):(opts.wfDownColor||'#D93025')));
       const cx=cxL(i),yT=Y0(Math.max(b0,b1)),yB=Y0(Math.min(b0,b1));
-      ctx.fillStyle=col;ctx.fillRect(cx-bw/2,yT,bw,Math.max(yB-yT,1.5));
-      if(prevY!=null){ctx.setLineDash([3,3]);ctx.strokeStyle=MUTED;ctx.beginPath();ctx.moveTo(prevCx,prevY);ctx.lineTo(cx,prevY);ctx.stroke();ctx.setLineDash([]);}
+      ctx.fillStyle=col;ctx.fillRect(cx-bw/2,yT,bw,Math.max(yB-yT,2));
+      if(prevY!=null){ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle='#b8c0cc';ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(prevCx+bw/2,prevY);ctx.lineTo(cx-bw/2,prevY);ctx.stroke();ctx.restore();}
       prevY=Y0(b1);prevCx=cx;
-      ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.fillText(isFirst||isLast?nf(v):(v>0?'+':'')+nf(v),cx,yT-4);});
+      ctx.fillStyle=isFirst||isLast?TEXT:col;ctx.textAlign='center';
+      ctx.font='700 '+(compact?8:11)+'px '+FONT;
+      ctx.fillText(isFirst||isLast?nf(v):(v>0?'+':'−')+nf(Math.abs(v)),cx,yT-5);
+      ctx.font=fs+'px '+FONT;
+      if(!isFirst&&!isLast){ctx.fillStyle=MUTED;ctx.fillText('→ '+nf(b1),cx,yB+13);}});
   }
   else if(type==='stacked'){
     const cumPos=new Array(n).fill(0),cumNeg=new Array(n).fill(0),bw=slot*0.6;
@@ -333,9 +360,14 @@ function ensureInteractive(canvas){
       if(hit){s.hover={px:hit.px,py:hit.py};paint(canvas);const m=hit.meta;
         showTip((m.label?'<b>'+m.label+'</b><br>':'')+(m.tip||('X: '+fm(m.x)+' · Y: '+fm(m.y))),e.clientX,e.clientY);}
       else{if(s.hover){s.hover=null;paint(canvas);}hideTip();}return;}
-    if(type==='donut'){const d=g.donut;if(d){const dist=Math.hypot(x-d.cx,y-d.cy);
-      if(dist<=d.r&&dist>=d.r0){let a=Math.atan2(y-d.cy,x-d.cx)+Math.PI/2;if(a<0)a+=Math.PI*2;let acc=0,idx=-1;
-        for(let i=0;i<d.vals.length;i++){const frac=(d.vals[i]||0)/d.total*Math.PI*2;if(a>=acc&&a<acc+frac){idx=i;break;}acc+=frac;}
+    if(type==='donut'){const d=g.donut;if(d){
+      const legHit=(g.legendRects||[]).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h);
+      if(legHit){if(s.hover!==legHit.i){s.hover=legHit.i;paint(canvas);}
+        showTip('<b>'+(d.labels[legHit.i]||'')+'</b><br>'+fm(d.vals[legHit.i])+' млн руб.<br><span style="opacity:.7">клик — скрыть / показать сегмент</span>',e.clientX,e.clientY);return;}
+      const dist=Math.hypot(x-d.cx,y-d.cy);
+      if(dist<=d.r&&dist>=d.r0){let a=Math.atan2(y-d.cy,x-d.cx)+Math.PI/2;if(a<0)a+=Math.PI*2;
+        const base=-Math.PI/2;let idx=-1;
+        (d.arcs||[]).forEach(arc=>{const s0=arc.a0-base,s1=arc.a1-base;if(a>=s0&&a<s1)idx=arc.i;});
         if(idx>=0){if(s.hover!==idx){s.hover=idx;paint(canvas);}const lbl=d.labels[idx]||('#'+(idx+1));
           showTip('<b>'+lbl+'</b><br>'+fm(d.vals[idx])+' · '+nf((d.vals[idx]||0)/d.total*100,1)+'%',e.clientX,e.clientY);return;}}
       if(s.hover!=null){s.hover=null;paint(canvas);}hideTip();return;}}
