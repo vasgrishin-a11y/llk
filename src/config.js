@@ -3,9 +3,7 @@
 import {OBJ as O} from './data.js';
 
 export const DASHBOARD_CONFIG={
-  title:'Ежемесячный цикл интегрированного бизнес-планирования · In.Plan',
-  brand:'In.Plan',
-  brandSub:'Integrated Business Planning',
+  title:'Ежемесячный цикл интегрированного бизнес-планирования',
   subtitle:'Ежемесячный цикл интегрированного бизнес-планирования',
   context:[
     ['📅 Текущий месяц','Октябрь 2026'],
