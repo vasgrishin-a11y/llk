@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ежемесячный цикл IBP · In.Plan</title>
-<meta name="description" content="In.Plan S&OP / IBP dashboard: обзор, сегментация, спрос, запасы, поставки, планы и действия">
+<title>Ежемесячный цикл интегрированного бизнес-планирования</title>
+<meta name="description" content="Дашборд: обзор, сегментация, спрос, запасы, поставки, планы и действия">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -48,34 +48,18 @@ body{margin:0;background:var(--scp-bg);color:var(--scp-text);
 .muted{color:var(--scp-text-3)}
 button{font:inherit;cursor:pointer}
 
-/* ═══════════════ КАРКАС: тёмный рельс In.Plan + рабочая область ═══════════════ */
-.app{display:flex;min-height:100vh}
+/* ═══════════════ КАРКАС: верхняя шапка + горизонтальное меню ═══════════════ */
+.app{display:flex;flex-direction:column;min-height:100vh}
 .wrap{flex:1;min-width:0;display:flex;flex-direction:column}
-.rail{width:212px;flex:0 0 212px;background:var(--scp-rail);
-  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:300}
-.rail-logo{display:flex;align-items:center;padding:16px 14px 10px;min-height:56px;flex:0 0 auto}
-.inplan-badge{display:flex;align-items:center;gap:3px;padding:6px;border-radius:6px;
-  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
-.ip-sq{width:11px;height:11px;border-radius:2.5px;transition:transform .2s ease}
-.inplan-badge:hover .ip-sq{transform:scale(1.08)}
-.ip-s1{background:var(--scp-accent);box-shadow:0 0 8px rgba(144,0,255,.6)}
-.ip-s2{background:var(--scp-accent-sub)}
-.ip-s3{background:var(--scp-accent-2)}
-.ip-s4{background:#fff;opacity:.9}
-.rail-brand{display:flex;flex-direction:column;justify-content:center;padding:0 16px 12px;
-  flex:0 0 auto;line-height:1.25}
-.rail-brand .rb-t{color:#fff;font-size:13px;font-weight:600;white-space:nowrap}
-.rail-brand .rb-s{color:#8a8a8a;font-size:10.5px;letter-spacing:.2px;white-space:nowrap}
-.rail-nav{display:flex;flex-direction:column;overflow-y:auto;flex:1;padding-bottom:8px}
-.rail-nav button{display:flex;align-items:center;gap:10px;background:transparent;border:0;
-  border-left:4px solid transparent;color:#d6d6d6;text-align:left;padding:9px 14px 9px 12px;
-  font:400 13px/18px 'Open Sans',sans-serif;cursor:pointer;transition:.15s;white-space:nowrap;overflow:hidden}
-.rail-nav button:hover{background:var(--scp-rail-hover);color:#fff}
-.rail-nav button.on{background:var(--scp-rail-2);border-left-color:var(--scp-accent);color:#fff;font-weight:600}
-.rail-nav .dot{width:6px;height:6px;border-radius:50%;background:#6b6b6f;flex:0 0 6px}
-.rail-nav button.on .dot{background:var(--scp-accent-sub)}
-.rail-ver{color:#8a8a8a;font-size:11px;padding:10px 16px 14px;white-space:nowrap;flex:0 0 auto;border-top:1px solid #2e2e2e}
-.rail-ver b{color:#cfcfcf;font-weight:600}
+.topnav{background:var(--scp-rail);display:flex;align-items:stretch;gap:2px;
+  padding:0 32px;overflow-x:auto;position:sticky;top:0;z-index:300}
+.topnav button{display:inline-flex;align-items:center;gap:8px;background:transparent;border:0;
+  border-bottom:3px solid transparent;color:#d6d6d6;padding:12px 14px 9px;
+  font:400 13px/18px 'Open Sans',sans-serif;cursor:pointer;transition:.15s;white-space:nowrap}
+.topnav button:hover{background:var(--scp-rail-hover);color:#fff}
+.topnav button.on{background:var(--scp-rail-2);border-bottom-color:var(--scp-accent);color:#fff;font-weight:600}
+.topnav .dot{width:6px;height:6px;border-radius:50%;background:#6b6b6f;flex:0 0 6px}
+.topnav button.on .dot{background:var(--scp-accent-sub)}
 
 /* ═══════════════ ШАПКА: заголовок раздела + статус + икон-кнопки ═══════════════ */
 header{background:var(--scp-surface);border-bottom:1px solid var(--scp-line-2);
@@ -322,14 +306,7 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .result-v.orange{color:var(--scp-warn-tx)}
 
 @media(max-width:1100px){
-  .app{flex-direction:column}
-  .rail{width:100%;flex:0 0 auto;height:auto;min-height:52px;flex-direction:row;align-items:center;gap:4px}
-  .rail-logo{padding:8px 12px;min-height:52px}
-  .rail-brand{padding:6px 14px 6px 4px;border-right:1px solid rgba(255,255,255,.08)}
-  .rail-nav{flex-direction:row;overflow-x:auto;padding:0 8px;align-self:stretch}
-  .rail-nav button{border-left:0;border-bottom:3px solid transparent;padding:8px 12px}
-  .rail-nav button.on{border-left:0;border-bottom-color:var(--scp-accent)}
-  .rail-ver{border-top:0;padding:0 16px}
+  .topnav{padding:0 12px}
   .grid{grid-template-columns:1fr}
   .grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
   header,main,.ctxbar{padding-left:16px;padding-right:16px}
@@ -338,13 +315,12 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 }
 @media(max-width:800px){
   .grid-3{grid-template-columns:1fr}
-  .rail-brand .rb-s{display:none}
   main{padding:14px}
   .gap-label{width:120px}.gap-val{width:110px}
 }
 @media print{
   body{background:#fff}
-  .rail,.hdr-actions,.ctxbar{display:none}
+  .topnav,.hdr-actions,.ctxbar{display:none}
   .card,.kpi{break-inside:avoid;border-color:#bbb}
 }
 </style>

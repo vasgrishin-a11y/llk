@@ -308,8 +308,8 @@ function vActions(){
     +`<div class="info info-success decision">${A.decision}</div>`;
 }
 
-/* ═══════════════ Каркас: тёмный rail In.Plan + рабочая область ═══════════════
-   На широких экранах меню слева, на узких — сверху; тема светлая,
+/* ═══════════════ Каркас: верхнее меню + рабочая область ═══════════════
+   Единственная навигация — горизонтальное меню сверху; тема светлая,
    действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
 const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions};
 function renderContent(){
@@ -321,13 +321,19 @@ function renderContent(){
 }
 const ICON_UPLOAD='<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
 const ICON_RESET='<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
-const BADGE='<div class="inplan-badge" title="In.Plan"><span class="ip-sq ip-s1"></span><span class="ip-sq ip-s2"></span><span class="ip-sq ip-s3"></span><span class="ip-sq ip-s4"></span></div>';
 function render(){
   if(!C.tabs.some(x=>x.id===tab)){tab='overview';storage.set('tab',tab);}
   summ=summary(data);
   const t=C.tabs.find(x=>x.id===tab)||C.tabs[0];
   document.title=C.title;
-  document.querySelector('#app').innerHTML=`<div class="app"><aside class="rail"><div class="rail-logo">${BADGE}</div><div class="rail-brand"><span class="rb-t">In.Plan</span><span class="rb-s">Integrated Business Planning</span></div><nav class="rail-nav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav><div class="rail-ver">Цикл: <b>Октябрь 2026</b></div></aside><div class="wrap"><header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${C.subtitle}</div></div></div><div class="stat">${summ.rows} строк данных<br>${summ.custom?'Источник: загруженный XLSX':'Источник: демо-данные'}</div><div class="hdr-actions"><button class="icon-btn" id="upload" data-tip="Загрузить Excel (лист SIOP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button><input type="file" id="xlsx" accept=".xlsx,.xls" hidden><button class="icon-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button></div></header><div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div><main id="content"></main></div></div>`;
+  document.querySelector('#app').innerHTML=`<div class="app">`
+    +`<nav class="topnav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav>`
+    +`<div class="wrap">`
+    +`<header><div class="hdr-left"><div><h1>${C.title}</h1><div class="h-sub">${t.label} · Цикл: Октябрь 2026</div></div></div>`
+    +`<div class="stat">${summ.rows} строк данных<br>${summ.custom?'Источник: загруженный XLSX':'Источник: демо-данные'}</div>`
+    +`<div class="hdr-actions"><button class="icon-btn" id="upload" data-tip="Загрузить Excel (лист SIOP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button><input type="file" id="xlsx" accept=".xlsx,.xls" hidden><button class="icon-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button></div></header>`
+    +`<div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div>`
+    +`<main id="content"></main></div></div>`;
   renderContent();
 }
 async function readXlsx(e){

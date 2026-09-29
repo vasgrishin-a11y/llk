@@ -55,7 +55,8 @@ test('приложение рендерит все рабочие вкладки
 
   click('[data-tab="actions"]');
   assert.ok(!$('#theme'),'переключателя темы нет');
-  assert.ok($('.rail-nav'),'меню In.Plan есть');
+  assert.ok($('.topnav'),'верхнее меню есть');
+  assert.ok(!$('.rail'),'левого меню нет');
   assert.ok($('#upload.icon-btn'),'загрузка Excel — икон-кнопка');
   assert.ok($('#reset.icon-btn'),'сброс — икон-кнопка');
   click('#reset');
