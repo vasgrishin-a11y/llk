@@ -5,7 +5,7 @@
    локальные переключатели вкладок — в `ui` (в памяти), открытые таблицы — `open`. */
 import {DASHBOARD_CONFIG as C} from './config.js';
 import {MONTHLY,normalizeRows,summary} from './data.js';
-import {OVERVIEW,SEGMENTS,DEMAND,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView} from './datasets.js';
+import {OVERVIEW,SEGMENTS,DEMAND,DEMAND_KPIS,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView} from './datasets.js';
 import {drawChart} from './charts.js';
 import {storage} from './storage.js';
 
@@ -107,38 +107,66 @@ function vOverview(){
     +card('⚠️ Ключевые отклонения',OVERVIEW.deviations.map(([k,t,d])=>info(k,`<b>${t}</b><br>${d}`)).join(''));
 }
 
-/* ═══════════════ 1. Сегментация ═══════════════ */
+/* ═══════════════ 1. Сегментация ═══════════════
+   Матрица «маржа × ценность»: 5 уровней (Бриллиант → Бронза) диагональными
+   полосами; размер круга = валовая прибыль клиента; фильтры — по каналу
+   продаж и по «выбивающимся» клиентам (на пересмотр). */
 function segMatrixHTML(){
   const M=SEGMENTS.matrix,off=ui.segOff||new Set();
-  const X=v=>Math.max(1.5,Math.min(98.5,v/M.maxX*100));
-  const Y=v=>Math.max(2,Math.min(98,(v-M.minY)/(M.maxY-M.minY)*100));
-  const dots=M.data.map((d,i)=>{const r=12+Math.sqrt(Math.abs(d.marginMln))*7;
-    const dim=off.has(d.cls)?' dim':'';
-    const tip=`<b>${esc(d.name)}</b><br><span class="r">${esc(d.channel)}</span><br>Ценность: ${NF(d.value,1)} млн руб/год<br>Валовая маржа: ${NF(d.margin,0)}% · ${NF(d.marginMln,1)} млн руб.<br>Cost-to-serve: ${NF(d.cost,0)}% · Сервис: ${NF(d.service,0)}%<br>Приоритет: ${esc(d.priority)}`;
-    return `<div class="sm-dot sm-${d.cls}${dim}" data-smtip="${esc(tip)}" style="left:${X(d.value)}%;bottom:${Y(d.margin)}%;width:${r}px;height:${r}px">${r>26?esc(d.name.split(' ')[0]):''}</div>`;}).join('');
-  const splitLeft=X(M.splitX),splitBottom=Y(M.splitY);
-  const legend=Object.entries(M.segLabels).map(([cls,lbl])=>`<button data-segtoggle="${cls}" class="${off.has(cls)?'off':''}"><i class="sm-${cls}" style="background:${({strategic:'#4CAF50',core:'#20A7C9',perspective:'#FF9800',transactional:'#D93025',outlier:'#9C27B0'})[cls]}"></i>${lbl}</button>`).join('');
-  return `<div class="segmatrix">`
-    +`<div class="sm-quad sm-q-tl" style="width:${splitLeft}%;height:${100-splitBottom}%"><span>Растить ↗</span></div>`
-    +`<div class="sm-quad sm-q-tr" style="width:${100-splitLeft}%;height:${100-splitBottom}%;left:${splitLeft}%"><span>Защищать ★</span></div>`
-    +`<div class="sm-quad sm-q-bl" style="width:${splitLeft}%;height:${splitBottom}%"><span>Транзакционные</span></div>`
-    +`<div class="sm-quad sm-q-br" style="width:${100-splitLeft}%;height:${splitBottom}%;left:${splitLeft}%"><span>Оптимизировать маржу</span></div>`
-    +`<div class="sm-plot">${dots}</div>`
+  const chan=ui.segchan??'all',rev=ui.segrev??'0';
+  const C=SEGMENTS.clients,lvl=Object.fromEntries(SEGMENTS.levels.map(s=>[s.id,s]));
+  const X=v=>Math.max(1.2,Math.min(98.6,v/M.maxX*100));
+  const mY=v=>(v-M.minY)/(M.maxY-M.minY)*100;
+  /* зоны сегментов внутри плота: [bottom, height] в % высоты плота */
+  const ZONES=[{bottom:78,h:19},{bottom:57.1,h:19},{bottom:40.2,h:15},{bottom:25.3,h:13},{bottom:12.4,h:11}];
+  const on=d=>!off.has(d.seg)&&(chan==='all'||d.channel===chan)&&(rev==='0'||d.review);
+  /* внутри зоны клиенты ранжируются по марже (больше маржа — выше точка) */
+  const rank={};let zoneN=[];
+  SEGMENTS.levels.forEach(s=>{const list=C.filter(d=>d.seg===s.id&&on(d)).slice().sort((a,b)=>b.marginPct-a.marginPct);rank[s.id]=list;});
+  const dots=[];
+  C.forEach(d=>{
+    if(off.has(d.seg))return;
+    const isOn=on(d);const z=ZONES[SEGMENTS.levels.findIndex(s=>s.id===d.seg)];
+    const x=X(d.rev);
+    let y;
+    if(isOn){const list=rank[d.seg],k=list.indexOf(d),n=list.length;
+      y=z.bottom+z.h-(2*k+1)*z.h/(2*n);}
+    else y=Math.max(11,Math.min(96.5,mY(d.marginPct)));
+    const r=16+Math.pow(Math.max(d.gp,60),.42)*2.8;
+    const L=lvl[d.seg];
+    const tip=`<b>${esc(d.name)}</b>${d.review?' ⚑ <b style="color:#ffb3c2">на пересмотр</b>':''}<br><span class="r">${esc(L.label)} · ${esc(d.channel)}</span><br>Выручка: ${NF(d.rev,0)} млн руб/год<br>Валовая прибыль: ${NF(d.gp,1)} млн руб. (${NF(d.marginPct,0)}%)<br>Себестоимость: ${NF(d.cost,0)} млн руб. · Сервис: ${d.sFact}% (цель ${d.sTarget}%)<br>Приоритет: ${esc(d.priority)}`;
+    const reviewStyle=d.review?'box-shadow:0 0 0 3px #d6455b,0 0 14px rgba(214,69,91,.35);':'';
+    const lbl=d.name.length>18?(d.name.split(' ')[0]+'…'):d.name;
+    dots.push(`<div class="sm-dot${isOn?'':' dim'}" data-smtip="${esc(tip)}" style="left:${x}%;bottom:${y}%;width:${r}px;height:${r}px;border-color:${L.color};color:var(--scp-text);${reviewStyle}"><span style="font-size:${r>42?10:9}px;line-height:1.05">${esc(lbl)}</span><span style="font-size:8.5px;opacity:.72">${NF(d.gp,0)} млн</span></div>`);
+  });
+  const zones=SEGMENTS.levels.map((s,i)=>{
+    const lst=C.filter(c=>c.seg===s.id),revSum=lst.reduce((a,c)=>a+c.rev,0),gpSum=lst.reduce((a,c)=>a+c.gp,0);
+    const z=ZONES[i];
+    return `<div class="sm-z sm-z-${s.id}" style="bottom:${z.bottom}%;height:${z.h}%"><div class="sm-z-title">${s.icon} ${s.label}</div><div class="sm-z-sub">${lst.length} клиентов · ${NF(revSum,0)} млн руб. · ВП ${NF(gpSum,0)} млн руб.</div></div>`;
+  }).join('');
+  const outl=C.filter(c=>c.review).length;
+  const legend=SEGMENTS.levels.map(s=>`<button data-segtoggle="${s.id}" class="${off.has(s.id)?'off':''}"><i style="background:${s.color}"></i>${s.icon} ${s.label} (${C.filter(c=>c.seg===s.id).length})</button>`).join('')
+    +`<span class="muted" style="font-size:11px">Клик по легенде скрывает сегмент</span>`;
+  return `<div id="seg-host"><div class="segmatrix">`
+    +`<div class="sm-plot">${zones}${dots}<div class="sm-outer">⚑ На пересмотр — ${outl} клиент.: сегмент не соответствует марже (высокая маржа в нижнем сегменте / низкая в верхнем)</div></div>`
     +`<div class="sm-axis-x">Ценность клиента → выручка, млн руб/год</div>`
     +`<div class="sm-axis-y">Валовая маржа, %</div>`
-    +`</div><div class="sm-legend">${legend}</div>`;
+    +`</div><div class="sm-legend">${legend}</div></div>`;
 }
 function vSegments(){
   const S=SEGMENTS;
-  J('#c-segrev','donut',[S.revDonut.data],S.revDonut.labels,{height:300,colors:['#4CAF50','#20A7C9','#FF9800','#D93025','#9C27B0']});
+  J('#c-segrev','donut',[S.revDonut.data],S.revDonut.labels,{height:300,colors:['#0082a9','#7c3aed','#20A7C9','#d6455b','#e8930c','#4CAF50','#8c9bae']});
   J('#c-segcost','stacked',S.costStack.series.map(([n,d,c])=>({data:d,color:c})),S.costStack.labels,{height:300,legend:S.costStack.series.map(x=>x[0])});
   return kpis('segments')
-    +card('📊 Сегментация клиентов · матрица «маржа × ценность» (2026)',segMatrixHTML()+insight(S.matrix.insight)+insight(S.bubbleInsight)+tbl('tbl-seg',S.clients.heads,S.clients.rows))
+    +card('📊 Сегментация клиентов','Матрица «маржа × ценность» (2026): размер круга — валовая прибыль клиента'
+      +`<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 4px"><div><div class="muted" style="font-size:11px;margin-bottom:4px">Канал продаж</div>${sw('segchan',[['all','Все каналы'],...SEGMENTS.channels.map(c=>[c,SEGMENTS.chShort[c]])])}</div><div><div class="muted" style="font-size:11px;margin-bottom:4px">Выбивающиеся</div>${sw('segrev',[['0','Все клиенты'],['1','⚑ Только «на пересмотр»']])}</div></div>`
+      +segMatrixHTML()+insight(S.bubbleInsight)+tbl('tbl-seg',S.matrix.th,S.matrix.row))
     +`<div class="grid">`
-    +card('🥧 Распределение выручки по сегментам',canvas('c-segrev','Кольцевая диаграмма распределения выручки по сегментам')+insight(S.revDonut.insight)+tbl('tbl-rev',S.revDonut.heads,S.revDonut.rows))
-    +card('📊 Структура затрат по сегментам за текущий год',canvas('c-segcost','Стековая диаграмма структуры затрат по сегментам')+insight(S.costStack.insight)+tbl('tbl-cost',S.costStack.heads,S.costStack.rows))
+    +card('🥧 Распределение выручки по каналам продаж',canvas('c-segrev','Кольцевая диаграмма распределения выручки по каналам продаж')+insight(S.revDonut.insight)+tbl('tbl-rev',S.revDonut.heads,S.revDonut.rows))
+    +card('📊 Структура затрат по каналам продаж',canvas('c-segcost','Стековая диаграмма структуры затрат по каналам продаж')+insight(S.costStack.insight)+tbl('tbl-cost',S.costStack.heads,S.costStack.rows))
     +`</div>`;
 }
+
 
 /* ═══════════════ 2. Спрос ═══════════════ */
 function vDemand(){
@@ -146,8 +174,8 @@ function vDemand(){
   const D=DEMAND,p=ui.dmp;
   let dins='';
   if(p==='2026'){
-    const facts=MONTHLY.filter(r=>r.type==='Факт'),unc=[32500,33750,33750];
-    const vol=[...facts.map(r=>r.vol),...unc],rev=[...facts.map(r=>r.rev),...unc.map(v=>v*8200/1_000_000)];
+    const facts=MONTHLY.filter(r=>r.type==='Факт'),unc=D.uncQ4;
+    const vol=[...facts.map(r=>r.vol),...unc],rev=[...facts.map(r=>r.rev),...unc.map(v=>v*141500/1_000_000)];
     const pc=[...facts.map(()=>'#20A7C9'),...unc.map(()=>'#90CAF9')];
     J('#c-demand','combo',[
       {data:MONTHLY.map(r=>r.planVol),kind:'bar',color:'#e3e7ec'},
@@ -194,7 +222,9 @@ function vDemand(){
   ],['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен'],{height:96,compact:true,legend:['Факт',m.fcName]}));
   const modelCards=D.models.map((m,i)=>`<article class="model champ"><h5>${m.name} <span class="badge">ЛУЧШАЯ</span></h5><canvas id="c-mini${i}" class="chart" role="img" aria-label="Мини-график: факт и прогноз модели ${esc(m.model)}"></canvas><div class="stat"><b>Модель:</b> ${m.model}</div><div class="stat"><b>Точность:</b> ${m.acc}</div><div class="stat"><b>Систематическая ошибка:</b> ${m.bias}</div><div class="stat"><b>Почему:</b> ${m.why}</div><div class="stat dim">${m.others}</div></article>`).join('')
     +`<article class="model"><h5>📊 Сводка по моделям</h5><div class="info">${D.modelsSummary.map(([k,v])=>`<div class="stat"><b>${k}</b> ${v}</div>`).join('')}</div><div class="info info-success">${D.modelsDecision}</div></article>`;
-  return kpis('demand')
+  /* KPI-карточки спроса — динамические: пересчитываются для выбранного года */
+  const dk=`<section class="kpis">${(DEMAND_KPIS['y'+p]||DEMAND_KPIS.y2026).map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div>${k.dev?`<div class="dev dev-${k.dev.kind||'neu'}">${k.dev.text}</div>`:''}</article>`).join('')}</section>`;
+  return dk
     +card('📈 Спрос против годового бизнес-плана',sw('dmp',[['2025','2025 год'],['2026','2026 год'],['2027','2027 год']])+canvas('c-demand','Столбчато-линейный график спроса против плана')+insight(dins)+(p==='2026'?tbl('tbl-demand-period',D.periodTable.heads,D.periodTable.rows):''))
     +`<div class="grid">`
     +card('📉 Формирование согласованного прогноза',canvas('c-wf','Водопад: формирование согласованного прогноза')+insight(W.insight)+tbl('tbl-wf',W.heads,W.rows))
@@ -209,20 +239,40 @@ function vDemand(){
 
 /* ═══════════════ 3. Запасы ═══════════════ */
 function vStock(){
-  const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons';
+  const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons',im=ui.invmode??'tons';
   const CV=S.coverage[v==='channels'?'channels':'products'];
+  /* страховой запас — заливкой под линией; таблица синхронизирована с переключателем */
   J('#c-cover','combo',[
+    {data:CV.safety,kind:'line',color:'#b39ddb',fill:'#b39ddb',dash:true},
     {data:CV.days,kind:'bar',color:'#20A7C9',pointColors:CV.colors},
-    {data:CV.safety,kind:'line',color:'#20A7C9',dash:true},
     {data:CV.target,kind:'line',color:'#4CAF50',dash:true},
-  ],CV.labels,{height:340,legend:['Дней покрытия','Страховой запас (минимум)','Целевой запас']});
+  ],CV.labels,{height:340,legend:['Страховой запас (заливка)','Дней покрытия (факт)','Целевой запас (норма)']});
+  const covRows=v==='channels'?S.coverage.channelsRows:S.coverage.productsRows;
   const IP=S.invPlan;
-  J('#c-invplan','line',[
-    {data:IP.safety,color:'#20A7C9'},
-    {data:IP.reorder,color:'#FF9800',dash:true},
-    {data:IP.target,color:'#4CAF50'},
-    {data:IP.actual,color:'#1a2b4a',fill:true},
-  ],IP.labels,{height:340,legend:['Страховой запас','Точка заказа','Целевой запас','Запас на конец периода'],yTitle:'т',max:120000});
+  if(im==='tons'){
+    J('#c-invplan','band',[
+      {data:IP.safetyBandTop,color:'#b39ddb'},
+      {data:IP.actual,color:'#1a2b4a'},
+      {data:IP.target,color:'#4CAF50',dash:true},
+      {data:IP.reorder,color:'#e8930c',dash:true},
+      {data:IP.safety,color:'#b39ddb'},
+    ],IP.labels,{height:340,legend:['Зона страхового запаса','Запас на конец периода (т)','Целевой коридор','Точка заказа','Страховой запас (низ)'],yTitle:'т'});
+  }else if(im==='money'){
+    J('#c-invplan','band',[
+      {data:IP.costSafetyBandTop,color:'#b39ddb'},
+      {data:IP.cost,color:'#1a2b4a'},
+      {data:IP.costTarget,color:'#4CAF50',dash:true},
+      {data:IP.costReorder,color:'#e8930c',dash:true},
+      {data:IP.costSafety,color:'#b39ddb'},
+    ],IP.labels,{height:340,legend:['Зона страхового запаса','Стоимость запасов (млн руб.)','Целевая стоимость','Точка заказа','Страховой запас (низ)'],yTitle:'млн руб.'});
+  }else{
+    J('#c-invplan','line',[
+      {data:IP.pct.map(()=>20),color:'#9000ff',dash:true},
+      {data:IP.pct,color:'#20A7C9',fill:true},
+      {data:IP.pct.map(()=>15),color:'#8c9bae',dash:true},
+      {data:IP.pct.map(()=>25),color:'#8c9bae',dash:true},
+    ],IP.labels,{height:340,legend:['Цель +20%','Отклонение от цели, %','Коридор +15%','Коридор +25%'],yTitle:'%',min:0,max:30});
+  }
   const DD=S.dead[dm];
   J('#c-dead','hbar',DD.series.map(([n,d,c])=>({data:d,color:c})),DD.labels,{height:300,legend:DD.series.map(x=>x[0])});
   const AX=S.abcxyz;
@@ -230,10 +280,10 @@ function vStock(){
   J('#c-mto','donut',[S.mtomts.data],S.mtomts.labels,{height:340,colors:S.mtomts.colors});
   const statCard=x=>`<article class="kpi bt-${x.cls}"><div class="muted kpi-label">${x.name}</div><div class="value ${x.cls}">${x.days}</div><div class="kpi-sub">${x.target}</div><div class="dev dev-${x.cls==='green'?'pos':x.cls==='red'?'neg':'neu'}">${x.delta}</div><div class="kpi-foot ${x.cls}">${x.effect}</div></article>`;
   return kpis('stock')
-    +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов']])+canvas('c-cover','Диаграмма покрытия запасов в днях')+insight(CV.insight)+tbl('tbl-inv-coverage',S.coverage.heads,S.coverage.rows))
-    +card('📈 План запасов на 18 месяцев',canvas('c-invplan','Линейный график плана запасов на 18 месяцев')+insight(IP.insight)+tbl('tbl-inv-plan',IP.heads,IP.rows))
-    +card('🔴 Неликвиды — кандидаты на распродажу',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+info('primary',S.dead.methodology)+canvas('c-dead','Столбчатая диаграмма неликвидов')+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows))
-    +card('🏭 Сырье: состояние запасов',info('primary',S.rawmMethodology)+`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
+    +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов']])+canvas('c-cover','Диаграмма покрытия запасов в днях')+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
+    +card('📈 План запасов на 18 месяцев',sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.'],['delta','Отклонение от цели, %']])+canvas('c-invplan','План запасов на 18 месяцев: зона страхового запаса, целевой коридор и фактический запас')+insight(im==='tons'?IP.insightTons:im==='money'?IP.insightMoney:IP.insightDelta)+tbl('tbl-inv-plan',im==='tons'?IP.heads:im==='money'?IP.headsM:IP.headsD,im==='tons'?IP.rows:im==='money'?IP.rowsM:IP.rowsD))
+    +card('🔴 Неликвиды — кандидаты на распродажу',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
+    +card('🏭 Сырье: состояние запасов',`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
     +card('📦 Готовая продукция: состояние запасов',`<div class="grid-3">${S.fgm.map(statCard).join('')}</div>`+tbl('tbl-fg',S.fgTable.heads,S.fgTable.rows))
     +`<div class="grid">`
     +card('📊 Матрица ABC-XYZ (ABC по марже, XYZ по вариативности спроса)',canvas('c-abc','Точечная диаграмма матрицы ABC-XYZ')+insight(AX.insight)+tbl('tbl-abc',AX.heads,AX.rows))
@@ -250,13 +300,17 @@ function chainGraphHTML(){
   const cy=t=>top+t*rowGap+NH/2;
   const RAIL='#9000ff',AUTO='#ff9a3b',BAD='#f22a41';
   let edges='',nodes='',labels='';
-  const edge=(x1,y1,x2,y2,color,bad)=>`<line x1="${x1.toFixed(1)}" y1="${(y1+NH/2).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${(y2-NH/2).toFixed(1)}" stroke="${bad?BAD:color}" stroke-width="${bad?2.4:1.6}" ${bad?'stroke-dasharray="6 4"':''} opacity="${bad?0.9:0.5}"/>`;
-  // t0 -> t1 (rail)
-  R[0].nodes.forEach((s,i)=>{const p=i%R[1].nodes.length;edges+=edge(cx(0,i),cy(0),cx(1,p),cy(1),RAIL,!!(s.r||R[1].nodes[p].r));});
-  // t1 -> t2 (auto)
+  const edge=(x1,y1,x2,y2,color,bad,soft)=>`<line x1="${x1.toFixed(1)}" y1="${(y1+NH/2).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${(y2-NH/2).toFixed(1)}" stroke="${bad?BAD:color}" stroke-width="${bad?2.4:soft?1.1:1.6}" ${bad?'stroke-dasharray="6 4"':''} opacity="${bad?0.9:soft?0.28:0.5}"/>`;
+  // t0 -> t1: поставщики сырья связаны со ВСЕМИ заводами
+  R[0].nodes.forEach((s,i)=>{R[1].nodes.forEach((p,j)=>{edges+=edge(cx(0,i),cy(0),cx(1,j),cy(1),RAIL,!!(s.r||p.r),true);});});
+  // t1 -> t2: завод → свой заводской склад
   R[1].nodes.forEach((p,i)=>{const w=Math.min(i,R[2].nodes.length-1);edges+=edge(cx(1,i),cy(1),cx(2,w),cy(2),AUTO,!!(p.r||R[2].nodes[w].r));});
-  // t2 -> t3 (auto, fan to 2 hubs)
-  R[2].nodes.forEach((w,i)=>{[i*2,i*2+1].forEach(k=>{const c3=R[3].nodes[k];if(!c3)return;edges+=edge(cx(2,i),cy(2),cx(3,k),cy(3),AUTO,!!(w.r||c3.r));});});
+  // t2 -> t3: заводские склады → 3PL/ОК по регионам (согласованы с планом перемещений)
+  const REGION={'Ростов-на-Дону':['ПС Волгоград','ПС Интесмо'],'Краснодар':['ПС Волгоград','ПС Интесмо'],'Ставрополь':['ПС Волгоград','ПС Интесмо'],
+    'Уфа':['ПС Торжок','ПС Интесмо'],'Пермь':['ПС Торжок','ПС Интесмо'],'Екатеринбург':['ПС Торжок','ПС Пермь'],'Челябинск':['ПС Торжок','ПС Тюмень'],
+    'Тюмень (ОК)':['ПС Тюмень','ПС Пермь'],'Новосибирск (ОК)':['ПС Тюмень'],'Красноярск (ОК)':['ПС Тюмень'],'Екатеринбург (ОК)':['ПС Пермь'],'Кузбасс (ОК)':['ПС Пермь']};
+  const psIdx=new Map(R[2].nodes.map((n,i)=>[n.n,i]));
+  R[3].nodes.forEach((c3,i)=>{(REGION[c3.n]||[]).forEach(ps=>{const wi=psIdx.get(ps);if(wi==null)return;edges+=edge(cx(2,wi),cy(2),cx(3,i),cy(3),AUTO,!!(R[2].nodes[wi].r||c3.r));});});
   R.forEach((row,t)=>{
     labels+=`<text x="10" y="${(cy(t)+3).toFixed(1)}" font-size="12" font-weight="700" fill="#5a5a5c">${esc(row.label)}</text>`;
     row.nodes.forEach((n,i)=>{const x=cx(t,i)-NW/2,y=top+t*rowGap;const nm=n.n.split('|');
@@ -298,35 +352,33 @@ function hmTable(scen,mode){
 function vSupply(){
   const S=SUPPLY;
   const gap=S.gap.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div></div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.pct?` <small>${r.pct}</small>`:''}</div></div>`).join('');
-  J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:240});
-  J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:380,legend:S.radar.series.map(x=>x[0]),max:120});
+  J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:260,barValuesIn:true});
+  J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:380,legend:S.radar.series.map(x=>x[0]),max:S.radar.max||120});
   const F=S.fan;
   J('#c-fan','band',[
     {data:F.best,color:'#20A7C9'},
     {data:F.base,color:'#1a2b4a'},
     {data:F.worst,color:'#8c9bae'},
-  ],F.labels,{height:340,legend:['Лучший (+18%, маржа 25,8%)','Базовый (маржа 24,0%)','Худший (−12%, маржа 19,5%)'],yTitle:'Объем (т)'});
-  const fanRows=F.labels.map((m,i)=>[m,String(F.worst[i]),String(F.base[i]),String(F.best[i]),F.marginWorst[i],'24,0%',F.marginBest[i],F.drivers[i]]);
+  ],F.labels,{height:340,legend:['Оптимистичный (+2,4%)','Базовый','Пессимистичный (−5,8%)'],yTitle:'Объем (т)'});
+  const fanRows=F.labels.map((m,i)=>[m,N(F.worst[i]),N(F.base[i]),N(F.best[i]),N(F.marginWorst[i]),N(F.marginBase[i]),N(F.marginBest[i]),F.drivers[i]]);
   const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4>${s.rank?`<div class="scen-rank">${s.rank}</div>`:''}<div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</article>`).join('');
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
-  const methKey=(hs==='A'?'A':'B')+(hm==='cov'?'cov':'mrg');
   const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Фокус на марже)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
     +(hs!=='A'?info('primary',S.kpiNote):'')
-    +info('primary',S.heatmapMethodology[methKey])
     +hmTable(hs,hm)
     +`<div class="hm-legend">${hs==='A'?S.heatmapLegends[hm]:S.heatmapLegends.delta}</div>`
     +insight(hs==='A'?S.heatmapInsights[hm]:S.heatmapInsights.delta)
     +tbl('tbl-heatmap',HEATMAP.flatTable.heads,HEATMAP.flatTable.rows);
   return kpis('supply')
-    +card('🏭 Карта цепочки поставок и ограничений',info('primary',S.mapDesc)+chainGraphHTML()
-      +`<div class="info info-danger"><b>🔴 Разрыв цепочки без митигации: −25 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
-      +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows))
-    +card('📊 Покрытие спроса без митигации',info('primary',S.gap.methodology)+`<div class="gap-chart">${gap}</div>`
-      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 25 000 т</b> · доступно 75 000 из 100 000 т<br>${S.gap.reasons}`)
+    +card('🏭 Карта цепочки поставок и ограничений',chainGraphHTML()
+      +`<div class="info info-danger"><b>🔴 Разрыв цепочки без митигации: −19 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
+      +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows),S.mapDesc)
+    +card('📊 Покрытие спроса без митигации',`<div class="gap-chart">${gap}</div>`
+      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 19 000 т</b> · доступно 133 000 из 152 000 т<br>${S.gap.reasons}`)
       +tbl('tbl-gap',S.gap.table.heads,S.gap.table.rows))
-    +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
-    +`<h3 class="section-h">🎯 Сценарии покрытия спроса (митигация разрыва внутри сценария)</h3><div class="grid-3">${scenCards}</div>`
+    +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки (значения — на полосах)')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
+    +`<h3 class="section-h">🎯 Сценарии покрытия спроса (митигация разрыва)</h3><div class="grid-3">${scenCards}</div>`
     +card('📊 Сравнение сценариев: объем против маржи',canvas('c-radar','Радарная диаграмма сравнения сценариев')+insight(S.radar.insight)+tbl('tbl-scen',S.radar.heads,S.radar.rows))
     +card('🌊 Сценарное планирование: лучший / базовый / худший (18 месяцев)',canvas('c-fan','Веерный график сценариев на 18 месяцев')+insight(F.insight)+tbl('tbl-fan',F.heads,fanRows))
     +card('🗺️ Тепловая карта по клиентам и продуктам (4 квартал 2026)',heatmapHtml);
@@ -340,7 +392,7 @@ function vPlans(){
   const [a,b]=planRange(q,ui.pcFrom,ui.pcTo);
   const P=PLANS[pl],cdef=P.chart(a,b);
   J('#c-plan',cdef.type,cdef.series,cdef.labels,cdef.opts);
-  const view=planView(pl,a,b);
+  const view=planView(pl,a,b,q);
   const kpiStrip=`<section class="kpis">${view.kpis.map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div></article>`).join('')}</section>`;
   // быстрые фильтры + выбор произвольного периода
   const monthOpts=(sel)=>MONTHS18.map((m,i)=>`<option value="${i}"${i===sel?' selected':''}>${m}</option>`).join('');
@@ -349,14 +401,14 @@ function vPlans(){
   const periodBar=`<div class="periodbar"><span class="pb-lbl">Период планирования</span>`
     +`<div class="switch">${PLAN_PERIODS.map(([v,l])=>`<button class="${q===v?'active':''}" data-sw="pq" data-val="${v}">${l}</button>`).join('')}</div>`
     +custom
-    +`</div><div class="pb-summary">Показан период: <b>${MONTHS18[a]} – ${MONTHS18[b-1]}</b> (${b-a} мес.). Карточки, график и таблица обновляются вместе.</div>`;
+    +`</div><div class="pb-summary">Показан период: <b>${MONTHS18[a]} – ${MONTHS18[b-1]}</b> (${b-a} мес.). Карточки, график и детальная таблица обновляются вместе.</div>`;
   return periodBar
     +`<div class="switch" style="margin-bottom:12px">${Object.entries(PLANS).map(([id,p])=>`<button class="${pl===id?'active':''}" data-sw="plan" data-val="${id}">${p.tab}</button>`).join('')}</div>`
     +kpiStrip
     +card('📊 '+P.tab+' · '+MONTHS18[a]+' – '+MONTHS18[b-1],
       canvas('c-plan','График: '+P.tab)
       +insight(P.insight)
-      +tbl('tbl-plan-'+pl,view.table.heads,view.table.rows));
+      +tbl('tbl-plan-'+pl,view.detail.heads,view.detail.rows));
 }
 
 /* ═══════════════ 6. Действия ═══════════════ */
@@ -394,8 +446,7 @@ function render(){
   document.querySelector('#app').innerHTML=`<div class="app">`
     +`<div class="topbar">`
       +`<a class="brand" href="#" title="In.Plan · интегрированное бизнес-планирование">`
-        +`<span class="brand-badge"><i class="bb1"></i><i class="bb2"></i><i class="bb3"></i><i class="bb4"></i></span>`
-        +`<span><span class="brand-name">In<span>.</span>Plan</span><span class="brand-tag">S&amp;OP / IBP · Цикл Октябрь 2026</span></span></a>`
+        +`<span class="brand-badge"><i class="bb1"></i><i class="bb2"></i><i class="bb3"></i><i class="bb4"></i></span></a>`
       +`<div class="topbar-actions">`
         +`<button class="tb-btn" id="upload" data-tip="Загрузить Excel (лист S&OP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button>`
         +`<input type="file" id="xlsx" accept=".xlsx,.xls" hidden>`

@@ -3,27 +3,28 @@
    • объём — тонны;
    • выручка — млн руб.;
    • цена — руб/т.
-   Формула связности: revenueMln = volumeTons × priceRubPerTon / 1 000 000. */
+   Формула связности: revenueMln = volumeTons × priceRubPerTon / 1 000 000.
+   Масштаб 2025–2026: производство ~527 тыс. т, выручка ~75 млрд руб. */
 
 export const MONTHLY=[
-  {period:'Янв 2026',type:'Факт',planVol:20000,vol:19000,planRev:170.0,rev:155.8,price:8200},
-  {period:'Фев 2026',type:'Факт',planVol:25000,vol:24000,planRev:212.5,rev:196.8,price:8200},
-  {period:'Мар 2026',type:'Факт',planVol:28000,vol:28000,planRev:238.0,rev:229.6,price:8200},
-  {period:'Апр 2026',type:'Факт',planVol:28000,vol:28000,planRev:238.0,rev:229.6,price:8200},
-  {period:'Май 2026',type:'Факт',planVol:30000,vol:30000,planRev:255.0,rev:246.0,price:8200},
-  {period:'Июн 2026',type:'Факт',planVol:31000,vol:27000,planRev:263.5,rev:221.4,price:8200},
-  {period:'Июл 2026',type:'Факт',planVol:27000,vol:21000,planRev:229.5,rev:172.2,price:8200},
-  {period:'Авг 2026',type:'Факт',planVol:30000,vol:24000,planRev:255.0,rev:196.8,price:8200},
-  {period:'Сен 2026',type:'Факт',planVol:26000,vol:24500,planRev:221.0,rev:200.9,price:8200},
-  // Финальный ограниченный S&OP-план Q4: 87 500 т из 100 000 т неограниченного спроса.
-  {period:'Окт 2026',type:'Прогноз',planVol:25000,vol:29000,planRev:212.5,rev:237.8,price:8200},
-  {period:'Ноя 2026',type:'Прогноз',planVol:25000,vol:29250,planRev:212.5,rev:239.85,price:8200},
-  {period:'Дек 2026',type:'Прогноз',planVol:25000,vol:29250,planRev:212.5,rev:239.85,price:8200},
+  {period:'Янв 2026',type:'Факт',planVol:41000,vol:39500,planRev:5904.0,rev:5589.3,price:141500},
+  {period:'Фев 2026',type:'Факт',planVol:46000,vol:45000,planRev:6624.0,rev:6367.5,price:141500},
+  {period:'Мар 2026',type:'Факт',planVol:48000,vol:47500,planRev:6912.0,rev:6721.3,price:141500},
+  {period:'Апр 2026',type:'Факт',planVol:47000,vol:46200,planRev:6768.0,rev:6537.3,price:141500},
+  {period:'Май 2026',type:'Факт',planVol:49000,vol:48300,planRev:7056.0,rev:6834.5,price:141500},
+  {period:'Июн 2026',type:'Факт',planVol:50000,vol:46500,planRev:7200.0,rev:6579.8,price:141500},
+  {period:'Июл 2026',type:'Факт',planVol:44000,vol:35500,planRev:6336.0,rev:5023.3,price:141500},
+  {period:'Авг 2026',type:'Факт',planVol:47000,vol:39800,planRev:6768.0,rev:5631.7,price:141500},
+  {period:'Сен 2026',type:'Факт',planVol:43000,vol:41700,planRev:6192.0,rev:5900.6,price:141500},
+  // Финальный ограниченный S&OP-план Q4: 133 000 т из 152 000 т неограниченного спроса.
+  {period:'Окт 2026',type:'Прогноз',planVol:44000,vol:44000,planRev:6336.0,rev:6226.0,price:141500},
+  {period:'Ноя 2026',type:'Прогноз',planVol:44000,vol:44500,planRev:6336.0,rev:6296.8,price:141500},
+  {period:'Дек 2026',type:'Прогноз',planVol:43000,vol:44500,planRev:6192.0,rev:6296.8,price:141500},
 ].map(r=>({...r,valid:!!r.period&&r.planVol>=0&&r.vol>=0&&r.rev>=0}));
 
 /* Число из ячейки: пробелы — разделители групп, запятая — десятичный разделитель */
 const num=v=>{if(v==null||v==='')return 0;if(typeof v==='number')return isFinite(v)?v:0;
-  let s=String(v).trim().replace(/[\s  ]/g,'');
+  let s=String(v).trim().replace(/[\s  ]/g,'');
   if(s.includes(',')&&!s.includes('.')){const p=s.split(',');s=p.length===2&&p[1].length<=2?p[0]+'.'+p[1]:s.replace(/,/g,'');}
   const n=parseFloat(s);return isFinite(n)?n:0;};
 const str=v=>String(v==null?'':v).trim();
@@ -48,7 +49,7 @@ export const filterData=(data,filters={})=>data.filter(x=>Object.entries(filters
 
 /* Канонические YTD-итоги отчёта: считаются из январь–сентябрь, без ручных
    «косметических» итогов — это защищает KPI и графики от рассинхронизации. */
-export const CANON={factVol:225500,factRev:1849.1};
+export const CANON={factVol:390000,factRev:55185};
 
 /* Сводка по фактическим строкам — источник KPI вкладки «Обзор» */
 export const summary=data=>{

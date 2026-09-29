@@ -193,8 +193,14 @@ function paint(canvas){
         vis.forEach((s,gi)=>{const v=s.data[c];if(v==null)return;const by=cy-rowH*0.36+gi*bh;
           const bx=Math.min(X(0),X(v)),bw=Math.max(Math.abs(X(v)-X(0)),1);
           ctx.fillStyle=(s.pointColors&&s.pointColors[c])||s.color;ctx.fillRect(bx,by,bw,bh*0.86);
-          ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.font=(compact?8:10)+'px '+FONT;
-          ctx.fillText(fm(v),v>=0?bx+bw+3:bx-3,by+bh*0.7);ctx.font=fs+'px '+FONT;});
+          if(opts.barValuesIn){ /* значение внутри полосы, белым */
+            ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='700 '+(compact?8:10)+'px '+FONT;
+            const txt=fm(v);const tw=ctx.measureText(txt).width;
+            if(bw>tw+8)ctx.fillText(txt,bx+bw/2,by+bh*0.7);
+            else{ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.fillText(txt,v>=0?bx+bw+3:bx-3,by+bh*0.7);}
+            ctx.font=fs+'px '+FONT;}
+          else{ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.font=(compact?8:10)+'px '+FONT;
+            ctx.fillText(fm(v),v>=0?bx+bw+3:bx-3,by+bh*0.7);ctx.font=fs+'px '+FONT;}});
       }
     }
     drawLegend(H-lay.h);return;
@@ -251,8 +257,13 @@ function paint(canvas){
       if(up.length>1&&lo.length>1){ctx.beginPath();ctx.moveTo(up[0][0],up[0][1]);up.forEach(p=>ctx.lineTo(p[0],p[1]));
         for(let i=lo.length-1;i>=0;i--)ctx.lineTo(lo[i][0],lo[i][1]);ctx.closePath();
         ctx.globalAlpha=0.12;ctx.fillStyle=vis[0].color;ctx.fill();ctx.globalAlpha=1;}
+      /* средние линии — полная заливка+линия; границы — тонкий пунктирный контур поверх заливки */
+      vis.forEach((s,idx)=>{if(s.fill)fillUnder(s);if(idx>0&&idx<vis.length-1)drawLineSeries(s);});
+      if(opts.bandStroke!==false){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=opts.bandStrokeColor||'#7c86a0';ctx.lineWidth=1.2;
+        [up,lo].forEach(pts=>{if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}});
+        ctx.restore();}
     }
-    vis.forEach(s=>{if(s.fill)fillUnder(s);drawLineSeries(s);});
+    else{vis.forEach(s=>{if(s.fill)fillUnder(s);drawLineSeries(s);});}
   }
   else if(type==='area'){
     const bottoms=new Array(n).fill(0);
