@@ -78,7 +78,7 @@ test('тепловая карта и планы имеют согласован�
 });
 
 test('сегментация, разрыв и запасы соответствуют обновлённой бизнес-логике',()=>{
-  assert.equal(CLIENTS.length,21);
+  assert.equal(CLIENTS.length,22);
   assert.equal(CLIENTS.reduce((a,c)=>a+c.rev,0),73440);
   assert.ok(CLIENTS.some(c=>c.name==='Михайловский ГОК им. А.В. Варичева'));
   assert.ok(!SEGMENTS.revDonut.labels.some(x=>/Прочие/.test(x)));
@@ -86,6 +86,65 @@ test('сегментация, разрыв и запасы соответств�
   assert.ok(STOCK.coverage.echelons.labels.includes('3PL — итого'));
   assert.equal(STOCK.dead.tons.series.length,3);
   assert.ok(!STOCK.dead.tons.series.some(s=>/распродажи/.test(s[0])));
+});
+
+test('три клиента «на пересмотр»: ВП на уровне соседнего сегмента, направления ↑/↓',()=>{
+  const rev=CLIENTS.filter(c=>c.review);
+  assert.equal(rev.length,3);
+  const by=n=>CLIENTS.find(c=>c.name===n);
+  const gpRange=seg=>{const g=CLIENTS.filter(c=>c.seg===seg).map(c=>c.gp);return [Math.min(...g),Math.max(...g)];};
+  const [gMin,gMax]=gpRange('gold'),[sMin,sMax]=gpRange('silver');
+  // АСТОН (Платина): ВП на уровне Золота, кандидат на понижение — выручка не менялась
+  const a=by('АСТОН');
+  assert.equal(a.rev,4300);assert.equal(a.revDir,'down');
+  assert.ok(a.gp>=gMin&&a.gp<=gMax,`ВП АСТОН (${a.gp}) в диапазоне Золота ${gMin}–${gMax}`);
+  // НЛМК (Серебро): ВП на уровне Золота, кандидат на повышение
+  const n=by('НЛМК');
+  assert.equal(n.rev,2400);assert.equal(n.revDir,'up');
+  assert.ok(n.gp>=gMin&&n.gp<=gMax,`ВП НЛМК (${n.gp}) в диапазоне Золота ${gMin}–${gMax}`);
+  // ЕВРАЗ КГОК (Бронза): ВП на уровне Серебра, кандидат на повышение
+  const e=by('ЕВРАЗ КГОК');
+  assert.equal(e.rev,1300);assert.equal(e.revDir,'up');
+  assert.ok(e.gp>=sMin&&e.gp<=sMax,`ВП ЕВРАЗ КГОК (${e.gp}) в диапазоне Серебра ${sMin}–${sMax}`);
+});
+
+test('онлайн-канал получил объём, донаты и итоги бьются',()=>{
+  const online=CLIENTS.filter(c=>c.channel==='Онлайн продажи');
+  assert.equal(online.length,1);
+  assert.equal(online[0].rev,2000);
+  const year=SEGMENTS.revDonut.year.data,ytd=SEGMENTS.revDonut.ytd.data;
+  assert.equal(year.reduce((a,b)=>a+b,0),73440);
+  assert.equal(Math.round(ytd.reduce((a,b)=>a+b,0)),55185);
+  assert.equal(year[SEGMENTS.revDonut.labels.indexOf('Онлайн')],2000);
+  assert.ok(year[5]/73440>0.02&&year[5]/73440<0.04,'доля онлайн ≈3%');
+});
+
+test('разрыв покрытия спроса: Серебро и Бронза в сумме не покрыты ровно на 19 000 т',()=>{
+  const rows=SUPPLY.gap.table.rows;
+  const silver=rows.find(r=>/Серебро/.test(r[0])),bronze=rows.find(r=>/Бронза/.test(r[0]));
+  assert.equal(silver[5],'15 000');assert.equal(silver[6],'−8 000');
+  assert.equal(bronze[5],'10 000');assert.equal(bronze[6],'−11 000');
+  assert.equal(23000-15000+21000-10000,19000);
+  // проценты покрытия соответствуют доступно/спрос
+  assert.equal(silver[4],'65,2%');assert.equal(bronze[4],'47,6%');
+  // в диаграмме есть красная зона непокрытия и итоговая строка разрыва
+  assert.ok(SUPPLY.gap.rows.some(r=>r.gapW>0),'красная зона непокрытия в полосах');
+  assert.ok(SUPPLY.gap.rows.some(r=>r.gapRow&&/19 000/.test(r.value)),'итоговая строка «не покрыто 19 000 т»');
+});
+
+test('запасы: моторные и трансмиссионные масла ниже страхового уровня (алерт)',()=>{
+  const P=STOCK.coverage.products;
+  const mot=P.rows.find(r=>r.name==='Масла моторные'),tr=P.rows.find(r=>r.name==='Трансмиссионные масла');
+  assert.ok(mot.days<mot.safety,`моторные ${mot.days}<${mot.safety}`);
+  assert.ok(tr.days<tr.safety,`трансмиссионные ${tr.days}<${tr.safety}`);
+  assert.equal(P.rows.filter(r=>r.days<r.safety).length,2);
+  assert.match(P.insightShort,/алерт/);
+});
+
+test('сценарии: S&OP пред. цикла убран из анализа выполнения годового плана',()=>{
+  assert.ok(!('prev' in SUPPLY.scenYear));
+  assert.equal(SUPPLY.scenYear.rows.length,3);
+  assert.deepEqual(SUPPLY.scenYear.rows.map(r=>r.id),['А','Б','В']);
 });
 
 const mkStub=()=>{
@@ -113,4 +172,17 @@ test('drawChart отрисовывает все зарегистрированн
     drawChart(canvas,t,cases[t],t==='radar'?labels:t==='waterfall'?['Базовый','+Промо','+Корр.','Итого']:labels,
       {legend:['ряд 1','ряд 2','ряд 3'],xTitle:'X',yTitle:'Y',compact:t==='line'});
   }
+});
+
+test('drawChart: красная зона fillBetween и доп. пункты легенды legendExtra',()=>{
+  const {canvas}=mkStub();
+  const series=[{data:[100,110,105,120,115],color:'#20A7C9'},{data:[90,95,92,96,94],color:'#4CAF50',dash:true}];
+  const opts={legend:['План запасов IBP','Целевой запас'],fillBetween:{upper:0,lower:1,color:'#D93025',alpha:.16},
+    legendExtra:[{t:'Превышение плана над целью',color:'rgba(217,48,37,.35)'}]};
+  drawChart(canvas,'line',series,['м1','м2','м3','м4','м5'],opts);
+  // скрытие ряда легендой не должно ломать отрисовку зоны
+  canvas.__state.hidden.add(1);
+  drawChart(canvas,'line',series,['м1','м2','м3','м4','м5'],opts);
+  // only:'both' — вся область между линиями
+  drawChart(canvas,'line',series,['м1','м2','м3','м4','м5'],{...opts,fillBetween:{upper:0,lower:1,only:'both'}});
 });

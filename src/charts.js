@@ -79,17 +79,21 @@ function paint(canvas){
   ctx.font=fs+'px '+FONT;ctx.textAlign='left';ctx.textBaseline='alphabetic';
   const geom={type,plot:null,index:[],legendRects:[],points:[],zoomActive};canvas.__geom=geom;
 
-  /* ── легенда (с учётом скрытия и пустых рядов) ── */
+  /* ── легенда (с учётом скрытия и пустых рядов) ──
+     opts.legendExtra: [{t:'подпись',color:'#hex'}] — дополнительные некликабельные
+     пункты легенды (например, цветная зона fillBetween), рисуются после рядов. */
   const legendSrc=opts.legend&&opts.legend.length?opts.legend.map(String):null;
   // для декартовых прячем легенду ряда, если у него совсем нет данных в окне
   const legItems=legendSrc?legendSrc.map((t,i)=>{
     const s=S[i];const hasData=!s||(s.data||[]).some(v=>v!=null);
     return {t,i,color:(S[i]?S[i].color:pal[i%pal.length]),hidden:st.hidden.has(i),empty:!hasData};
   }).filter(it=>!it.empty):[];
+  const extraItems=(Array.isArray(opts.legendExtra)?opts.legendExtra:[]).map(e=>({t:String(e.t||''),i:-1,color:e.color||'#8c9bae',hidden:false,empty:!e.t}));
+  const allLegItems=[...legItems,...extraItems.filter(e=>!e.empty)];
   const layoutLegend=list=>{const sw=compact?7:9,gap=compact?9:14,lh=compact?12:16;let x=6,rows=1;const items=[];ctx.font=fs+'px '+FONT;
     list.forEach(o=>{const t=typeof o==='string'?o:o.t;const w=sw+5+ctx.measureText(t).width+gap;if(x+w>W-6&&x!==6){rows++;x=6}items.push(Object.assign({},typeof o==='string'?{t:o}:o,{x,row:rows-1,w}));x+=w;});
     return{rows,h:rows*lh+4,items,sw,lh};};
-  const lay=legItems.length?layoutLegend(legItems):{rows:0,h:0,items:[],sw:7,lh:14};
+  const lay=allLegItems.length?layoutLegend(allLegItems):{rows:0,h:0,items:[],sw:7,lh:14};
   const drawLegend=(top)=>{ctx.font=fs+'px '+FONT;ctx.textAlign='left';geom.legendRects=[];
     lay.items.forEach(it=>{const y=top+it.row*lay.lh+lay.lh-4;
       ctx.globalAlpha=it.hidden?0.4:1;
@@ -296,6 +300,39 @@ function paint(canvas){
   const fillUnder=s=>{const pts=linePoints(s);if(pts.length<2)return;
     ctx.beginPath();ctx.moveTo(pts[0][0],Y0(0));pts.forEach(([x,y])=>ctx.lineTo(x,y));ctx.lineTo(pts[pts.length-1][0],Y0(0));ctx.closePath();
     ctx.globalAlpha=0.16;ctx.fillStyle=s.fill===true?s.color:s.fill;ctx.fill();ctx.globalAlpha=1;};
+  /* ── Заливка области между двумя рядами (opts.fillBetween) ──
+     {upper:i, lower:j, color, alpha, only:'above'|'both'} — красная зона между
+     «Планом запасов IBP» и «Целевым запасом»: закрашиваются только участки, где
+     верхний ряд выше нижнего (only:'above', сверхнормативный запас). Каждый
+     непрерывный участок расширяется на полшага оси X, чтобы был виден даже
+     в одном месяце. */
+  const drawFillBetween=()=>{
+    const fb=opts.fillBetween;
+    const up=vis.find(s=>s.__i===fb.upper),lo=vis.find(s=>s.__i===fb.lower);
+    if(!up||!lo)return;
+    const upM=new Map(linePoints(up).map(p=>[p[2],p])),loM=new Map(linePoints(lo).map(p=>[p[2],p]));
+    const idxs=[...new Set([...upM.keys(),...loM.keys()])].sort((a,b)=>a-b);
+    const above=fb.only!=='both';
+    const cond=i=>{const u=up.data[i],l=lo.data[i];return u!=null&&l!=null&&(above?u>l:u!==l);};
+    const half=(n>1?(x1-x0)/(n-1):x1-x0)/2;
+    let run=[];
+    const flush=()=>{
+      if(!run.length)return;
+      const first=run[0],last=run[run.length-1];
+      const xL=Math.max(x0,upM.get(first)[0]-half),xR=Math.min(x1,upM.get(last)[0]+half);
+      ctx.beginPath();ctx.moveTo(xL,upM.get(first)[1]);
+      run.forEach(i=>ctx.lineTo(upM.get(i)[0],upM.get(i)[1]));
+      ctx.lineTo(xR,upM.get(last)[1]);
+      ctx.lineTo(xR,loM.get(last)[1]);
+      for(let k=run.length-1;k>=0;k--)ctx.lineTo(loM.get(run[k])[0],loM.get(run[k])[1]);
+      ctx.lineTo(xL,loM.get(first)[1]);
+      ctx.closePath();
+      ctx.globalAlpha=fb.alpha!=null?fb.alpha:0.16;ctx.fillStyle=fb.color||'#D93025';ctx.fill();ctx.globalAlpha=1;
+      run=[];
+    };
+    idxs.forEach(i=>{if(cond(i))run.push(i);else flush();});
+    flush();
+  };
 
   if(type==='line'||type==='band'){
     if(type==='band'&&vis.length>=3){
@@ -309,7 +346,7 @@ function paint(canvas){
         [up,lo].forEach(pts=>{if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}});
         ctx.restore();}
     }
-    else{vis.forEach(s=>{if(s.fill)fillUnder(s);drawLineSeries(s);});}
+    else{if(opts.fillBetween)drawFillBetween();vis.forEach(s=>{if(s.fill)fillUnder(s);drawLineSeries(s);});}
   }
   else if(type==='area'){
     const bottoms=new Array(n).fill(0);
@@ -424,7 +461,7 @@ function ensureInteractive(canvas){
     if(canvas.__moved){canvas.__moved=false;return;}
     const rect=canvas.getBoundingClientRect();const x=e.clientX-rect.left,y=e.clientY-rect.top;
     const g=geom();const hit=(g.legendRects||[]).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h);
-    if(hit){const s=st();if(s.hidden.has(hit.i))s.hidden.delete(hit.i);else s.hidden.add(hit.i);paint(canvas);}
+    if(hit&&hit.i>=0){const s=st();if(s.hidden.has(hit.i))s.hidden.delete(hit.i);else s.hidden.add(hit.i);paint(canvas);}
   });
 
   // зум колесом по X (декартовы)
