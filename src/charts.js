@@ -158,8 +158,14 @@ function paint(canvas){
 
   /* ─────────── scatter ─────────── */
   if(type==='scatter'){
-    const padL=compact?26:40,padB=(compact?14:22)+lay.h,padT=compact?8:12,padR=12;
-    const x0=padL,y0=padT,x1=W-padR,y1=H-padB,mx=opts.maxX||100,my=opts.maxY||100;
+    const mx=opts.maxX||100,my=opts.maxY||100;
+    /* Ширина подписей оси Y задаёт левый отступ, иначе они наезжают на заголовок оси;
+       заголовку оси X отводим собственную полосу под числами. */
+    ctx.font=fs+'px '+FONT;
+    let wy=0;for(let i=0;i<=4;i++)wy=Math.max(wy,ctx.measureText(fm(my*(4-i)/4)).width);
+    const padL=Math.max(compact?26:40,Math.ceil(wy)+5+(opts.yTitle?16:3));
+    const padB=(compact?14:22)+(opts.xTitle?14:0)+lay.h,padT=compact?8:12,padR=12;
+    const x0=padL,y0=padT,x1=W-padR,y1=H-padB;
     const X=v=>x0+v/mx*(x1-x0),Y=v=>y1-v/my*(y1-y0);
     ctx.strokeStyle=LINE;ctx.lineWidth=1;ctx.font=fs+'px '+FONT;
     for(let i=0;i<=4;i++){const gx=x0+i*(x1-x0)/4,gy=y0+i*(y1-y0)/4;
@@ -186,7 +192,7 @@ function paint(canvas){
     ctx.font=fs+'px '+FONT;
     let labelW=compact?70:90;
     if(!compact)labelW=Math.min(Math.max(...labels.map(l=>ctx.measureText(String(l)).width),40)+12,220);
-    const x0=labelW+8,x1=W-(compact?36:56),y0=compact?6:10,y1=H-(compact?14:20)-lay.h;
+    const x0=labelW+8,x1=W-(compact?36:56),y0=compact?6:10,y1=H-(compact?16:26)-lay.h;
     const stackH=!!opts.stackH;
     let allVals;
     if(stackH){allVals=[];for(let c=0;c<cats;c++){let pos=0,neg=0;vis.forEach(s=>{const v=s.data[c]||0;if(v>=0)pos+=v;else neg+=v;});allVals.push(pos,neg);}}
@@ -240,7 +246,16 @@ function paint(canvas){
   if(opts.max!=null)rg0.max=opts.max;if(opts.min!=null)rg0.min=opts.min;
   if(rg1){if(opts.max1!=null)rg1.max=opts.max1;if(opts.min1!=null)rg1.min=opts.min1;}
   const rot=!compact&&n>12;
-  const padL=compact?28:44,padR=rg1?(compact?34:46):12,padT=compact?8:14,padB=(compact?14:rot?46:24)+lay.h;
+  /* Отступы считаем от реальной ширины подписей, иначе длинные числа наезжают
+     на заголовок оси, а подписи оси X — на легенду. */
+  ctx.font=fs+'px '+FONT;
+  const tickW=(mn,mx)=>{let w=0;for(let i=0;i<=4;i++)w=Math.max(w,ctx.measureText(fm(mx-(mx-mn)*i/4)).width);return Math.ceil(w);};
+  const w0=tickW(rg0.min,rg0.max),w1=rg1?tickW(rg1.min,rg1.max):0;
+  const padL=Math.max(compact?28:44,w0+5+(opts.yTitle?16:3));
+  const padR=rg1?Math.max(compact?34:46,w1+5+(opts.y1Title?16:3)):12;
+  const padT=compact?8:14;
+  const labW=labels.length?Math.ceil(Math.max(...labels.map(l=>ctx.measureText(String(l)).width))):0;
+  const padB=(compact?14:rot?Math.min(64,Math.max(46,Math.round(labW*0.59)+14)):30)+lay.h;
   const x0=padL,y0=padT,x1=W-padR,y1=H-padB,pw=x1-x0,ph=y1-y0;
   const Y0=v=>y1-(v-rg0.min)/((rg0.max-rg0.min)||1)*ph;
   const Y1=v=>rg1?y1-(v-rg1.min)/((rg1.max-rg1.min)||1)*ph:Y0(v);
