@@ -31,6 +31,28 @@ test('приложение рендерит все рабочие вкладки
     assert.ok($$('canvas.chart').length>=2,`графики на ${id}`);
   }
 
+  // сегментация: иконка «на пересмотр» — один красно-зелёный круг (2 полуокружности)
+  click('[data-tab="segments"]');
+  assert.equal($$('.sm-legend svg circle').length,2,'иконка пересмотра: красно-зелёное кольцо');
+  assert.equal($$('.sm-dot.sm-rev-down').length,1,'АСТОН — красная рамка');
+  assert.equal($$('.sm-dot.sm-rev-up').length,2,'НЛМК и ЕВРАЗ КГОК — зелёные рамки');
+
+  // спрос: масштаб графика FVA не от нуля — есть пояснение
+  click('[data-tab="demand"]');
+  assert.match($('#content').textContent,/Ось объёма — не от нуля/);
+
+  // запасы: алерт по категориям ниже страхового уровня
+  click('[data-tab="stock"]');
+  click('[data-sw="invview"][data-val="products"]');
+  assert.match($('#content').textContent,/Алерт: ниже страхового запаса/);
+  assert.match($('#content').textContent,/Масла моторные — 18 дн\. при страховом 20/);
+
+  // поставки: полосы разрыва с красной зоной непокрытия, итог 19 000 т
+  click('[data-tab="supply"]');
+  assert.ok($$('.gap-bar-un').length>=2,'красная зона непокрытия в полосах');
+  assert.match($('#content').textContent,/Серебро −8 000 т \+ Бронза −11 000 т = −19 000 т/);
+  assert.ok(!$('#content').textContent.includes('S&OP пред. цикла ·'),'S&OP пред. цикла убран из анализа сценариев');
+
   click('[data-tab="supply"]');
   click('[data-sw="hmscen"][data-val="C"]');
   assert.match($('#content').innerHTML,/hm-delta-neg-good/);
@@ -47,6 +69,8 @@ test('приложение рендерит все рабочие вкладки
   assert.ok($('#c-ovperf'),'chart overview 2027');
 
   click('[data-tab="plans"]');
+  const pqAct=$$('.switch [data-sw="pq"]').find(b=>b.classList.contains('active'));
+  assert.ok(pqAct&&pqAct.dataset.val==='q4-2026','по умолчанию открывается 4 кв. 2026');
   click('[data-sw="plan"][data-val="inventory"]');
   click('[data-sw="pq"][data-val="q4-2026"]');
   assert.ok($('#c-plan'),'chart плана остатков');
