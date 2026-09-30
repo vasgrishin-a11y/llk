@@ -261,6 +261,16 @@ function paint(canvas){
     if(rot){ctx.save();ctx.translate(x,y1+6);ctx.rotate(-Math.PI/5);ctx.textAlign='right';ctx.fillText(String(l),0,8);ctx.restore();}
     else{ctx.textAlign='center';ctx.fillText(String(l),x,y1+(compact?9:14));}});
   if(rg0.min<0){ctx.strokeStyle=MUTED;ctx.beginPath();ctx.moveTo(x0,Y0(0));ctx.lineTo(x1,Y0(0));ctx.stroke();}
+  /* вертикальные отметки событий (например, остановы производства): opts.marks=[{i,label}] */
+  if(Array.isArray(opts.marks)&&opts.marks.length){
+    const i0=zoomActive&&st.zoom?st.zoom.i0:0;
+    opts.marks.forEach(mk=>{const idx=(mk.i|0)-i0;if(idx<0||idx>=n)return;const mx=cxL(idx);
+      ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle=mk.color||'#D93025';ctx.lineWidth=1.4;ctx.globalAlpha=.75;
+      ctx.beginPath();ctx.moveTo(mx,y0);ctx.lineTo(mx,y1);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+      ctx.fillStyle=mk.color||'#D93025';ctx.beginPath();ctx.arc(mx,y0+5,4.5,0,7);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='700 7px '+FONT;ctx.textAlign='center';ctx.fillText('!',mx,y0+7.6);
+      ctx.restore();ctx.font=fs+'px '+FONT;ctx.textAlign='left';});
+  }
 
   const linePoints=s=>{const pts=[];s.data.forEach((v,i)=>{if(v!=null)pts.push([cxL(i),(s.axis===1?Y1:Y0)(v),i])});return pts;};
   const drawLineSeries=s=>{const pts=linePoints(s);if(!pts.length)return;
