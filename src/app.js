@@ -165,7 +165,6 @@ function vSegments(){
     +`<div class="grid">`
     +card('🥧 Распределение выручки по каналам продаж',sw('revmode',[['year','Год 2026 (факт 9 мес. + прогноз)'],['ytd','Факт янв–сен 2026']])
       +canvas('c-segrev','Кольцевая диаграмма распределения выручки по каналам продаж')
-      +'<div class="muted" style="font-size:11px;margin-top:6px">Интерактивно: наведение — доля и сумма канала, клик по легенде — скрыть / показать канал (доли пересчитываются).</div>'
       +insight(RD.insight)+tbl('tbl-rev',S.revDonut.heads,RD.rows))
     +card('📊 Структура затрат по каналам продаж',canvas('c-segcost','Стековая диаграмма структуры затрат по каналам продаж')+insight(S.costStack.insight)+tbl('tbl-cost',S.costStack.heads,S.costStack.rows))
     +`</div>`;

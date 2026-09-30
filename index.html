@@ -407,6 +407,23 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .hm tr.row-sum td{font-weight:700;border-top:2px solid var(--scp-n-900);border-bottom:2px solid var(--scp-n-900)}
 .hm tr.row-sum td.hm-0,.hm tr.row-sum td.hm-m-na,.hm tr.row-sum td.hm-delta-zero{background:#3c3d3e;color:#fff}
 .hm tr.row-sum td.wp-num,.hm tr.row-sum td.wp-mode{background:var(--scp-n-900);color:#fff}
+/* Итоговая строка перебивает общий tr.row-sum{background:--scp-b-50}, иначе белый текст
+   ложится на почти белый фон и «сливается». Возвращаем цветовую шкалу с контрастным текстом. */
+.hm tr.row-sum td.wp-ok{background:#137333;color:#fff}
+.hm tr.row-sum td.wp-good{background:#8BC34A;color:#1f3323}
+.hm tr.row-sum td.wp-mid{background:#FFC107;color:#3d2c00}
+.hm tr.row-sum td.wp-bad{background:#FF9800;color:#fff}
+.hm tr.row-sum td.wp-worst{background:#D93025;color:#fff}
+.hm tr.row-sum td.hm-100{background:#137333;color:#fff}
+.hm tr.row-sum td.hm-90,.hm tr.row-sum td.hm-m-good,.hm tr.row-sum td.hm-delta-pos{background:#4CAF50;color:#fff}
+.hm tr.row-sum td.hm-80,.hm tr.row-sum td.hm-m-mid{background:#8BC34A;color:#1f3323}
+.hm tr.row-sum td.hm-70,.hm tr.row-sum td.hm-m-low{background:#CDDC39;color:#1f3323}
+.hm tr.row-sum td.hm-60,.hm tr.row-sum td.hm-m-vlow{background:#FFC107;color:#3d2c00}
+.hm tr.row-sum td.hm-50,.hm tr.row-sum td.hm-m-minimal{background:#FF9800;color:#fff}
+.hm tr.row-sum td.hm-40{background:#FF5722;color:#fff}
+.hm tr.row-sum td.hm-30,.hm tr.row-sum td.hm-m-loss{background:#D93025;color:#fff}
+.hm tr.row-sum td.hm-m-high{background:#137333;color:#fff}
+.hm tr.row-sum td.hm-delta-neg{background:#FFCDD2;color:#B3241e}
 /* тепловая карта точности прогноза (WAPE) */
 .hm.wape{min-width:720px;font-size:12px}
 .hm.wape th,.hm.wape td{padding:9px 10px}
