@@ -130,8 +130,13 @@ function segMatrixHTML(){
   const chan=ui.segchan??'all',rev=ui.segrev??'0';
   const CL=SEGMENTS.clients;
   const on=d=>!off.has(d.seg)&&(chan==='all'||d.channel===chan)&&(rev==='0'||d.review);
-  const maxGp=Math.max(...CL.map(c=>c.gp));
-  const size=gp=>Math.round(44+Math.sqrt(gp/maxGp)*68);
+  /* Масштаб круга — от мин. до макс. ВП по всем 22 клиентам (не от нуля), иначе клиенты
+     внутри одного сегмента (близкие по ВП) визуально почти не отличаются. Область круга
+     пропорциональна ВП внутри этого диапазона (sqrt), диапазон диаметра — 34–134px,
+     что даёт разницу площади ~15× между самым маленьким и самым крупным клиентом. */
+  const gpVals=CL.map(c=>c.gp),minGp=Math.min(...gpVals),maxGp=Math.max(...gpVals);
+  const R_MIN=34,R_MAX=134;
+  const size=gp=>Math.round(R_MIN+Math.sqrt((gp-minGp)/(maxGp-minGp))*(R_MAX-R_MIN));
   const shortName=n=>n.length>16?n.split(' ')[0].slice(0,15):n;
   const bands=SEGMENTS.levels.map(L=>{
     const all=CL.filter(c=>c.seg===L.id);
@@ -143,9 +148,10 @@ function segMatrixHTML(){
       const tip=`<b>${esc(d.name)}</b>${d.review?(d.revDir==='down'?' ⚑↓':' ⚑↑'):''}<br><span class="r">${esc(L.label)} · ${esc(d.channel)}${revTxt}</span><br>`
         +`Выручка: ${NF(d.rev,0)} млн руб/год<br>Валовая прибыль: <b>${NF(d.gp,1)} млн руб.</b> (${NF(d.marginPct,0)}%)<br>`
         +`Себестоимость: ${NF(d.cost,0)} млн руб.<br>Сервис: ${d.sFact}% (цель ${d.sTarget}%)`;
+      const showVal=r>=44;
       return `<div class="sm-dot${isOn?'':' dim'}${d.review?(d.revDir==='down'?' sm-rev-down':' sm-rev-up'):''}" data-smtip="${esc(tip)}" style="width:${r}px;height:${r}px;background:${L.color}">`
-        +`<span class="sm-dot-n" style="font-size:${r>84?11:r>66?10:9}px">${esc(shortName(d.name))}</span>`
-        +`<span class="sm-dot-v" style="font-size:${r>84?10:8.5}px">${NF(d.gp,0)}</span></div>`;
+        +`<span class="sm-dot-n" style="font-size:${r>100?11:r>75?10:r>55?9:8}px">${esc(shortName(d.name))}</span>`
+        +(showVal?`<span class="sm-dot-v" style="font-size:${r>100?10:r>75?9:8}px">${NF(d.gp,0)}</span>`:'')+`</div>`;
     }).join('');
     return `<div class="sm-band${off.has(L.id)?' sm-band-off':''}" style="--sc:${L.color}">`
       +`<div class="sm-band-head"><span class="sm-band-chip"></span><div class="sm-band-t">${esc(L.label)}`
