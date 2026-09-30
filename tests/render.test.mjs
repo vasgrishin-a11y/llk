@@ -65,6 +65,18 @@ test('приложение рендерит все рабочие вкладки
   assert.ok($('.tbl-wrap.show'),'таблица раскрылась');
 
   click('[data-tab="overview"]');
+  /* «Ключевые отклонения» сворачиваются по образцу «Данные» */
+  const devBtn=$('[data-toggle="ov-deviations"]');
+  assert.ok(devBtn,'кнопка сворачивания отклонений есть');
+  assert.match(devBtn.textContent,/Показать отклонения/);
+  assert.ok(!$('#ov-deviations').classList.contains('show'),'отклонения скрыты по умолчанию');
+  devBtn.click();
+  assert.ok($('#ov-deviations').classList.contains('show'),'отклонения раскрылись');
+  assert.match(devBtn.textContent,/Скрыть отклонения/);
+  assert.ok($$('#ov-deviations .info').length>=3,'строки отклонений отрисованы');
+  devBtn.click();
+  assert.ok(!$('#ov-deviations').classList.contains('show'),'отклонения снова скрыты');
+
   click('[data-sw="ovp"][data-val="2027"]');
   assert.ok($('#c-ovperf'),'chart overview 2027');
 
@@ -85,6 +97,12 @@ test('приложение рендерит все рабочие вкладки
   assert.ok(!$('.rail'),'левого меню нет');
   assert.ok($('#upload.tb-btn'),'загрузка Excel — икон-кнопка');
   assert.ok($('#reset.tb-btn'),'сброс — икон-кнопка');
+  /* экспорт: кнопка справа вверху с выбором формата */
+  assert.ok($('#exportBtn.tb-btn'),'кнопка экспорта в топбаре');
+  const menu=$('#exportMenu');
+  assert.ok(menu&&menu.hidden,'меню форматов скрыто по умолчанию');
+  assert.ok(menu.querySelector('[data-exp="pdf"]')&&menu.querySelector('[data-exp="pptx"]'),'пункты PDF и PPTX');
+  assert.ok($('#exportBtn').closest('.topbar-actions'),'кнопка в правой группе топбара');
   click('#reset');
   assert.ok($('[data-tab="overview"]'),'сброс вернул обзор');
 });

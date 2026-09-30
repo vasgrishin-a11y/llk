@@ -7,6 +7,7 @@ import {DASHBOARD_CONFIG as C} from './config.js';
 import {MONTHLY,normalizeRows,summary} from './data.js';
 import {OVERVIEW,SEGMENTS,DEMAND,DEMAND_KPIS,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView} from './datasets.js';
 import {drawChart} from './charts.js';
+import {exportDashboard} from './export.js';
 import {storage} from './storage.js';
 
 let data=MONTHLY;
@@ -115,7 +116,9 @@ function vOverview(){
     +card('💰 Выручка и маржа: сравнение с прошлым годом',canvas('c-ovrev','Столбчато-линейный график: выручка и маржа по кварталам')+insight(R.insight)+tbl('tbl-rev-yoy',R.heads,R.rows))
     +`</div>`
     +card('🎯 Точность прогноза по кварталам (WAPE, ниже — лучше)',canvas('c-ovacc','Линейный график ошибки прогноза WAPE по кварталам')+insight(A.insight)+tbl('tbl-acc',A.heads,A.rows))
-    +card('⚠️ Ключевые отклонения',OVERVIEW.deviations.map(([k,t,d])=>info(k,`<b>${t}</b><br>${d}`)).join(''));
+    /* Ключевые отклонения — сворачиваемый блок (как «Данные»): по умолчанию скрыт */
+    +card('⚠️ Ключевые отклонения',`<button class="toggle" data-toggle="ov-deviations" data-open="⚠️ Скрыть отклонения ▲" data-closed="⚠️ Показать отклонения ▼">${open.has('ov-deviations')?'⚠️ Скрыть отклонения ▲':'⚠️ Показать отклонения ▼'}</button>`
+      +`<div class="tbl-wrap dev-wrap${open.has('ov-deviations')?' show':''}" id="ov-deviations">${OVERVIEW.deviations.map(([k,t,d])=>info(k,`<b>${t}</b><br>${d}`)).join('')}</div>`);
 }
 
 /* ═══════════════ 1. Сегментация ═══════════════
@@ -533,8 +536,17 @@ function renderContent(){
   jobs.forEach(([sel,...rest])=>drawChart(el.querySelector(sel),...rest));
   jobs=[];
 }
+/* Рендер любой вкладки в произвольный контейнер (используется экспортом PDF/PPTX):
+   графики отрисовываются в канвасы внутри host, текущий экран не затрагивается. */
+export function renderViewInto(host,tabId){
+  jobs=[];
+  host.innerHTML=(VIEWS[tabId]||vOverview)();
+  jobs.forEach(([sel,...rest])=>drawChart(host.querySelector(sel),...rest));
+  jobs=[];
+}
 const ICON_UPLOAD='<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
 const ICON_RESET='<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+const ICON_EXPORT='<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 function render(){
   if(!C.tabs.some(x=>x.id===tab)){tab='overview';storage.set('tab',tab);}
   summ=summary(data);
@@ -546,6 +558,13 @@ function render(){
         +`<span class="brand-badge"><i class="bb1"></i><i class="bb2"></i><i class="bb3"></i><i class="bb4"></i></span></a>`
       +`<nav class="topnav" aria-label="Разделы дашборда">${C.tabs.map(x=>`<button class="${x.id===tab?'on':''}" data-tab="${x.id}" aria-current="${x.id===tab}"><span class="dot"></span><b>${x.label}</b></button>`).join('')}</nav>`
       +`<div class="topbar-actions">`
+        +`<div class="tb-export">`
+        +`<button class="tb-btn" id="exportBtn" data-tip="Экспорт дашборда: PDF или PPTX" aria-label="Экспорт дашборда" aria-haspopup="true">${ICON_EXPORT}</button>`
+        +`<div class="tb-menu" id="exportMenu" hidden role="menu">`
+        +`<div class="tb-menu-t">Экспорт дашборда · все разделы</div>`
+        +`<button class="tb-menu-i" role="menuitem" data-exp="pdf"><span class="mi-ic">📄</span><span class="mi-tx"><b>PDF</b><small>альбомный A4 · 1–3 графика на странице</small></span></button>`
+        +`<button class="tb-menu-i" role="menuitem" data-exp="pptx"><span class="mi-ic">📊</span><span class="mi-tx"><b>PPTX</b><small>альбомные слайды · без таблиц и отклонений</small></span></button>`
+        +`</div></div>`
         +`<button class="tb-btn" id="upload" data-tip="Загрузить Excel (лист S&OP)" aria-label="Загрузить Excel">${ICON_UPLOAD}</button>`
         +`<input type="file" id="xlsx" accept=".xlsx,.xls" hidden>`
         +`<button class="tb-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button>`
@@ -556,6 +575,20 @@ function render(){
     +`<div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div>`
     +`<main id="content"></main></div></div>`;
   renderContent();
+}
+/* Экспорт дашборда в PDF/PPTX: рендерим все вкладки офскрин и собираем файл */
+async function runExport(format){
+  const btn=document.getElementById('exportBtn');
+  if(btn){btn.classList.add('busy');btn.dataset.tip='Готовлю файл…';}
+  try{
+    const res=await exportDashboard(format,{renderViewInto});
+    if(btn)btn.dataset.tip=`Готово: ${res.pages} стр. (${format.toUpperCase()})`;
+  }catch(err){
+    alert('Не удалось сформировать файл: '+err.message);
+    if(btn)btn.dataset.tip='Экспорт дашборда: PDF или PPTX';
+  }finally{
+    setTimeout(()=>{if(btn){btn.classList.remove('busy');btn.dataset.tip='Экспорт дашборда: PDF или PPTX';}},2500);
+  }
 }
 async function readXlsx(e){
   try{
@@ -572,11 +605,18 @@ document.addEventListener('click',e=>{
   if(tb){tab=tb.dataset.tab;storage.set('tab',tab);render();window.scrollTo({top:0,behavior:'smooth'});return;}
   const sg=e.target.closest('[data-segtoggle]');
   if(sg){if(!ui.segOff)ui.segOff=new Set();const c=sg.dataset.segtoggle;ui.segOff.has(c)?ui.segOff.delete(c):ui.segOff.add(c);renderContent();return;}
+  const exp=e.target.closest('[data-exp]');
+  if(exp){const m=document.getElementById('exportMenu');if(m)m.hidden=true;runExport(exp.dataset.exp);return;}
+  if(e.target.closest('#exportBtn')){const m=document.getElementById('exportMenu');if(m)m.hidden=!m.hidden;return;}
+  if(!e.target.closest('.tb-export')){const m=document.getElementById('exportMenu');if(m)m.hidden=true;}
   const s=e.target.closest('[data-sw]');
   if(s){ui[s.dataset.sw]=s.dataset.val;renderContent();return;}
   const tg=e.target.closest('[data-toggle]');
   if(tg){const id=tg.dataset.toggle;if(open.has(id))open.delete(id);else open.add(id);
-    const w=document.getElementById(id);if(w){w.classList.toggle('show');tg.textContent=w.classList.contains('show')?'📋 Скрыть данные ▲':'📋 Данные ▼';}return;}
+    const w=document.getElementById(id);if(w){w.classList.toggle('show');
+      /* у блока могут быть свои подписи (например, «⚠️ Показать отклонения»), иначе — «📋 Данные» */
+      const o=tg.dataset.open||'📋 Скрыть данные ▲',c=tg.dataset.closed||'📋 Данные ▼';
+      tg.textContent=w.classList.contains('show')?o:c;}return;}
   if(e.target.closest('#upload')){const inp=document.querySelector('#xlsx');if(inp)inp.click();return;}
   if(e.target.closest('#reset')){data=MONTHLY;Object.keys(ui).forEach(k=>delete ui[k]);open.clear();render();return;}
 });

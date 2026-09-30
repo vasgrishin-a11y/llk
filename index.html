@@ -78,6 +78,20 @@ button{font:inherit;cursor:pointer}
   background:var(--scp-n-900);color:#fff;font-size:12px;line-height:16px;white-space:nowrap;padding:5px 9px;
   border-radius:var(--r-s);opacity:0;pointer-events:none;transition:opacity .15s;z-index:500}
 .tb-btn[data-tip]:hover::after{opacity:1}
+/* ── Экспорт дашборда: кнопка + выпадающее меню форматов ── */
+.tb-export{position:relative}
+.tb-btn.busy{opacity:.45;pointer-events:none;animation:tbPulse 1.1s ease-in-out infinite}
+@keyframes tbPulse{50%{opacity:.85}}
+.tb-menu{position:absolute;right:0;top:calc(100% + 10px);z-index:80;min-width:272px;background:var(--scp-card,#fff);
+  border:1px solid var(--scp-line-2,#dbe4ef);border-radius:12px;box-shadow:0 16px 44px rgba(15,23,42,.18);
+  padding:8px;font-family:'Open Sans',sans-serif}
+.tb-menu-t{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--scp-text-3,#8c9096);padding:8px 10px 7px}
+.tb-menu-i{display:flex;gap:11px;align-items:center;width:100%;background:none;border:0;border-radius:9px;
+  padding:9px 10px;cursor:pointer;text-align:left;font-family:inherit}
+.tb-menu-i:hover{background:var(--scp-b-50,#eef1f7)}
+.mi-ic{font-size:19px;flex:0 0 auto}
+.mi-tx b{display:block;font-size:13.5px;color:var(--scp-text,#1a2b4a)}
+.mi-tx small{display:block;font-size:11px;color:var(--scp-text-3,#8c9096);margin-top:2px}
 /* Разделы — часть той же полосы */
 .topnav{display:flex;align-items:stretch;gap:2px;min-width:0;overflow-x:auto;background:transparent}
 .topnav::-webkit-scrollbar{height:0}
@@ -218,6 +232,7 @@ canvas.chart{width:100%;display:block;margin-top:8px;cursor:pointer}
 .tbl-wrap{display:none;margin-top:8px;max-height:360px;overflow:auto;
   border:1px solid var(--scp-line-2);border-radius:var(--r-s)}
 .tbl-wrap.show{display:block}
+.tbl-wrap.dev-wrap{max-height:none}
 .tbl-scroll{overflow:auto;border:1px solid var(--scp-line-2);border-radius:var(--r-s);margin-top:8px}
 table{width:100%;border-collapse:collapse}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--scp-line)}
