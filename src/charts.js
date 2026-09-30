@@ -217,7 +217,7 @@ function paint(canvas){
           const bx=Math.min(X(0),X(v)),bw=Math.max(Math.abs(X(v)-X(0)),1);
           ctx.fillStyle=(s.pointColors&&s.pointColors[c])||s.color;ctx.fillRect(bx,by,bw,bh*0.86);
           if(opts.barValuesIn){ /* значение внутри полосы, белым */
-            ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='700 '+(compact?8:10)+'px '+FONT;
+            ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='700 '+(opts.barValueFont||(compact?8:10))+'px '+FONT;
             const txt=fm(v);const tw=ctx.measureText(txt).width;
             if(bw>tw+8)ctx.fillText(txt,bx+bw/2,by+bh*0.7);
             else{ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.fillText(txt,v>=0?bx+bw+3:bx-3,by+bh*0.7);}

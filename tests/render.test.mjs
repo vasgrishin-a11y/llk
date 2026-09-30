@@ -18,7 +18,7 @@ const click=(s)=>{const el=$(s);assert.ok(el,`элемент ${s} найден`)
 
 test('приложение рендерит все рабочие вкладки и элементы управления',async()=>{
   await import('../src/app.js');
-  assert.ok($$('#content .kpi').length>=8,'KPI обзора');
+  assert.ok($$('#content .kpi').length>=7,'KPI обзора');
   assert.ok($$('canvas.chart').length>0,'canvas обзора');
   assert.equal($$('[data-tab="quality"]').length,0,'раздел качества данных удалён');
 
@@ -50,9 +50,9 @@ test('приложение рендерит все рабочие вкладки
   click('[data-sw="plan"][data-val="inventory"]');
   click('[data-sw="pq"][data-val="q4-2026"]');
   assert.ok($('#c-plan'),'chart плана остатков');
-  assert.match($('#content').textContent,/План запасов: Запасы растут/);
+  assert.match($('#content').textContent,/План запасов: базовый уровень следует целевому запасу/);
   assert.match($('#content').textContent,/Дек 2026 — итого/,'детализация по месяцам есть');
-  assert.match($('#content').textContent,/ПС Интесмо/,'детализация до складов есть');
+  assert.match($('#content').textContent,/ПС Ворсино/,'детализация до складов есть');
 
   click('[data-tab="actions"]');
   assert.ok(!$('#theme'),'переключателя темы нет');

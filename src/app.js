@@ -52,7 +52,7 @@ const OV_EXTRA_ROWS=[
   {cells:['<b>Требуется в 4 кв. для годового плана</b>','Цель','131 000','<b>156 000</b>','119%','18 864,0','<b>23 439,0</b>','124%','150 250'],cls:'row-sum'},
   {cells:['<b>4 кв. — S&OP предыдущего цикла</b>','Пред. цикл','131 000','127 500','97%','18 864,0','17 977,5','95%','141 000'],cls:'row-fc'},
   {cells:['<b>Отставание пред. цикла до цели</b>','Разрыв','—','<b>−28 500</b>','—','—','<b>−5 461,5</b>','—','—'],cls:'row-total'},
-  {cells:['<b>4 кв. — новый S&OP (сценарий В)</b>','Новый цикл','131 000','<b>133 000</b>','102%','18 864,0','<b>18 819,5</b>','100%','141 500'],cls:'row-sum'},
+  {cells:['<b>4 кв. — новый S&OP (сценарий В)</b>','Новый цикл','131 000','<b>129 000</b>','98%','18 864,0','<b>18 255,0</b>','97%','141 512'],cls:'row-sum'},
 ];
 function vOverview(){
   if(ui.ovp==null)ui.ovp='2026';
@@ -102,7 +102,7 @@ function vOverview(){
     {data:R.y2026,kind:'bar',color:'#FF9800'},
     {data:R.m2025,kind:'line',axis:1,color:'#4CAF50'},
     {data:R.m2026,kind:'line',axis:1,color:'#D93025'},
-  ],R.labels,{height:280,legend:['Выручка 2025 (млн)','Выручка 2026 (млн)','Маржа 2025 %','Маржа 2026 %'],y1Title:'Маржа %'});
+  ],R.labels,{height:280,legend:['Выручка 2025 (млн)','Выручка 2026 (млн)','Маржа 2025 %','Маржа 2026 %'],y1Title:'Маржа %',min1:22.4,max1:23.6});
   J('#c-ovacc','line',[
     {data:A.acc,color:'#D93025',fill:true},
     {data:Array(A.labels.length).fill(A.target),color:'#4CAF50',dash:true},
@@ -264,38 +264,28 @@ function vDemand(){
 /* ═══════════════ 3. Запасы ═══════════════ */
 function vStock(){
   const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons',im=ui.invmode??'tons';
-  const CV=S.coverage[v==='channels'?'channels':'products'];
+  const covKey=v==='channels'?'channels':v==='products'?'products':'echelons';
+  const CV=S.coverage[covKey];
   /* страховой запас — заливкой под линией; таблица синхронизирована с переключателем */
   J('#c-cover','combo',[
     {data:CV.safety,kind:'line',color:'#b39ddb',fill:'#b39ddb',dash:true},
-    {data:CV.days,kind:'bar',color:'#20A7C9',pointColors:CV.colors},
+    {data:CV.days,kind:'bar',color:'#20A7C9'},
     {data:CV.target,kind:'line',color:'#4CAF50',dash:true},
   ],CV.labels,{height:340,legend:['Страховой запас, дней (заливка)','Дней покрытия, факт','Целевой запас, дней'],yTitle:'Дней покрытия'});
-  const covRows=v==='channels'?S.coverage.channelsRows:S.coverage.productsRows;
+  const covRows=v==='channels'?S.coverage.channelsRows:v==='products'?S.coverage.productsRows:S.coverage.echelonsRows;
   const IP=S.invPlan;
   if(im==='tons'){
-    J('#c-invplan','band',[
-      {data:IP.safetyBandTop,color:'#b39ddb'},
-      {data:IP.actual,color:'#1a2b4a'},
+    J('#c-invplan','line',[
+      {data:IP.safety,color:'#8c9bae',dash:true},
       {data:IP.target,color:'#4CAF50',dash:true},
-      {data:IP.reorder,color:'#e8930c',dash:true},
-      {data:IP.safety,color:'#b39ddb'},
-    ],IP.labels,{height:340,legend:['Зона страхового запаса','Запас на конец периода (т)','Целевой коридор','Точка заказа','Страховой запас (низ)'],yTitle:'т',marks:IP.stops});
-  }else if(im==='money'){
-    J('#c-invplan','band',[
-      {data:IP.costSafetyBandTop,color:'#b39ddb'},
-      {data:IP.cost,color:'#1a2b4a'},
-      {data:IP.costTarget,color:'#4CAF50',dash:true},
-      {data:IP.costReorder,color:'#e8930c',dash:true},
-      {data:IP.costSafety,color:'#b39ddb'},
-    ],IP.labels,{height:340,legend:['Зона страхового запаса','Стоимость запасов (млн руб.)','Целевая стоимость','Точка заказа','Страховой запас (низ)'],yTitle:'млн руб.',marks:IP.stops});
+      {data:IP.actual,color:'#20A7C9'},
+    ],IP.labels,{height:340,legend:['Страховой запас','Целевой запас','План запасов IBP'],yTitle:'т',marks:IP.stops});
   }else{
     J('#c-invplan','line',[
-      {data:IP.pct.map(()=>0),color:'#9000ff',dash:true},
-      {data:IP.pct,color:'#20A7C9',fill:true},
-      {data:IP.pct.map(()=>-5),color:'#8c9bae',dash:true},
-      {data:IP.pct.map(()=>5),color:'#8c9bae',dash:true},
-    ],IP.labels,{height:340,legend:['Цель (0% к целевому запасу)','Отклонение от цели, %','Коридор −5%','Коридор +5%'],yTitle:'%',min:-10,max:25,marks:IP.stops});
+      {data:IP.costSafety,color:'#8c9bae',dash:true},
+      {data:IP.costTarget,color:'#4CAF50',dash:true},
+      {data:IP.cost,color:'#20A7C9'},
+    ],IP.labels,{height:340,legend:['Страховой запас','Целевой запас','План запасов IBP'],yTitle:'млн руб.',marks:IP.stops});
   }
   const DD=S.dead[dm];
   J('#c-dead','hbar',DD.series.map(([n,d,c])=>({data:d,color:c})),DD.labels,{height:300,legend:DD.series.map(x=>x[0])});
@@ -304,9 +294,9 @@ function vStock(){
   J('#c-mto','donut',[S.mtomts.data],S.mtomts.labels,{height:340,colors:S.mtomts.colors});
   const statCard=x=>`<article class="kpi bt-${x.cls}"><div class="muted kpi-label">${x.name}</div><div class="value ${x.cls}">${x.days}</div><div class="kpi-sub">${x.target}</div><div class="dev dev-${x.cls==='green'?'pos':x.cls==='red'?'neg':'neu'}">${x.delta}</div><div class="kpi-foot ${x.cls}">${x.effect}</div></article>`;
   return kpis('stock')
-    +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов']])+canvas('c-cover','Диаграмма покрытия запасов в днях')+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
-    +card('📈 План запасов на 18 месяцев',(IP.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — плановые остановы производства: ${IP.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.'],['delta','Отклонение от цели, %']])+canvas('c-invplan','План запасов на 18 месяцев: зона страхового запаса, целевой коридор и фактический запас')+insight(im==='tons'?IP.insightTons:im==='money'?IP.insightMoney:IP.insightDelta)+tbl('tbl-inv-plan',im==='tons'?IP.heads:im==='money'?IP.headsM:IP.headsD,im==='tons'?IP.rows:im==='money'?IP.rowsM:IP.rowsD))
-    +card('🔴 Неликвиды — кандидаты на распродажу',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
+    +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов'],['echelons','По эшелонам']])+canvas('c-cover','Диаграмма покрытия запасов в днях')+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
+    +card('📈 План запасов на 18 месяцев',(IP.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — плановые остановы производства: ${IP.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','План запасов на 18 месяцев: зона страхового запаса, целевой коридор и фактический запас')+insight(im==='tons'?IP.insightTons:IP.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IP.heads:IP.headsM,im==='tons'?IP.rows:IP.rowsM))
+    +card('🔴 Неликвиды',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
     +card('🏭 Сырье: состояние запасов',`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
     +card('📦 Готовая продукция: состояние запасов',`<div class="grid-3">${S.fgm.map(statCard).join('')}</div>`+tbl('tbl-fg',S.fgTable.heads,S.fgTable.rows))
     +`<div class="grid">`
@@ -334,9 +324,12 @@ function chainGraphHTML(){
   // завод → свой заводской склад: внутризаводское перемещение
   R[1].nodes.forEach((p,i)=>{const w=Math.min(i,R[2].nodes.length-1);edges+=edge(cx(1,i),cy(1),cx(2,w),cy(2),INTRA,.55);});
   // заводские склады → 3PL / опорные концентраторы: авто
-  const REGION={'Ростов-на-Дону':['ПС Волгоград','ПС Интесмо'],'Краснодар':['ПС Волгоград','ПС Интесмо'],'Ставрополь':['ПС Волгоград','ПС Интесмо'],
-    'Уфа':['ПС Торжок','ПС Интесмо'],'Пермь':['ПС Торжок','ПС Интесмо'],'Екатеринбург':['ПС Торжок','ПС Пермь'],'Челябинск':['ПС Торжок','ПС Тюмень'],
-    'Тюмень (ОК)':['ПС Тюмень','ПС Пермь'],'Новосибирск (ОК)':['ПС Тюмень'],'Красноярск (ОК)':['ПС Тюмень'],'Екатеринбург (ОК)':['ПС Пермь'],'Кузбасс (ОК)':['ПС Пермь']};
+  const REGION={
+    'СЗ|Санкт-Петербург':['ПС Торжок','ПС Ворсино'],'СЗ|Петрозаводск':['ПС Торжок'],
+    'Центр|Москва':['ПС Торжок','ПС Ворсино'],'Центр|Нижний Новгород':['ПС Ворсино','ПС Торжок'],'Центр|Воронеж':['ПС Ворсино','ПС Волгоград'],
+    'Юг|Ростов-на-Дону':['ПС Волгоград','ПС Ворсино'],'Юг|Краснодар':['ПС Волгоград','ПС Ворсино'],
+    'Сибирь|Тюмень (ОК)':['ПС Тюмень','ПС Пермь'],'Сибирь|Новосибирск':['ПС Тюмень'],'Сибирь|Красноярск':['ПС Тюмень'],
+    'Восток|Хабаровск':['ПС Тюмень'],'Восток|Владивосток':['ПС Тюмень']};
   const psIdx=new Map(R[2].nodes.map((n,i)=>[n.n,i]));
   R[3].nodes.forEach((c3,i)=>{(REGION[c3.n]||[]).forEach(ps=>{const wi=psIdx.get(ps);if(wi==null)return;edges+=edge(cx(2,wi),cy(2),cx(3,i),cy(3),AUTO,.22);});});
   R.forEach((row,t)=>{
@@ -423,7 +416,7 @@ function scenYearRows(Y){
 function vSupply(){
   const S=SUPPLY;
   const gap=S.gap.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div></div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.pct?` <small>${r.pct}</small>`:''}</div></div>`).join('');
-  J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:260,barValuesIn:true});
+  J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:280,barValuesIn:true,barValueFont:13});
   J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:400,legend:S.radar.series.map(x=>x[0]),max:S.radar.max||120});
   const F=S.fan;
   J('#c-fan','band',[
@@ -445,7 +438,7 @@ function vSupply(){
   return kpis('supply')
     +card('🏭 Карта цепочки поставок и ограничений',chainGraphHTML()
       +`<div class="info info-danger"><b>🔴 Разрыв цепочки без компенсирующих мер: −19 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
-      +info('warning','<b>🟡 Узкие места (предупреждения, разрыва не создают):</b> заводы Пермь (98%) и Торжок (94%); заводские склады ПС Пермь (91%), ПС Волгоград (88%) и ПС Торжок (14 из 16 рамп); склады 3PL Ростов-на-Дону (89%), Екатеринбург (92% комплектации) и Новосибирск (ОК) (ЖД-плечо 12 суток). Держим на контроле: при росте спроса выше сценария Б они станут следующими ограничениями.')
+      +info('warning','<b>🟡 Узкие места (предупреждения, разрыва не создают):</b> заводы Пермь (98%) и Торжок (94%); заводские склады ПС Пермь (91%), ПС Волгоград (88%) и ПС Торжок (14 из 16 рамп); склады 3PL Юг / Ростов-на-Дону (89%), Центр / Москва (88% комплектации) и Сибирь / Новосибирск (ЖД-плечо 12 суток). Держим на контроле: при росте спроса выше сценария Б они станут следующими ограничениями.')
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows),S.mapDesc)
     +card('📊 Покрытие спроса без компенсирующих мер (сценарий А «Базовый»)',`<div class="gap-chart">${gap}</div>`
       +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 19 000 т</b> · доступно 133 000 из 152 000 т<br>${S.gap.reasons}`)

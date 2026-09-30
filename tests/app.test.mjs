@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {DASHBOARD_CONFIG as C} from '../src/config.js';
 import {MONTHLY,normalizeRows,filterData,summary} from '../src/data.js';
 import {drawChart,CHART_TYPES} from '../src/charts.js';
-import {HEATMAP,PLANS,DEMAND_KPIS} from '../src/datasets.js';
+import {HEATMAP,PLANS,DEMAND_KPIS,CLIENTS,SEGMENTS,STOCK,SUPPLY,planView} from '../src/datasets.js';
 
 test('index содержит основные области UI и canvas',()=>{
   const h=fs.readFileSync('index.html','utf8');
@@ -16,14 +16,17 @@ test('index содержит основные области UI и canvas',()=>{
 test('конфиг: 7 рабочих вкладок без раздела качества данных',()=>{
   assert.equal(C.tabs.length,7);
   assert.deepEqual(C.tabs.map(t=>t.id),['overview','segments','demand','stock','supply','plans','actions']);
-  assert.equal(C.kpis.overview.length,8);
+  assert.equal(C.kpis.overview.length,7);
+  assert.ok(!C.kpis.overview.some(k=>/Средняя цена/.test(k.label)),'карточка средней цены удалена');
   for(const t of ['segments','stock','supply','plans'])assert.ok(C.kpis[t].length>=5,`KPI для ${t}`);
   // KPI спроса — динамические по годам (src/datasets.js)
   assert.deepEqual(Object.keys(DEMAND_KPIS),['y2025','y2026','y2027']);
   Object.values(DEMAND_KPIS).forEach(list=>assert.ok(list.length>=4,'динамические KPI спроса'));
-  // 2026: карточки годового неограниченного спроса нет, квартальная — первая
-  assert.ok(/4 кв\. 2026/.test(DEMAND_KPIS.y2026[0].label),'первая карточка 2026 — неогр. спрос 4 кв.');
-  assert.ok(!DEMAND_KPIS.y2026.some(k=>k.label==='Неограниченный спрос 2026'),'нет годовой карточки неогр. спроса');
+  assert.equal(DEMAND_KPIS.y2026[0].label,'Отклонение от плана YTD');
+  assert.ok(/4 кв\. 2026/.test(DEMAND_KPIS.y2026[1].label),'вторая карточка 2026 — неогр. спрос 4 кв.');
+  assert.equal(DEMAND_KPIS.y2026[2].label,'Прогноз года');
+  assert.equal(DEMAND_KPIS.y2026[2].value,'542 000 т');
+  assert.equal(DEMAND_KPIS.y2026[3].label,'Потенциал выручки 2026');
 });
 
 test('демо-данные: тонны, млн руб. и канонический YTD',()=>{
@@ -68,6 +71,21 @@ test('тепловая карта и планы имеют согласован�
   const c=PLANS.sales.chart(0,3);
   assert.equal(c.labels.length,3);
   c.series.forEach(s=>assert.equal(s.data.length,3));
+  const q4=planView('sales',0,3,'q4-2026');
+  assert.match(q4.kpis[0].value,/129/);
+  assert.match(q4.kpis[0].sub,/18.?255/);
+  assert.ok(!q4.kpis.some(k=>k.label==='Средняя цена'));
+});
+
+test('сегментация, разрыв и запасы соответствуют обновлённой бизнес-логике',()=>{
+  assert.equal(CLIENTS.length,21);
+  assert.equal(CLIENTS.reduce((a,c)=>a+c.rev,0),73440);
+  assert.ok(CLIENTS.some(c=>c.name==='Михайловский ГОК им. А.В. Варичева'));
+  assert.ok(!SEGMENTS.revDonut.labels.some(x=>/Прочие/.test(x)));
+  assert.equal(SUPPLY.gap.table.rows.slice(0,5).reduce((a,r)=>a+Number(String(r[6]).replace(/[^0-9]/g,'')),0),19000);
+  assert.ok(STOCK.coverage.echelons.labels.includes('3PL — итого'));
+  assert.equal(STOCK.dead.tons.series.length,3);
+  assert.ok(!STOCK.dead.tons.series.some(s=>/распродажи/.test(s[0])));
 });
 
 const mkStub=()=>{
