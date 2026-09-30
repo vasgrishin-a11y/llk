@@ -286,12 +286,24 @@ function vStock(){
   /* страховой запас — заливкой под линией; таблица синхронизирована с переключателем.
      Столбцы ниже страхового уровня подсвечиваются красным (алерт). */
   const covAlerts=CV.rows.filter(r=>r.days<r.safety);
+  const isEchelon=v==='echelons';
+  const threePlColor='#7C3AED';
+  const coverageLegend=isEchelon
+    ?['Страховой запас, дней (заливка)','Заводы — факт','Целевой запас, дней']
+    :['Страховой запас, дней (заливка)','Дней покрытия, факт','Целевой запас, дней'];
+  const coverageLegendExtra=[
+    ...(isEchelon?[{t:'3PL — факт',color:threePlColor}]:[]),
+    ...(covAlerts.length?[{t:'Ниже страхового уровня (алерт)',color:'#D93025'}]:[]),
+  ];
   J('#c-cover','combo',[
     {data:CV.safety,kind:'line',color:'#b39ddb',fill:'#b39ddb',dash:true},
-    {data:CV.days,kind:'bar',color:'#20A7C9',pointColors:CV.days.map((d,i)=>d<CV.safety[i]?'#D93025':'#20A7C9')},
+    {data:CV.days,kind:'bar',color:'#20A7C9',pointColors:CV.days.map((d,i)=>{
+      if(d<CV.safety[i])return '#D93025';
+      return isEchelon&&/^3PL\b/.test(CV.labels[i])?threePlColor:'#20A7C9';
+    })},
     {data:CV.target,kind:'line',color:'#4CAF50',dash:true},
-  ],CV.labels,{height:340,legend:['Страховой запас, дней (заливка)','Дней покрытия, факт','Целевой запас, дней'],yTitle:'Дней покрытия',
-    legendExtra:covAlerts.length?[{t:'Ниже страхового уровня (алерт)',color:'#D93025'}]:null});
+  ],CV.labels,{height:340,legend:coverageLegend,yTitle:'Дней покрытия',
+    legendExtra:coverageLegendExtra.length?coverageLegendExtra:null});
   const covAlertHtml=covAlerts.length
     ?info('danger','<b>🔴 Алерт: ниже страхового запаса — '+covAlerts.length+' '+(['позиция','позиции','позиций'])[covAlerts.length===1?0:covAlerts.length<5?1:2]+'</b><br>'
       +covAlerts.map(r=>`<b>${esc(r.name)}</b> — ${r.days} дн. при страховом ${r.safety} (−${r.safety-r.days} дн.)`).join(' · ')
@@ -442,9 +454,9 @@ function scenYearRows(Y){
 }
 function vSupply(){
   const S=SUPPLY;
-  /* Полоса сегмента: цветная часть — покрытый объём, красная (gapW) — не покрытый.
-     Значение справа: «покрыто X (Y%)» + красной строкой «не покрыто Z». */
-  const gap=S.gap.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.gapRow?'#D93025':r.c}">${r.value}${r.pct?` <small>${r.pct}</small>`:''}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}${r.sub?`<br><small>${r.sub}</small>`:''}</div></div>`).join('');
+  /* Полоса сегмента: цветная часть — доступный объём, лёгкая штриховка — разрыв.
+     Справа остаются только объёмы: доступный и, при наличии, малый красный объём разрыва. */
+  const gap=S.gap.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
   J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:280,barValuesIn:true,barValueFont:13});
   J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:400,legend:S.radar.series.map(x=>x[0]),max:S.radar.max||120});
   const F=S.fan;
@@ -470,7 +482,6 @@ function vSupply(){
       +info('warning','<b>🟡 Узкие места (предупреждения, разрыва не создают):</b> заводы Пермь (98%) и Торжок (94%); заводские склады ПС Пермь (91%), ПС Волгоград (88%) и ПС Торжок (14 из 16 рамп); склады 3PL Юг / Ростов-на-Дону (89%), Центр / Москва (88% комплектации) и Сибирь / Новосибирск (ЖД-плечо 12 суток). Держим на контроле: при росте спроса выше сценария Б они станут следующими ограничениями.')
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows),S.mapDesc)
     +card('📊 Покрытие спроса (сценарий А «Базовый»)',`<div class="gap-chart">${gap}</div>`
-      +`<div class="muted" style="font-size:11px;margin:2px 0 4px">Цветная часть полосы — покрытый объём, красная — не покрытый (разрыв).</div>`
       +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 19 000 т</b> · доступно 133 000 из 152 000 т · Серебро −8 000 т + Бронза −11 000 т = −19 000 т<br>${S.gap.reasons}`)
       +tbl('tbl-gap',S.gap.table.heads,S.gap.table.rows))
     +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки (значения — на полосах)')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))

@@ -47,9 +47,18 @@ test('приложение рендерит все рабочие вкладки
   assert.match($('#content').textContent,/Алерт: ниже страхового запаса/);
   assert.match($('#content').textContent,/Масла моторные — 18 дн\. при страховом 20/);
 
-  // поставки: полосы разрыва с красной зоной непокрытия, итог 19 000 т
+  // эшелоны: 3PL выделен цветом отдельно от заводов и обозначен в легенде
+  click('[data-sw="invview"][data-val="echelons"]');
+  const echelonChart=$('#c-cover').__cfg;
+  const threePlIndex=echelonChart.labels.indexOf('3PL — итого');
+  assert.ok(threePlIndex>=0,'в эшелонах есть итог 3PL');
+  assert.equal(echelonChart.series[1].pointColors[threePlIndex],'#7C3AED','3PL выделен фиолетовым');
+  assert.ok(echelonChart.opts.legendExtra.some(x=>x.t==='3PL — факт'),'3PL указан в легенде');
+
+  // поставки: зоны разрыва в полосах, без отдельной строки «Не покрыто (разрыв)»
   click('[data-tab="supply"]');
-  assert.ok($$('.gap-bar-un').length>=2,'красная зона непокрытия в полосах');
+  assert.ok($$('.gap-bar-un').length>=2,'штрихуемые зоны разрыва в полосах');
+  assert.ok(!$('.gap-chart').textContent.includes('Не покрыто (разрыв)'),'отдельная строка разрыва удалена');
   assert.match($('#content').textContent,/Серебро −8 000 т \+ Бронза −11 000 т = −19 000 т/);
   assert.ok(!$('#content').textContent.includes('S&OP пред. цикла ·'),'S&OP пред. цикла убран из анализа сценариев');
 

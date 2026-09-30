@@ -127,9 +127,12 @@ test('разрыв покрытия спроса: Серебро и Бронза
   assert.equal(23000-15000+21000-10000,19000);
   // проценты покрытия соответствуют доступно/спрос
   assert.equal(silver[4],'65,2%');assert.equal(bronze[4],'47,6%');
-  // в диаграмме есть красная зона непокрытия и итоговая строка разрыва
-  assert.ok(SUPPLY.gap.rows.some(r=>r.gapW>0),'красная зона непокрытия в полосах');
-  assert.ok(SUPPLY.gap.rows.some(r=>r.gapRow&&/19 000/.test(r.value)),'итоговая строка «не покрыто 19 000 т»');
+  // в диаграмме остаются только штрихуемые зоны разрыва в полосах сегментов — без отдельной строки разрыва
+  assert.ok(SUPPLY.gap.rows.some(r=>r.gapW>0),'зоны разрыва в полосах');
+  assert.ok(!SUPPLY.gap.rows.some(r=>r.gapRow||/Не покрыто \(разрыв\)/.test(r.label||'')),'отдельная строка разрыва удалена');
+  const silverBar=SUPPLY.gap.rows.find(r=>/Серебро/.test(r.label));
+  assert.equal(silverBar.value,'15 000 т');
+  assert.equal(silverBar.gapVal,'8 000 т');
 });
 
 test('запасы: моторные и трансмиссионные масла ниже страхового уровня (алерт)',()=>{

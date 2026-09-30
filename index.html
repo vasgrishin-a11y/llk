@@ -311,7 +311,9 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .gap-bar-bg{flex:1;height:28px;background:var(--scp-n-50);border:1px solid var(--scp-line-2);
   border-radius:var(--r-s);overflow:hidden;display:flex}
 .gap-bar{height:100%;flex:0 0 auto}
-.gap-bar-un{background:#D93025}
+/* Разрыв остаётся заметным, но не конкурирует с покрытым объёмом сплошной заливкой. */
+.gap-bar-un{background-color:#fffafb;background-image:repeating-linear-gradient(135deg,
+  transparent 0 4px,rgba(217,48,37,.58) 4px 5px)}
 .gap-val{width:170px;text-align:right;font-size:11px;font-weight:600;flex-shrink:0;line-height:1.35}
 .gap-val.main{font-size:12px;font-weight:700}
 .gap-val small{font-size:9px}
