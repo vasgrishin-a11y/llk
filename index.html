@@ -52,9 +52,13 @@ button{font:inherit;cursor:pointer}
 .app{display:flex;flex-direction:column;min-height:100vh}
 .wrap{flex:1;min-width:0;display:flex;flex-direction:column}
 /* Верхняя брендовая полоса: лого-бейдж + словесный знак + быстрые действия */
-.topbar{background:var(--scp-rail);display:flex;align-items:center;gap:14px;padding:0 24px;height:56px;
-  position:sticky;top:0;z-index:320;box-shadow:0 1px 0 rgba(255,255,255,.05)}
-.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+/* Единая верхняя полоса: бренд + разделы + быстрые действия */
+.topbar{background:var(--scp-rail);display:flex;align-items:stretch;gap:0;padding:0 24px;min-height:58px;
+  position:sticky;top:0;z-index:320;box-shadow:0 2px 14px rgba(20,10,35,.22)}
+.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding-right:16px;margin-right:16px;
+  position:relative;text-decoration:none}
+.brand::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:1px;height:26px;background:rgba(255,255,255,.14)}
 .brand-badge{display:grid;grid-template-columns:11px 11px;grid-gap:3px;padding:7px;border-radius:7px;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
 .brand-badge i{width:11px;height:11px;border-radius:3px;display:block;transition:transform .2s}
@@ -64,7 +68,7 @@ button{font:inherit;cursor:pointer}
 .brand-name{color:#fff;font:700 16px/1 'Open Sans',sans-serif;letter-spacing:.2px}
 .brand-name span{color:var(--scp-accent-sub)}
 .brand-tag{color:#8a8a92;font-size:11px;margin-top:2px;letter-spacing:.2px}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto;padding-left:16px}
 .tb-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:var(--r-s);
   background:transparent;border:1px solid rgba(255,255,255,.14);color:#c8c4ce;cursor:pointer;transition:.12s;position:relative}
 .tb-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
@@ -74,16 +78,16 @@ button{font:inherit;cursor:pointer}
   background:var(--scp-n-900);color:#fff;font-size:12px;line-height:16px;white-space:nowrap;padding:5px 9px;
   border-radius:var(--r-s);opacity:0;pointer-events:none;transition:opacity .15s;z-index:500}
 .tb-btn[data-tip]:hover::after{opacity:1}
-/* Лента вкладок */
-.topnav{background:var(--scp-rail-2);display:flex;align-items:stretch;gap:2px;
-  padding:0 24px;overflow-x:auto;position:sticky;top:56px;z-index:310;box-shadow:0 2px 12px rgba(20,10,35,.18)}
+/* Разделы — часть той же полосы */
+.topnav{display:flex;align-items:stretch;gap:2px;min-width:0;overflow-x:auto;background:transparent}
 .topnav::-webkit-scrollbar{height:0}
 .topnav button{display:inline-flex;align-items:center;gap:8px;background:transparent;border:0;
-  border-bottom:3px solid transparent;color:#c2c0c9;padding:12px 16px 9px;
+  border-bottom:3px solid transparent;color:#b9b7c3;padding:0 15px 0;
   font:400 13px/18px 'Open Sans',sans-serif;cursor:pointer;transition:.15s;white-space:nowrap}
-.topnav button:hover{color:#fff}
+.topnav button:hover{color:#fff;background:rgba(255,255,255,.05)}
 .topnav button:hover .dot{background:var(--scp-accent-2)}
-.topnav button.on{border-bottom-color:var(--scp-accent-sub);color:#fff;font-weight:600}
+.topnav button.on{border-bottom-color:var(--scp-accent-sub);color:#fff;font-weight:600;
+  background:linear-gradient(180deg,rgba(144,0,255,.02),rgba(144,0,255,.22))}
 .topnav .dot{width:6px;height:6px;border-radius:50%;background:#5c5c66;flex:0 0 6px;transition:.15s}
 .topnav button.on .dot{background:var(--scp-accent-sub);box-shadow:0 0 6px rgba(175,71,255,.7)}
 
@@ -397,7 +401,12 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
   font-size:11px;color:var(--scp-text-3)}
 .hm-lg{display:inline-block;width:14px;height:14px;border-radius:3px;
   margin:0 4px 0 10px;vertical-align:-3px}
-.hm tr.row-sum td.row-header{background:var(--scp-surface-2)}
+/* Итоговая строка тепловой карты: тёмная закреплённая подпись, цветовая шкала ячеек сохраняется */
+.hm tr.row-sum td.row-header,.hm tr.row-sum th.row-header{background:var(--scp-n-900)!important;color:#fff;
+  font-weight:700;border-color:var(--scp-n-900);letter-spacing:.2px}
+.hm tr.row-sum td{font-weight:700;border-top:2px solid var(--scp-n-900);border-bottom:2px solid var(--scp-n-900)}
+.hm tr.row-sum td.hm-0,.hm tr.row-sum td.hm-m-na,.hm tr.row-sum td.hm-delta-zero{background:#3c3d3e;color:#fff}
+.hm tr.row-sum td.wp-num,.hm tr.row-sum td.wp-mode{background:var(--scp-n-900);color:#fff}
 /* тепловая карта точности прогноза (WAPE) */
 .hm.wape{min-width:720px;font-size:12px}
 .hm.wape th,.hm.wape td{padding:9px 10px}
@@ -421,7 +430,7 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .result-v.orange{color:var(--scp-warn-tx)}
 
 @media(max-width:1100px){
-  .topnav{padding:0 12px}
+  .topbar{padding:0 12px}
   .grid{grid-template-columns:1fr}
   .grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
   header,main,.ctxbar{padding-left:16px;padding-right:16px}
