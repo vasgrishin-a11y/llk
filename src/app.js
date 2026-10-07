@@ -286,7 +286,7 @@ function vDemand(){
 
 /* ═══════════════ 3. Запасы ═══════════════ */
 function vStock(){
-  const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons',im=ui.invmode??'tons';
+  const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons',im=ui.invmode??'tons',hv=ui.invhistview??'stocks';
   const covKey=v==='channels'?'channels':v==='products'?'products':'echelons';
   const CV=S.coverage[covKey];
   /* страховой запас — заливкой под линией; таблица синхронизирована с переключателем.
@@ -325,7 +325,17 @@ function vStock(){
     {t:'Выше целевого запаса (перетовар)',color:'rgba(255,152,0,.40)'},
     {t:'Ниже страхового запаса (пробой)',color:'rgba(217,48,37,.42)'},
   ];
-  if(im==='tons'){
+  const histBarColor=i=>IH.actual[i]<IH.safety[i]?'#D93025':IH.actual[i]>IH.target[i]*1.05?'#FF9800':'#20A7C9';
+  if(hv==='wape'){
+    const WAPE_TGT=IH.labels.map(()=>10);
+    J('#c-invplan','combo',[
+      {data:im==='tons'?IH.actual:IH.cost,kind:'bar',color:'#20A7C9',pointColors:IH.labels.map((_,i)=>histBarColor(i))},
+      {data:IH.wape,kind:'line',color:'#7c3aed',axis:1},
+      {data:WAPE_TGT,kind:'line',color:'#4CAF50',axis:1,dash:true},
+    ],IH.labels,{height:340,legend:im==='tons'?['Фактический запас, т','WAPE прогноза спроса %','Цель WAPE ≤10%']:['Стоимость запаса, млн руб.','WAPE прогноза спроса %','Цель WAPE ≤10%'],
+      yTitle:im==='tons'?'т':'млн руб.',y1Title:'WAPE %',marks:IH.stops,
+      legendExtra:[{t:'Столбец оранжевый — выше целевого (перетовар)',color:'#FF9800'},{t:'Столбец красный — ниже страхового (пробой)',color:'#D93025'}]});
+  }else if(im==='tons'){
     J('#c-invplan','line',[
       {data:IH.safety,color:'#8c9bae',dash:true},
       {data:IH.target,color:'#4CAF50',dash:true},
@@ -349,7 +359,7 @@ function vStock(){
   return kpis('stock')
     +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов'],['echelons','По эшелонам']])+canvas('c-cover','Диаграмма покрытия запасов в днях; красные столбцы — ниже страхового уровня')+covAlertHtml+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
     +card('🔴 Неликвиды',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
-    +card('📈 Анализ запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Анализ запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IH.heads:IH.headsM,im==='tons'?IH.rows:IH.rowsM))
+    +card('📈 Анализ запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invhistview',[['stocks','Запасы'],['wape','⚡ Точность прогноза']])+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Анализ запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(hv==='wape'?IH.insightWape:im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',hv==='wape'?IH.headsW:im==='tons'?IH.heads:IH.headsM,hv==='wape'?IH.rowsW:im==='tons'?IH.rows:IH.rowsM))
     +card('🏭 Сырье: состояние запасов',`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
     +card('📦 Готовая продукция: состояние запасов',`<div class="grid-3">${S.fgm.map(statCard).join('')}</div>`+tbl('tbl-fg',S.fgTable.heads,S.fgTable.rows))
     +`<div class="grid">`
