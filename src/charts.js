@@ -146,17 +146,46 @@ function paint(canvas){
   /* ─────────── radar ─────────── */
   if(type==='radar'){
     const n=labels.length;if(!n)return;
-    const cx=W/2,cy=(H-lay.h)/2+10,R=Math.min(W,H-lay.h)*0.36;
+    const cx=W/2,cy=(H-lay.h)/2+6;
+    /* Жирные видимые подписи осей; длинные подписи вида «Сырьё (затраты)»
+       переносятся на две строки. Радиус паутины — максимально большой,
+       при котором подписи не выходят за край канваса. */
+    const labFs=compact?9:12,labGap=2,labOff=10;
+    const parts=labels.map(l=>{const m=String(l).match(/^(.*?)\s*\((.+)\)$/);return m?[m[1],'('+m[2]+')']:[String(l)];});
+    const partSize=p=>{ctx.font='700 '+labFs+'px '+FONT;const w=ctx.measureText(p[0]).width;
+      if(p.length<2)return{w,h:labFs};
+      return{w:Math.max(w,ctx.measureText(p[1]).width),h:labFs*2+labGap};};
+    let R=Math.min(W,H-lay.h)*0.44;
+    parts.forEach((p,i)=>{const a=-Math.PI/2+i/n*Math.PI*2,c=Math.cos(a),s=Math.sin(a);
+      const sz=partSize(p);
+      if(c>0.3)R=Math.min(R,(W-6-sz.w-cx)/c-labOff);
+      if(c<-0.3)R=Math.min(R,(cx-6-sz.w)/-c-labOff);
+      if(s<-0.6)R=Math.min(R,(cy-sz.h-4)/-s-labOff);
+      if(s>0.6)R=Math.min(R,((H-lay.h)-cy-sz.h-4)/s-labOff);});
+    R=Math.max(36,R);
     const max=opts.max||Math.max(10,Math.ceil(Math.max(...vis.flatMap(s=>s.data.filter(v=>v!=null)),1)/10)*10);
     const pt=(i,v)=>{const a=-Math.PI/2+i/n*Math.PI*2,r=Math.max(0,v)/max*R;return[cx+Math.cos(a)*r,cy+Math.sin(a)*r];};
     for(let ring=1;ring<=4;ring++){ctx.beginPath();for(let i=0;i<=n;i++){const a=-Math.PI/2+(i%n)/n*Math.PI*2,r=R*ring/4,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.strokeStyle=LINE;ctx.lineWidth=1;ctx.stroke();}
-    ctx.font=(compact?8:10)+'px '+FONT;
-    for(let i=0;i<n;i++){const a=-Math.PI/2+i/n*Math.PI*2;
-      ctx.strokeStyle=LINE;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.stroke();
-      const lx=cx+Math.cos(a)*(R+10),ly=cy+Math.sin(a)*(R+10);ctx.fillStyle=MUTED;
-      ctx.textAlign=Math.abs(Math.cos(a))<0.35?'center':(Math.cos(a)>0?'left':'right');
-      ctx.textBaseline=Math.abs(Math.cos(a))<0.35?(Math.sin(a)>0?'top':'bottom'):'middle';
-      ctx.fillText(String(labels[i]),lx,ly);}
+    for(let i=0;i<n;i++){const a=-Math.PI/2+i/n*Math.PI*2,c=Math.cos(a),s=Math.sin(a);
+      ctx.strokeStyle=LINE;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+c*R,cy+s*R);ctx.stroke();
+      const lx=cx+c*(R+labOff),ly=cy+s*(R+labOff),p=parts[i],two=p.length>1;
+      ctx.font='700 '+labFs+'px '+FONT;ctx.fillStyle=TEXT;
+      ctx.textAlign=Math.abs(c)<0.35?'center':(c>0?'left':'right');
+      if(Math.abs(c)<0.35){
+        /* почти вертикальные оси: блок подписи над/под вершиной паутины */
+        if(s<0){ctx.textBaseline='bottom';
+          ctx.fillText(p[0],lx,ly-(two?labFs+labGap:0));
+          if(two)ctx.fillText(p[1],lx,ly);}
+        else{ctx.textBaseline='top';
+          ctx.fillText(p[0],lx,ly);
+          if(two)ctx.fillText(p[1],lx,ly+labFs+labGap);}
+      }else{
+        /* боковые оси: блок из двух строк центрируется по высоте вершины */
+        ctx.textBaseline='middle';
+        const blockH=two?labFs*2+labGap:labFs;
+        ctx.fillText(p[0],lx,ly-blockH/2+labFs/2);
+        if(two)ctx.fillText(p[1],lx,ly+blockH/2-labFs/2);}
+    }
     ctx.textBaseline='alphabetic';
     vis.forEach(s=>{ctx.beginPath();s.data.forEach((v,i)=>{const[x,y]=pt(i,v==null?0:v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();
       ctx.globalAlpha=0.15;ctx.fillStyle=s.color;ctx.fill();ctx.globalAlpha=1;

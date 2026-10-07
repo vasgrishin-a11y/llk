@@ -103,6 +103,26 @@ test('приложение рендерит все рабочие вкладки
   click('[data-sw="hmmode"][data-val="mrg"]');
   assert.match($('#content').innerHTML,/hm-cell/);
 
+  // разворот на весь экран: карточки сценариев и панель «Выполнение бизнес-плана 2026»
+  const scen=$('.scen');assert.ok(scen,'карточка сценария есть');
+  const scenExp=scen.querySelector(':scope > .chart-expand');
+  assert.ok(scenExp,'у карточки сценария есть кнопка разворота');
+  scenExp.click();
+  assert.ok(scen.classList.contains('fs'),'сценарий развернулся на весь экран');
+  assert.ok($('.fs-backdrop'),'фон-подложка показана');
+  scenExp.click();
+  assert.ok(!scen.classList.contains('fs')&&!$('.fs-backdrop'),'повторный клик сворачивает обратно');
+  assert.equal($$('.scen > .chart-expand').length,3,'кнопки разворота у всех трёх сценариев');
+  const sy=$('.scen-year');assert.ok(sy,'панель выполнения бизнес-плана есть');
+  const syExp=sy.querySelector(':scope > .chart-expand');
+  assert.ok(syExp,'у панели бизнес-плана есть кнопка разворота');
+  syExp.click();
+  assert.ok(sy.classList.contains('fs'),'панель бизнес-плана развернулась');
+  syExp.click();
+  assert.ok(!sy.classList.contains('fs'),'панель бизнес-плана свернулась');
+  // радар сравнения сценариев — с подписями осей
+  assert.equal($('#c-radar').__cfg.type,'radar','радар сравнения сценариев');
+
   const tg=$('[data-toggle]');
   assert.ok(tg,'кнопка «📋 Данные» есть');
   tg.click();

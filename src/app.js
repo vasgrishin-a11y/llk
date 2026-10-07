@@ -701,7 +701,9 @@ function vActions(){
    Единственная навигация — горизонтальное меню сверху; тема светлая,
    действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
 const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions};
-/* ── Разворот карточек с графиками на весь экран ── */
+/* ── Разворот на весь экран: карточки с графиками, карточки сценариев
+     и панель «Выполнение бизнес-плана 2026» (.scen-year) ── */
+const FS_SEL='.card.fs,.scen.fs,.scen-year.fs';
 const ICON_EXPAND='<svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
 const ICON_COLLAPSE='<svg viewBox="0 0 24 24"><polyline points="7 3 3 3 3 7"/><polyline points="17 21 21 21 21 17"/><line x1="3" y1="3" x2="10" y2="10"/><line x1="21" y1="21" x2="14" y2="14"/></svg>';
 function repaintCardCanvases(card,fs){
@@ -715,36 +717,38 @@ function repaintCardCanvases(card,fs){
   });
 }
 function closeFullscreen(){
-  const fsCard=document.querySelector('.card.fs');
+  const fsCard=document.querySelector(FS_SEL);
   if(fsCard){fsCard.classList.remove('fs');
-    const b=fsCard.querySelector('.chart-expand');
-    if(b){b.innerHTML=ICON_EXPAND;b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть график на весь экран');}
+    const b=fsCard.querySelector(':scope > .chart-expand');
+    if(b){b.innerHTML=ICON_EXPAND;b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть на весь экран');}
     repaintCardCanvases(fsCard,false);}
   document.querySelector('.fs-backdrop')?.remove();
   document.body.classList.remove('fs-lock');
 }
 function wireCardExpand(root){
-  root.querySelectorAll('.card').forEach(card=>{
-    if(!card.querySelector('canvas.chart'))return;
-    if(card.querySelector('.chart-expand'))return;
+  const targets=[...root.querySelectorAll('.card'),...root.querySelectorAll('.scen'),...root.querySelectorAll('.scen-year')];
+  targets.forEach(el=>{
+    /* карточки — только с графиками; сценарии и панель бизнес-плана — всегда */
+    if(el.classList.contains('card')&&!el.querySelector('canvas.chart'))return;
+    if(el.querySelector(':scope > .chart-expand'))return;
     const b=document.createElement('button');
     b.className='chart-expand';b.innerHTML=ICON_EXPAND;
-    b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть график на весь экран');
+    b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть на весь экран');
     b.addEventListener('click',ev=>{
       ev.stopPropagation();
-      const isFs=card.classList.contains('fs');
+      const isFs=el.classList.contains('fs');
       closeFullscreen();
       if(isFs)return;
-      card.classList.add('fs');
-      b.innerHTML=ICON_COLLAPSE;b.title='Свернуть обратно';b.setAttribute('aria-label','Свернуть график обратно');
+      el.classList.add('fs');
+      b.innerHTML=ICON_COLLAPSE;b.title='Свернуть обратно';b.setAttribute('aria-label','Свернуть обратно');
       const bd=document.createElement('div');bd.className='fs-backdrop';
       bd.addEventListener('click',closeFullscreen);
       document.body.appendChild(bd);
       document.body.classList.add('fs-lock');
-      repaintCardCanvases(card,true);
-      card.scrollTop=0;
+      repaintCardCanvases(el,true);
+      el.scrollTop=0;
     });
-    card.appendChild(b);
+    el.appendChild(b);
   });
 }
 function renderContent(){
@@ -907,7 +911,7 @@ document.addEventListener('mouseout',e=>{if(e.target.closest?.('[data-info],[dat
 /* перерисовка canvas при изменении ширины (дебаунс) */
 let rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{
-  const fsCard=document.querySelector('.card.fs');
+  const fsCard=document.querySelector(FS_SEL);
   if(fsCard){repaintCardCanvases(fsCard,true);return;}
   renderContent();
 },220);});
