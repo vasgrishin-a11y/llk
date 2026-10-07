@@ -307,31 +307,34 @@ function paint(canvas){
      непрерывный участок расширяется на полшага оси X, чтобы был виден даже
      в одном месяце. */
   const drawFillBetween=()=>{
-    const fb=opts.fillBetween;
-    const up=vis.find(s=>s.__i===fb.upper),lo=vis.find(s=>s.__i===fb.lower);
-    if(!up||!lo)return;
-    const upM=new Map(linePoints(up).map(p=>[p[2],p])),loM=new Map(linePoints(lo).map(p=>[p[2],p]));
-    const idxs=[...new Set([...upM.keys(),...loM.keys()])].sort((a,b)=>a-b);
-    const above=fb.only!=='both';
-    const cond=i=>{const u=up.data[i],l=lo.data[i];return u!=null&&l!=null&&(above?u>l:u!==l);};
-    const half=(n>1?(x1-x0)/(n-1):x1-x0)/2;
-    let run=[];
-    const flush=()=>{
-      if(!run.length)return;
-      const first=run[0],last=run[run.length-1];
-      const xL=Math.max(x0,upM.get(first)[0]-half),xR=Math.min(x1,upM.get(last)[0]+half);
-      ctx.beginPath();ctx.moveTo(xL,upM.get(first)[1]);
-      run.forEach(i=>ctx.lineTo(upM.get(i)[0],upM.get(i)[1]));
-      ctx.lineTo(xR,upM.get(last)[1]);
-      ctx.lineTo(xR,loM.get(last)[1]);
-      for(let k=run.length-1;k>=0;k--)ctx.lineTo(loM.get(run[k])[0],loM.get(run[k])[1]);
-      ctx.lineTo(xL,loM.get(first)[1]);
-      ctx.closePath();
-      ctx.globalAlpha=fb.alpha!=null?fb.alpha:0.16;ctx.fillStyle=fb.color||'#D93025';ctx.fill();ctx.globalAlpha=1;
-      run=[];
-    };
-    idxs.forEach(i=>{if(cond(i))run.push(i);else flush();});
-    flush();
+    const fbList=Array.isArray(opts.fillBetween)?opts.fillBetween:[opts.fillBetween];
+    fbList.forEach(fb=>{
+      if(!fb)return;
+      const up=vis.find(s=>s.__i===fb.upper),lo=vis.find(s=>s.__i===fb.lower);
+      if(!up||!lo)return;
+      const upM=new Map(linePoints(up).map(p=>[p[2],p])),loM=new Map(linePoints(lo).map(p=>[p[2],p]));
+      const idxs=[...new Set([...upM.keys(),...loM.keys()])].sort((a,b)=>a-b);
+      const above=fb.only!=='both';
+      const cond=i=>{const u=up.data[i],l=lo.data[i];return u!=null&&l!=null&&(above?u>l:u!==l);};
+      const half=(n>1?(x1-x0)/(n-1):x1-x0)/2;
+      let run=[];
+      const flush=()=>{
+        if(!run.length)return;
+        const first=run[0],last=run[run.length-1];
+        const xL=Math.max(x0,upM.get(first)[0]-half),xR=Math.min(x1,upM.get(last)[0]+half);
+        ctx.beginPath();ctx.moveTo(xL,upM.get(first)[1]);
+        run.forEach(i=>ctx.lineTo(upM.get(i)[0],upM.get(i)[1]));
+        ctx.lineTo(xR,upM.get(last)[1]);
+        ctx.lineTo(xR,loM.get(last)[1]);
+        for(let k=run.length-1;k>=0;k--)ctx.lineTo(loM.get(run[k])[0],loM.get(run[k])[1]);
+        ctx.lineTo(xL,loM.get(first)[1]);
+        ctx.closePath();
+        ctx.globalAlpha=fb.alpha!=null?fb.alpha:0.16;ctx.fillStyle=fb.color||'#D93025';ctx.fill();ctx.globalAlpha=1;
+        run=[];
+      };
+      idxs.forEach(i=>{if(cond(i))run.push(i);else flush();});
+      flush();
+    });
   };
 
   if(type==='line'||type==='band'){
@@ -433,6 +436,20 @@ function ensureInteractive(canvas){
         if(idx>=0){if(s.hover!==idx){s.hover=idx;paint(canvas);}const lbl=d.labels[idx]||('#'+(idx+1));
           showTip('<b>'+lbl+'</b><br>'+fm(d.vals[idx])+' · '+nf((d.vals[idx]||0)/d.total*100,1)+'%',e.clientX,e.clientY);return;}}
       if(s.hover!=null){s.hover=null;paint(canvas);}hideTip();return;}}
+    if(type==='hbar'&&g.hbar){
+      const hb=g.hbar;const c=Math.floor((y-hb.y0)/hb.rowH);
+      if(c>=0&&c<hb.cats){
+        const lab=cfg().labels[c];const leg=opts.legend||[];
+        const rows=(cfg().series||[]).map((ser,si)=>{
+          if(s.hidden.has(si))return null;const arr=Array.isArray(ser)?ser:ser.data;
+          const col=(ser&&ser.pointColors&&ser.pointColors[c])||(Array.isArray(ser)?PALETTE[si%PALETTE.length]:ser.color)||PALETTE[si%PALETTE.length];
+          const v=arr[c];if(v==null)return null;const name=leg[si]||('Ряд '+(si+1));
+          return '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:'+col+';display:inline-block"></span>'+name+': <b>'+fm(v)+'</b></div>';
+        }).filter(Boolean).join('');
+        if(rows){showTip('<div style="margin-bottom:3px;opacity:.8">'+(lab!=null?lab:'')+'</div>'+rows,e.clientX,e.clientY);return;}
+      }
+      hideTip();return;
+    }
     // декартовы — crosshair по ближайшему индексу
     if(!g.plot){hideTip();return;}
     if(x<g.plot.x0-6||x>g.plot.x1+6){if(s.hover!=null){s.hover=null;paint(canvas);}hideTip();return;}

@@ -120,3 +120,40 @@ test('сквозные итоги: клиенты, разрыв, waterfall, YTD,
   assert.equal(ST.coverage.products.rows.filter(r=>r.days<r.safety).length,2,'категории ниже страхового');
   assert.equal(ST.coverage.channels.rows.reduce((a,r)=>a+r.t,0),55300,'тонны каналов');
 });
+
+/* ── 15. Ретроспектива запасов (18 мес.) и многомерный план запасов в «Планах» ── */
+test('ретроспектива запасов за прошедшие 18 мес. (Апр 2025 – Сен 2026) сходится с текущим остатком 55 300 т / 6 033 млн руб.',()=>{
+  const IH=ST.invHistory;
+  assert.equal(IH.labels.length,18);
+  assert.equal(IH.labels[0],'Апр 2025');
+  assert.equal(IH.labels[17],'Сен 2026');
+  assert.equal(IH.actual[17],55300,'финальная точка ретроспективы = 55 300 т');
+  assert.equal(IH.cost[17],6033,'финальная точка в деньгах = 6 033 млн руб.');
+  assert.equal(IH.costTarget[17],4960,'целевая стоимость в Сен 2026 = 4 960 млн руб.');
+  const belowSafety=IH.actual.filter((v,i)=>v<IH.safety[i]);
+  const aboveTarget=IH.actual.filter((v,i)=>v>IH.target[i]);
+  assert.ok(belowSafety.length>=3,'есть падения ниже страхового запаса');
+  assert.ok(aboveTarget.length>=4,'есть превышения целевого запаса');
+  assert.ok(IH.stops.length>=3,'отмечены прошедшие остановы');
+});
+
+test('многомерный План запасов (раздел Планы): 10 складских узлов, 17 складов и 8 категорий продуктов бьются с общим планом помесячно',()=>{
+  const IP=PL.inventory;
+  assert.equal(IP.whGroups.length,10,'5 заводов ПС + 5 регионов 3PL');
+  assert.equal(IP.warehouses.length,17,'5 заводских ПС + 12 складов 3PL');
+  assert.equal(IP.products.length,8,'8 категорий продуктов');
+  assert.equal(IP.whGroups.reduce((a,g)=>a+g.base,0),55300,'база узлов = 55 300 т');
+  assert.equal(IP.warehouses.reduce((a,w)=>a+w.base,0),55300,'база 17 складов = 55 300 т');
+  assert.equal(IP.products.reduce((a,p)=>a+p.base,0),55300,'база 8 категорий = 55 300 т');
+
+  const cSum=IP.chart(0,18,{view:'summary',mode:'tons'});
+  const cWh=IP.chart(0,18,{view:'warehouses',mode:'tons'});
+  const cPr=IP.chart(0,18,{view:'products',mode:'tons'});
+  for(let mi=0;mi<18;mi++){
+    const totalIBP=cSum.series[2].data[mi];
+    const sumWh=cWh.series.reduce((a,s)=>a+s.data[mi],0);
+    const sumPr=cPr.series.reduce((a,s)=>a+s.data[mi],0);
+    assert.equal(sumWh,totalIBP,`месяц ${mi}: сумма по складам = IBP`);
+    assert.equal(sumPr,totalIBP,`месяц ${mi}: сумма по категориям = IBP`);
+  }
+});
