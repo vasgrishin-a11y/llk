@@ -148,12 +148,62 @@ test('многомерный План запасов (раздел Планы): 
 
   const cSum=IP.chart(0,18,{view:'summary',mode:'tons'});
   const cWh=IP.chart(0,18,{view:'warehouses',mode:'tons'});
+  const cWhD=IP.chart(0,18,{view:'warehouses',mode:'tons',level:'Detail'});
   const cPr=IP.chart(0,18,{view:'products',mode:'tons'});
+  assert.equal(cWh.series.length,6,'агг. уровень: 5 заводов ПС + Все склады 3PL');
+  assert.equal(cWhD.series.length,10,'детальный уровень: 5 заводов ПС + 5 регионов 3PL');
   for(let mi=0;mi<18;mi++){
     const totalIBP=cSum.series[2].data[mi];
     const sumWh=cWh.series.reduce((a,s)=>a+s.data[mi],0);
+    const sumWhD=cWhD.series.reduce((a,s)=>a+s.data[mi],0);
     const sumPr=cPr.series.reduce((a,s)=>a+s.data[mi],0);
-    assert.equal(sumWh,totalIBP,`месяц ${mi}: сумма по складам = IBP`);
+    assert.equal(sumWh,totalIBP,`месяц ${mi}: сумма по складам (агг.) = IBP`);
+    assert.equal(sumWhD,totalIBP,`месяц ${mi}: сумма по складам (дет.) = IBP`);
     assert.equal(sumPr,totalIBP,`месяц ${mi}: сумма по категориям = IBP`);
   }
+});
+
+test('цель 4 кв. 2026 снижена до 43/45/47 тыс. т, план IBP сходится сверху (+8/+4/+1%)',()=>{
+  const IP=PL.inventory;
+  const sm=IP.summaryFor(0,3,{view:'summary',mode:'tons'});
+  assert.deepEqual(sm.mTgt,[43000,45000,47000],'цель Окт/Ноя/Дек');
+  assert.deepEqual(sm.mAct,[46500,47000,47500],'план IBP Окт/Ноя/Дек');
+  assert.deepEqual(sm.mPct,[8,4,1],'схождение плана к цели');
+  // страховой запас — 72% новой цели
+  assert.deepEqual(sm.mSaf,[30960,32400,33840]);
+  // KPI «План запасов» в шапке раздела сходится с октябрём
+  const kpi=C.kpis.plans.find(k=>k.label==='План запасов');
+  assert.equal(kpi.value,'46 500 т');
+  assert.match(kpi.sub,/43 000/);
+});
+
+test('риски плана запасов: перетовар (+15% к цели) и дефицит (ниже страхового) находятся движком',()=>{
+  const IP=PL.inventory;
+  assert.equal(IP.RISK_OVER,1.15);
+  // продукты, 4 кв.: смазки — перетовар, трансмиссионные — дефицит
+  const rp=IP.risks(0,3,{view:'products'});
+  const byK=Object.fromEntries(rp.list.map(r=>[r.key,r]));
+  assert.equal(byK.grs.type,'over');assert.ok(byK.grs.worstPct>=15,byK.grs.worstPct);
+  assert.equal(byK.trm.type,'under');assert.ok(byK.trm.worstPct<0,byK.trm.worstPct);
+  assert.ok(byK.grs.cause.length>10&&byK.trm.action.length>10,'причина и действие заполнены');
+  // склады (детально), 4 кв.: Ворсино + Центр + Юг
+  const rw=IP.risks(0,3,{view:'warehouses',level:'Detail'});
+  assert.deepEqual(rw.list.map(r=>r.key),['ps_vors','3pl_ctr','3pl_sth']);
+  // склады (агг.), 4 кв.: виден только Ворсино, детализация показывает больше
+  const ra=IP.risks(0,3,{view:'warehouses'});
+  assert.deepEqual(ra.list.map(r=>r.key),['ps_vors']);
+  assert.equal(ra.detailCount,3,'в детализации рисков больше, чем в агрегате');
+  // динамика по складам, 4 кв.: три склада-нарушителя
+  const rd=IP.risks(0,3,{view:'wh_detail'});
+  assert.deepEqual(rd.list.map(r=>r.key),['ps_vors','3pl_msk','3pl_rnd']);
+  // сводный вид рисков не показывает
+  assert.equal(IP.risks(0,3,{view:'summary'}).list.length,0);
+  // фильтр «Только риски» сужает серии, но не ломает тип графика
+  assert.equal(IP.chart(0,3,{view:'products',riskOnly:true}).series.length,2);
+  assert.equal(IP.chart(0,3,{view:'warehouses',riskOnly:true}).series.length,1);
+  const wdc=IP.chart(0,3,{view:'wh_detail'});
+  assert.equal(wdc.type,'line');
+  assert.equal(wdc.series.length,3,'17 складов: только суммарные линии');
+  const wdc2=IP.chart(0,3,{view:'wh_detail',whs:new Set(['ps_vors','3pl_msk'])});
+  assert.equal(wdc2.series.length,5,'2 склада: 3 суммарные + 2 индивидуальные');
 });

@@ -150,6 +150,22 @@ h1{font:600 26px/32px 'Open Sans',sans-serif;margin:0;color:var(--scp-text)}
 .pb-summary{font-size:12px;color:var(--scp-text-3)}
 .pb-summary b{color:var(--scp-accent)}
 
+/* ── Полоса рисков плана запасов: минималистичные бейджи с тултипом ── */
+.risk-strip{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:2px 0 10px;
+  padding:8px 12px;background:var(--scp-surface-2);border:1px solid var(--scp-line-2);
+  border-radius:var(--r-m)}
+.risk-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--scp-text-3);margin-right:2px}
+.risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9999px;
+  font-size:12px;font-weight:600;cursor:help;border:1.5px solid;white-space:nowrap}
+.risk-over{color:#b26700;border-color:#e8930c;background:#fff8ec}
+.risk-over:hover{background:#fcf0d4}
+.risk-under{color:#b3241e;border-color:#e0243c;background:#fff3f5}
+.risk-under:hover{background:#ffd6db}
+.risk-hint{color:#4f0096;border-color:var(--scp-accent-sub);background:var(--scp-b-50)}
+.risk-hint:hover{background:var(--scp-accent-bg)}
+.risk-ok{font-size:12.5px;color:var(--scp-ok-tx);font-weight:600}
+
 /* ═══════════════ Информационные тултипы у расчётных показателей ═══════════════ */
 .infodot{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;
   border-radius:50%;background:var(--scp-b-100);color:var(--scp-b-800);font-size:10px;font-weight:700;
@@ -166,7 +182,7 @@ main{padding:20px 32px 72px;flex:1}
   padding:16px 18px 14px;margin-bottom:16px;min-width:0}
 .card h2{font:600 15px/20px 'Open Sans',sans-serif;margin:0 0 4px;color:var(--scp-text)}
 .card-sub{margin-bottom:8px;font-size:12px}
-.section-h{margin:8px 0 12px;font:600 11px/16px 'Open Sans',sans-serif;color:var(--scp-text-3);
+.section-h{margin:10px 0 12px;font:600 13px/18px 'Open Sans',sans-serif;color:var(--scp-text-3);
   text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--scp-line);padding-bottom:6px}
 canvas.chart{width:100%;display:block;margin-top:8px;cursor:pointer}
 
@@ -352,13 +368,13 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .scen-c{border-left-color:#4CAF50}
 .scen.rec{background:linear-gradient(135deg,rgba(76,175,80,.12),transparent 60%);
   border-color:#a5d6a7;border-left-color:#4CAF50}
-.scen h4{font:600 13.5px/19px 'Open Sans',sans-serif;margin:0 0 6px;color:var(--scp-text)}
-.scen-rank{font-size:11px;font-weight:600;color:var(--scp-text-2);margin:0 0 8px;padding:4px 8px;
+.scen h4{font:600 15px/21px 'Open Sans',sans-serif;margin:0 0 6px;color:var(--scp-text)}
+.scen-rank{font-size:12.5px;font-weight:600;color:var(--scp-text-2);margin:0 0 8px;padding:4px 10px;
   background:var(--scp-n-50);border-radius:9999px;display:inline-block}
-.scen-desc{font-size:11.5px;color:var(--scp-text-3);line-height:1.55;margin-bottom:10px}
-.scen-metric{display:flex;justify-content:space-between;gap:10px;font-size:12px;
-  padding:4px 0;border-bottom:1px dashed var(--scp-line)}
-.scen-metric b{font-size:13.5px;white-space:nowrap;color:var(--scp-text)}
+.scen-desc{font-size:13px;color:var(--scp-text-3);line-height:1.55;margin-bottom:10px}
+.scen-metric{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;
+  padding:4.5px 0;border-bottom:1px dashed var(--scp-line)}
+.scen-metric b{font-size:15px;white-space:nowrap;color:var(--scp-text)}
 .scen-metric b.green{color:var(--scp-ok-tx)}
 .scen-metric b.orange{color:var(--scp-warn-tx)}
 .scen-metric b.red{color:var(--scp-err)}
@@ -379,20 +395,20 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .scen-split{display:grid;grid-template-columns:minmax(300px,1fr) minmax(320px,1.15fr);gap:18px;align-items:start}
 @media (max-width:980px){.scen-split{grid-template-columns:1fr}}
 .scen-year{border:1px solid var(--scp-line-2);border-radius:var(--r-m);padding:12px 14px;background:var(--scp-surface)}
-.sy-head{font-size:12px;color:var(--scp-text-2);line-height:1.5;padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--scp-line)}
-.sy-head .muted{font-size:11px;margin-top:3px}
+.sy-head{font-size:13.5px;color:var(--scp-text-2);line-height:1.5;padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid var(--scp-line)}
+.sy-head .muted{font-size:12.5px;margin-top:3px}
 .sy-row{display:grid;grid-template-columns:1fr;gap:5px;padding:9px 10px;border-radius:9px;margin-bottom:7px;
   border:1px solid var(--scp-line);background:#fcfcfe}
 .sy-row.sy-prev{background:#f6f7f9;opacity:.9}
 .sy-row.sy-best{border:1.5px solid #4CAF50;background:rgba(76,175,80,.06)}
-.sy-name{font-size:12.5px;font-weight:700;color:var(--scp-text);margin-bottom:2px}
-.sy-m{display:grid;grid-template-columns:104px auto auto 1fr;align-items:center;gap:8px;font-size:11.5px;color:var(--scp-text-2)}
+.sy-name{font-size:14px;font-weight:700;color:var(--scp-text);margin-bottom:2px}
+.sy-m{display:grid;grid-template-columns:122px auto auto 1fr;align-items:center;gap:8px;font-size:13px;color:var(--scp-text-2)}
 .sy-m b{font-variant-numeric:tabular-nums;color:var(--scp-text);white-space:nowrap}
-.sy-k{color:var(--scp-text-3);font-size:10.5px;text-transform:uppercase;letter-spacing:.2px}
-.sy-p{color:var(--scp-text-3);font-size:11px;white-space:nowrap}
+.sy-k{color:var(--scp-text-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.2px}
+.sy-p{color:var(--scp-text-3);font-size:12px;white-space:nowrap}
 .sy-bar{display:block;height:7px;border-radius:4px;background:var(--scp-n-50);overflow:hidden;min-width:60px}
 .sy-bar i{display:block;height:100%;border-radius:4px}
-.sy-note{font-size:11.5px;color:var(--scp-text-2);margin-top:8px;padding-top:8px;border-top:1px dashed var(--scp-line)}
+.sy-note{font-size:13px;color:var(--scp-text-2);margin-top:8px;padding-top:8px;border-top:1px dashed var(--scp-line)}
 
 /* ── Тепловая карта ── */
 .hm-scroll{overflow-x:auto;margin-top:12px}

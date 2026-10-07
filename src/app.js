@@ -5,7 +5,7 @@
    локальные переключатели вкладок — в `ui` (в памяти), открытые таблицы — `open`. */
 import {DASHBOARD_CONFIG as C} from './config.js';
 import {MONTHLY,normalizeRows,summary} from './data.js';
-import {OVERVIEW,SEGMENTS,DEMAND,DEMAND_KPIS,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView} from './datasets.js';
+import {OVERVIEW,SEGMENTS,DEMAND,DEMAND_KPIS,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView,COST_TON} from './datasets.js';
 import {drawChart} from './charts.js';
 import {exportDashboard} from './export.js';
 import {storage} from './storage.js';
@@ -349,7 +349,7 @@ function vStock(){
   return kpis('stock')
     +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов'],['echelons','По эшелонам']])+canvas('c-cover','Диаграмма покрытия запасов в днях; красные столбцы — ниже страхового уровня')+covAlertHtml+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
     +card('🔴 Неликвиды',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
-    +card('📈 Проекция запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Проекция запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IH.heads:IH.headsM,im==='tons'?IH.rows:IH.rowsM))
+    +card('📈 Анализ запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Анализ запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IH.heads:IH.headsM,im==='tons'?IH.rows:IH.rowsM))
     +card('🏭 Сырье: состояние запасов',`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
     +card('📦 Готовая продукция: состояние запасов',`<div class="grid-3">${S.fgm.map(statCard).join('')}</div>`+tbl('tbl-fg',S.fgTable.heads,S.fgTable.rows))
     +`<div class="grid">`
@@ -508,6 +508,34 @@ function vSupply(){
 }
 
 /* ═══════════════ 5. Планы ═══════════════ */
+/* Полоса рисков плана запасов: минималистичные бейджи 🟠/🔴 с пояснением при наведении.
+   Использует data-smtip (HTML-тултип), как пузырьки сегментации. */
+function riskStripHTML(P,a,b,invOpts){
+  const iv=invOpts.view;
+  if(iv==='summary'||typeof P.risks!=='function')return '';
+  const R=P.risks(a,b,invOpts);
+  const shortName=n=>String(n).replace(/^3PL /,'');
+  if(!R.list.length){
+    const fb=invOpts.riskOnly?' Фильтр «Только риски» включён, но рисков нет — показаны все позиции.':'';
+    return `<div class="risk-strip"><span class="risk-title">⚠️ Риски периода:</span><span class="risk-ok">✅ Не выявлено — все позиции в коридоре (страховой … цель +15%).${fb}</span></div>`;
+  }
+  const badges=R.list.map(r=>{
+    const icon=r.type==='under'?'🔴':'🟠';
+    const wm=r.months.find(m=>m.mi===r.worstMi)||r.months[0];
+    const mln=v=>N(Math.round(v*COST_TON));
+    const tip=`<b>${esc(r.name)}</b> — ${r.type==='under'?'дефицит: план ниже страхового запаса':'перетовар: план выше цели более чем на 15%'}<br>`
+      +`Худший месяц: <b>${esc(MONTHS18[r.worstMi])}</b> — ${esc(r.text)}<br>`
+      +`План ${N(wm.plan)} т (${mln(wm.plan)} млн) · цель ${N(wm.tgt)} т · страховой ${N(wm.saf)} т<br>`
+      +(r.months.length>1?`Месяцы с риском: ${r.months.map(m=>esc(MONTHS18[m.mi])).join(', ')}<br>`:'')
+      +`Причина: ${esc(r.cause)}<br>Действие: ${esc(r.action)}`;
+    return `<span class="risk-badge risk-${r.type}" data-smtip="${esc(tip)}">${icon} ${esc(shortName(r.name))} · ${esc(r.text)}</span>`;
+  }).join('');
+  let hint='';
+  if(iv==='warehouses'&&R.detailCount!=null&&R.detailCount>R.list.length){
+    hint=`<span class="risk-badge risk-hint" data-smtip="${esc('Агрегированный уровень сглаживает часть рисков. Переключите уровень на «По регионам (10)», чтобы увидеть все '+R.detailCount+' рисковых узлов.')}">🔍 В детализации по регионам: ${R.detailCount}</span>`;
+  }
+  return `<div class="risk-strip"><span class="risk-title">⚠️ Риски периода (${R.list.length}):</span>${badges}${hint}</div>`;
+}
 function vPlans(){
   if(ui.pq==null)ui.pq='q4-2026'; /* по умолчанию открывается 4 кв. 2026 */
   const pl=ui.plan??'sales';
@@ -519,6 +547,9 @@ function vPlans(){
     mode:ui.planinvmode??'tons',
     cats:ui.invCats,
     nodes:ui.invNodes,
+    whs:ui.invWh,
+    level:ui.invWhLevel??'agg',
+    riskOnly:ui.invrisk==='1',
   }:{};
   const cdef=pl==='inventory'?P.chart(a,b,invOpts):P.chart(a,b);
   J('#c-plan',cdef.type,cdef.series,cdef.labels,cdef.opts);
@@ -540,16 +571,23 @@ function vPlans(){
     const viewSwitch=`<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">`
       +`<div><div class="muted" style="font-size:11px;margin-bottom:2px">Вид графика запасов</div>`
       +sw('planinvview',[
-        ['summary','📈 Сводный план на 18 мес. (IBP)'],
-        ['warehouses','🏭 По складам (заводы и 3PL по регионам)'],
-        ['wh_detail','🏬 Разбивка по каждому складу (17)'],
+        ['summary','📈 Сводный план (IBP)'],
+        ['warehouses','🏭 По складам (заводы + 3PL)'],
+        ['wh_detail','🏬 Динамика по складам (выбор)'],
         ['products','🧪 По категориям продуктов (8)'],
       ])+`</div>`
+      +(iv==='warehouses'?`<div><div class="muted" style="font-size:11px;margin-bottom:2px">Уровень: от общего к частному</div>`
+        +sw('invWhLevel',[['agg','📦 Заводы + Все 3PL'],['Detail','🗂️ По регионам (10)']])
+        +`</div>`:'')
       +`<div><div class="muted" style="font-size:11px;margin-bottom:2px">Единицы измерения</div>`
       +sw('planinvmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])
-      +`</div></div>`;
+      +`</div>`
+      +(iv!=='summary'?`<div><div class="muted" style="font-size:11px;margin-bottom:2px">Риски</div>`
+        +sw('invrisk',[['0','Все позиции'],['1','⚠️ Только риски']])
+        +`</div>`:'')
+      +`</div>`;
     let quickFilter='';
-    if(iv==='warehouses'||iv==='wh_detail'){
+    if(iv==='warehouses'){
       const selCats=ui.invCats&&ui.invCats.size?ui.invCats:null;
       const allOn=!selCats||selCats.size===P.products.length;
       quickFilter=`<div class="periodbar" style="margin:6px 0 10px;padding:8px 12px;background:var(--scp-surface-2)">`
@@ -559,6 +597,24 @@ function vPlans(){
         +P.products.map(p=>{
           const act=selCats?selCats.has(p.id):false;
           return `<button class="${act?'active':''}" data-invcat="${p.id}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:5px"></span>${esc(p.name)}</button>`;
+        }).join('')
+        +`</div></div>`;
+    }else if(iv==='wh_detail'){
+      const selWh=ui.invWh&&ui.invWh.size?ui.invWh:null;
+      const allOn=!selWh||selWh.size===P.warehouses.length;
+      const plantIds=P.warehouses.filter(w=>!w.id.startsWith('3pl_')).map(w=>w.id);
+      const tplIds=P.warehouses.filter(w=>w.id.startsWith('3pl_')).map(w=>w.id);
+      const onlyPlants=selWh&&selWh.size===plantIds.length&&plantIds.every(id=>selWh.has(id));
+      const only3pl=selWh&&selWh.size===tplIds.length&&tplIds.every(id=>selWh.has(id));
+      quickFilter=`<div class="periodbar" style="margin:6px 0 10px;padding:8px 12px;background:var(--scp-surface-2)">`
+        +`<span class="pb-lbl">Выбор складов (1 или несколько):</span>`
+        +`<div class="switch" style="margin:0">`
+        +`<button class="${allOn?'active':''}" data-invwh="all">Все склады (${P.warehouses.length})</button>`
+        +`<button class="${onlyPlants?'active':''}" data-invwh="plants">🏭 Заводы ПС (5)</button>`
+        +`<button class="${only3pl?'active':''}" data-invwh="3pl">🏬 Склады 3PL (12)</button>`
+        +P.warehouses.map(w=>{
+          const act=selWh?selWh.has(w.id):false;
+          return `<button class="${act?'active':''}" data-invwh="${w.id}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${w.color};margin-right:5px"></span>${esc(w.name)}</button>`;
         }).join('')
         +`</div></div>`;
     }else if(iv==='products'){
@@ -580,7 +636,7 @@ function vPlans(){
         }).join('')
         +`</div></div>`;
     }
-    invExtra=stopsNote+viewSwitch+quickFilter;
+    invExtra=stopsNote+viewSwitch+quickFilter+riskStripHTML(P,a,b,invOpts);
   }
   const insText=pl==='inventory'?P.insightFor(a,b,invOpts):P.insight;
   return periodBar
@@ -708,6 +764,20 @@ document.addEventListener('click',e=>{
       if(!ui.invNodes)ui.invNodes=new Set();
       if(ui.invNodes.has(val))ui.invNodes.delete(val);else ui.invNodes.add(val);
       if(!ui.invNodes.size||ui.invNodes.size===PLANS.inventory.whGroups.length)ui.invNodes=null;
+    }
+    renderContent();return;
+  }
+  const iwh=e.target.closest('[data-invwh]');
+  if(iwh){
+    const val=iwh.dataset.invwh;
+    const WH=PLANS.inventory.warehouses;
+    if(val==='all'){ui.invWh=null;}
+    else if(val==='plants'){ui.invWh=new Set(WH.filter(w=>!w.id.startsWith('3pl_')).map(w=>w.id));}
+    else if(val==='3pl'){ui.invWh=new Set(WH.filter(w=>w.id.startsWith('3pl_')).map(w=>w.id));}
+    else{
+      if(!ui.invWh)ui.invWh=new Set();
+      if(ui.invWh.has(val))ui.invWh.delete(val);else ui.invWh.add(val);
+      if(!ui.invWh.size||ui.invWh.size===WH.length)ui.invWh=null;
     }
     renderContent();return;
   }
