@@ -58,7 +58,7 @@ test('приложение рендерит все рабочие вкладки
   // запасы: карточка ретроспективы за прошедшие 18 месяцев идёт после карточки «Неликвиды»
   const stockCards=$$('#content .card h2').map(h=>h.textContent);
   const deadIdx=stockCards.findIndex(t=>/Неликвиды/.test(t));
-  const retroIdx=stockCards.findIndex(t=>/Проекция запасов за прошедшие 18 месяцев/.test(t));
+  const retroIdx=stockCards.findIndex(t=>/Анализ запасов за прошедшие 18 месяцев/.test(t));
   assert.ok(deadIdx>=0&&retroIdx>deadIdx,'график за прошедшие 18 мес. расположен после Неликвидов');
   assert.equal($('#c-invplan').__cfg.labels[0],'Апр 2025');
   assert.equal($('#c-invplan').__cfg.labels[17],'Сен 2026');
@@ -116,19 +116,41 @@ test('приложение рендерит все рабочие вкладки
   click('[data-sw="pq"][data-val="all"]');
   assert.equal($('#c-plan').__cfg.opts.marks.length,3,'3 плановых останова на горизонте 18 мес.');
 
+  // возвращаемся в 4 кв. 2026 для тестов видов графика, фильтров и рисков
+  click('[data-sw="pq"][data-val="q4-2026"]');
+
   // переключалка видов графика в Плане запасов + быстрые мульти-фильтры
   click('[data-sw="planinvview"][data-val="warehouses"]');
   assert.equal($('#c-plan').__cfg.type,'stacked','помесячный стек по заводам и 3PL');
-  assert.equal($('#c-plan').__cfg.series.length,10,'5 заводов ПС + 5 регионов 3PL');
+  assert.equal($('#c-plan').__cfg.series.length,6,'по умолчанию: 5 заводов ПС + Все склады 3PL');
+  assert.ok($('#c-plan').__cfg.opts.legend.includes('Все склады 3PL'),'агрегированный уровень 3PL');
+  click('[data-sw="invWhLevel"][data-val="Detail"]');
+  assert.equal($('#c-plan').__cfg.series.length,10,'детализация: 5 заводов ПС + 5 регионов 3PL');
+  click('[data-sw="invWhLevel"][data-val="agg"]');
   assert.ok($('[data-invcat="mot"]'),'быстрый фильтр по категориям продуктов есть');
   click('[data-invcat="mot"]');
   click('[data-invcat="grs"]');
   assert.equal($$('[data-invcat].active').length,2,'выбраны 2 категории продуктов одновременно');
+  click('[data-invcat="all"]');
+  // полоса рисков: бейджи перетовара/дефицита + фильтр «Только риски»
+  assert.ok($('.risk-strip'),'полоса рисков отрисована');
+  assert.ok($$('.risk-badge').length>=1,'есть бейджи рисков');
+  click('[data-sw="invrisk"][data-val="1"]');
+  assert.equal($('#c-plan').__cfg.series.length,1,'«Только риски» 4 кв. (агг.): один ПС Ворсино');
+  assert.equal($('#c-plan').__cfg.opts.legend[0],'ПС Ворсино');
+  click('[data-sw="invrisk"][data-val="0"]');
 
   click('[data-sw="planinvview"][data-val="wh_detail"]');
-  assert.equal($('#c-plan').__cfg.type,'hbar','горизонтальный график по всем 17 складам');
-  assert.equal($('#c-plan').__cfg.labels.length,17,'17 складов: 5 ПС + 12 3PL');
-  click('[data-invcat="all"]');
+  assert.equal($('#c-plan').__cfg.type,'line','динамика выборки складов, как сводный план');
+  assert.deepEqual($('#c-plan').__cfg.labels.slice(0,3),['Окт 2026','Ноя 2026','Дек 2026'],'ось X — периоды');
+  assert.equal($('#c-plan').__cfg.series.length,3,'все 17 складов: только суммарные линии');
+  assert.ok($('[data-invwh="ps_vors"]'),'фильтр выбора складов есть');
+  click('[data-invwh="ps_vors"]');
+  click('[data-invwh="3pl_msk"]');
+  assert.equal($$('[data-invwh].active').length,2,'выбраны 2 склада одновременно');
+  assert.equal($('#c-plan').__cfg.series.length,5,'2 склада: 3 суммарные линии + 2 индивидуальные');
+  assert.ok($('.risk-strip'),'полоса рисков в динамике по складам');
+  click('[data-invwh="all"]');
 
   click('[data-sw="planinvview"][data-val="products"]');
   assert.equal($('#c-plan').__cfg.type,'stacked','помесячный стек по категориям продуктов');
@@ -138,6 +160,9 @@ test('приложение рендерит все рабочие вкладки
   click('[data-invnode="3pl_sib"]');
   assert.equal($$('[data-invnode].active').length,2,'выбраны завод и регион 3PL одновременно');
   click('[data-invnode="all"]');
+  click('[data-sw="invrisk"][data-val="1"]');
+  assert.equal($('#c-plan').__cfg.series.length,2,'риски 4 кв.: смазки (перетовар) + трансмиссионные (дефицит)');
+  click('[data-sw="invrisk"][data-val="0"]');
   click('[data-sw="planinvview"][data-val="summary"]');
 
   click('[data-tab="actions"]');

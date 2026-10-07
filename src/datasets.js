@@ -296,15 +296,21 @@ export const DEMAND={
 /* ═══════════ 3. ЗАПАСЫ ═══════════
    План следует цели, создавая однопериодные буферы до и после остановов заводов. */
 const sales=[42500,43000,43500,43500,43000,42500,41500,42000,42500,44000,44500,43500,43000,43500,44000,43000,42500,42000]; // 774 000 т / 18 мес.
-const invTarget=[46500,47000,47500,45500,44000,43200,42500,42800,43600,45200,46000,46800,47000,47400,47600,45800,44200,43400];
+/* Целевой запас 4 кв. 2026 снижен решением S&OP: Окт — 43 000 т, Ноя — 45 000 т, Дек — 47 000 т
+   (было 46 500 / 47 000 / 47 500 т). План IBP в 4 кв. оставлен на прежних уровнях
+   46 500 / 47 000 / 47 500 т и сходится к новой цели сверху: +8,1% → +4,4% → +1,1%.
+   Логика: мгновенно «упасть» с 55 300 т (Сен 2026) на 43 000 т за месяц нельзя —
+   снижение идёт за счёт распродажи неликвидов (~8 000 т) и контролируемого недовоза. */
+const invTarget=[43000,45000,47000,45500,44000,43200,42500,42800,43600,45200,46000,46800,47000,47400,47600,45800,44200,43400];
 /* С января 2027 запас плавно сходится к целевому коридору; всплески — сезонное накопление
-   перед плановыми остановами и зимним пиком, провалы — периоды остановов производства. */
-const invDevPct=[100,100,100,100,100,100,100,110,98,108,109,97,108,100,110,96,109,100];
+   перед плановыми остановами и зимним пиком, провалы — периоды остановов производства.
+   Первые три значения — точные доли, сохраняющие план 4 кв. 46 500 / 47 000 / 47 500 т. */
+const invDevPct=[46500/43000*100,47000/45000*100,47500/47000*100,100,100,100,100,110,98,108,109,97,108,100,110,96,109,100];
 const INV_STOPS=[{i:8,label:'Останов: Волгоград, линия №2 — кап. ремонт, 3 недели'},
   {i:11,label:'Останов: Пермь — плановое ТО, 2 недели'},
   {i:15,label:'Останов: Торжок — модернизация фасовки, 2 недели'}];
 const inv=invTarget.map((t,i)=>Math.round(t*invDevPct[i]/100)); // фактический план запасов
-const COST_TON=0.1091; // себестоимость запаса, млн руб./т (77% × 141 500 руб/т)
+export const COST_TON=0.1091; // себестоимость запаса, млн руб./т (77% × 141 500 руб/т)
 const invCost=inv.map(v=>+(v*COST_TON).toFixed(0));
 const invCostTarget=invTarget.map(v=>+(v*COST_TON).toFixed(0));
 const invMoneyDev=inv.map((v,i)=>Math.round(100*100/invDevPct[i])-100); // dev денег ≈ dev тонн (пересчёт ниже в строках)
@@ -403,22 +409,22 @@ export const STOCK={
     costSafetyBandTop:invCostSafety.map(v=>Math.round(v*1.08)),
     legend:['Страховой запас','Целевой запас','План запасов IBP'],
     legendMoney:['Страховой запас','Целевой запас','План запасов IBP'],
-    insightTons:'<b>📌 Вывод:</b> график содержит только три показателя: страховой запас, целевой запас и План запасов IBP. <b>Красная зона — превышение плана IBP над целевым запасом</b> (сверхнормативный запас): буфер создаётся на один период до и один после каждой плановой остановки; в месяц остановки запас возвращается к цели или немного ниже — эти месяцы красным не выделяются.',
-    insightMoney:'<b>📌 Вывод:</b> денежный план повторяет логику тонн: <b>красная зона — стоимость запаса сверх цели</b>; локальные превышения формируются только за один период до и один период после плановых остановок.',
-    insightDelta:'<b>📌 Вывод:</b> траектория: +20% (4 кв. 2026) → +10% (мар. 2027) → +1% (1 кв. 2028), без резких срывов. Вне коридора ±5 п.п. только 3 месяца остановов производства (−1…−4%).',
+    insightTons:'<b>📌 Вывод:</b> график содержит только три показателя: страховой запас, целевой запас и План запасов IBP. <b>Красная зона — превышение плана IBP над целевым запасом</b> (сверхнормативный запас): в 4 кв. 2026 план сходится к сниженной цели сверху (+8,1% → +4,4% → +1,1%); далее буфер создаётся на один период до и один после каждой плановой остановки; в месяц остановки запас возвращается к цели или немного ниже — эти месяцы красным не выделяются.',
+    insightMoney:'<b>📌 Вывод:</b> денежный план повторяет логику тонн: <b>красная зона — стоимость запаса сверх цели</b>; в 4 кв. 2026 — схождение к сниженной цели сверху, далее локальные превышения только за один период до и один период после плановых остановок.',
+    insightDelta:'<b>📌 Вывод:</b> траектория: +8% (окт. 2026) → +4% (ноя.) → +1% (дек.) → 0% (1 кв. 2027), далее плановые буферы вокруг остановов (+8…+10%) и просадки в месяцы ремонтов (−2…−4%).',
     heads:['Месяц','Запас на конец периода (т)','Дни покрытия','Целевой коридор (т)','Цель (дни)','Страховой запас (т)','Δ к цели'],
     rows:MONTHS18.map((m,i)=>[m,F(inv[i]),F(invDays[i],1),F(invTarget[i]),F(invTargetDays[i],1),F(invSafety[i]),(inv[i]>=invTarget[i]?'+':'−')+F(Math.abs(inv[i]-invTarget[i]))+' / '+(invPct[i]>=0?'+':'−')+Math.abs(invPct[i])+'%']),
     headsM:['Месяц','Стоимость запасов (млн руб.)','Целевая стоимость (млн руб.)','Δ (млн руб.)','Отклонение к цели %'],
     rowsM:MONTHS18.map((m,i)=>[m,F(invCost[i]),F(invCostTarget[i]),(invCost[i]>=invCostTarget[i]?'+':'−')+F(Math.abs(invCost[i]-invCostTarget[i])),(invPct[i]>=0?'+':'−')+Math.abs(invPct[i])+'%']),
     headsD:['Месяц','Δ к цели (т)','Отклонение %','Событие','Статус'],
     rowsD:MONTHS18.map((m,i)=>{const st=INV_STOPS.find(x=>x.i===i);
-      return [m,(inv[i]>=invTarget[i]?'+':'−')+F(Math.abs(inv[i]-invTarget[i])),(invPct[i]>=0?'+':'−')+Math.abs(invPct[i])+'%',st?'⛔ '+st.label:(invPct[i]>=110?'Сезонное накопление':'—'),Math.abs(invPct[i]-100)<=5?'🟢 У цели':invPct[i]>105?'🟠 Выше цели':'🔵 Ниже цели'];})},
+      return [m,(inv[i]>=invTarget[i]?'+':'−')+F(Math.abs(inv[i]-invTarget[i])),(invPct[i]>=0?'+':'−')+Math.abs(invPct[i])+'%',st?'⛔ '+st.label:(invPct[i]>=10?'Сезонное накопление':'—'),Math.abs(invPct[i])<=3?'🟢 У цели':invPct[i]>3?'🟠 Выше цели':'🔵 Ниже цели'];})},
   invHistory:{
     labels:HIST_MONTHS18,sales:histSales,target:histTarget,safety:histSafety,actual:histActual,
     cost:histCost,costTarget:histCostTarget,costSafety:histCostSafety,days:histDays,targetDays:histTargetDays,pct:histPct,
     stops:HIST_STOPS,
-    legend:['Страховой запас','Целевой запас','Проекция запасов (факт)'],
-    legendMoney:['Страховой запас','Целевой запас','Проекция запасов (факт)'],
+    legend:['Страховой запас','Целевой запас','Фактический запас'],
+    legendMoney:['Страховой запас','Целевой запас','Фактический запас'],
     insightTons:'<b>📌 Вывод (ретроспектива за прошедшие 18 мес., Апр 2025 – Сен 2026):</b> за прошедшие 18 месяцев запасы трижды пробивали <b>страховой уровень вниз</b> (красная зона: июнь–июль 2025 в Перми до 29 400 т, ноябрь–декабрь 2025 в Волгограде до 30 900 т, апрель 2026 в Торжке до 29 800 т) из-за затяжных остановов и сбоев поставок сырья, что приводило к просадкам OTIF. Перед ремонтами создавался буфер <b>выше целевого запаса</b> (оранжевая зона), а в 3 кв. 2026 на фоне спада продаж (117 000 т против плана 134 000 т) нераспроданный буфер вывел запасы на пик <b>55 300 т (+21,6% к цели 45 460 т)</b> к концу сентября 2026.',
     insightMoney:'<b>📌 Вывод (в деньгах, Апр 2025 – Сен 2026):</b> падения ниже страхового уровня в периоды ремонтов сжимали запас до <b>3 208–3 371 млн руб.</b> при страховом ~3 496–3 653 млн руб. Накопление буфера перед летней модернизацией Ворсино и провал спроса 3 кв. 2026 вывели стоимость запасов на <b>6 033 млн руб.</b> при целевой <b>4 960 млн руб. (+1 073 млн руб. / +21,6%)</b> на конец сентября 2026.',
     heads:['Месяц','Запас на конец периода (т)','Дни покрытия','Целевой коридор (т)','Цель (дни)','Страховой запас (т)','Δ к цели','Статус / событие'],
@@ -844,6 +850,49 @@ export const PLANS={
       for(let k=0;k<rem&&k<order.length;k++)fl[order[k][1]]+=1;
       return fl;
     };
+    /* ── Точечные отклонения плана от целевого распределения (риски) ──
+       Модификаторы применяются ТОЛЬКО к кубу плана IBP (cubeActual); кубы цели,
+       страхового запаса и продаж строятся на базовых весах. Помесячные итоги при этом
+       бьются (lrm нормирует сумму), а отдельные склады/продукты отклоняются от своей цели:
+       перетовар 🟠 — план выше цели более чем на 15%, дефицит 🔴 — план ниже страхового.
+       Порог +15% отделяет точечные риски от плановых буферов вокруг остановов (+8…+10%).
+       Кейсы привязаны к сюжету дашборда: переполнение Ворсино, ЖД-плечо Сибири и Востока,
+       зимний пик моторных/трансмиссионных масел, перетовар смазок (см. раздел «Запасы»). */
+    const RISK_OVER=1.15;
+    const WH_RISK_MODS={
+      ps_vors:{0:1.30},        // Окт 2026: переполнение ПС Ворсино (96%), приём остановлен
+      '3pl_msk':{1:1.28},      // Ноя 2026: предзимний буфер Центра, комплектация 88%
+      '3pl_rnd':{2:1.30},      // Дек 2026: избыточный зимний буфер Юга
+      ps_tyum:{4:0.60},        // Фев 2027: просадка Тюмени после зимнего пика
+      ps_volg:{7:1.32},        // Май 2027: буфер перед капремонтом линии №2 с запасом
+      ps_perm:{10:1.25},       // Авг 2027: буфер перед плановым ТО
+      '3pl_nsk':{13:0.65},     // Ноя 2027: ЖД-плечо 12 суток в зимний пик
+      ps_torzh:{14:1.28},      // Дек 2027: буфер перед модернизацией фасовки
+      '3pl_khv':{15:0.65},     // Янв 2028: срыв подвоза на Восток (останов Торжка)
+      '3pl_vvo':{15:0.65},     // Янв 2028: срыв подвоза на Восток (останов Торжка)
+    };
+    const CAT_RISK_MODS={
+      grs:{0:1.26,1:1.28,2:1.30,3:1.22}, // перетовар смазок 4 кв. — янв (46 дн. при цели 35)
+      trm:{0:0.60,1:0.62},               // дефицит трансмиссионных Окт–Ноя (16 дн. при страховом 19)
+      mot:{3:0.62,4:0.60},               // дефицит моторных в зимний пик (18 дн. при страховом 20)
+      ind:{10:1.27},                     // буфер индустриальных перед ТО Перми
+    };
+    const RISK_INFO={
+      ps_vors:{over:['Переполнение ПС Ворсино (96%): приём продукции остановлен — см. раздел «Поставки».','Срочно разгрузить ~2 000 т в 3PL Центр (Москва) и снять ограничение приёмки.']},
+      '3pl_msk':{over:['Предзимний буфер Центра; комплектация Москвы загружена на 88%.','Расширить смену комплектации; перебросить часть объёма в Нижний Новгород.']},
+      '3pl_rnd':{over:['Избыточный зимний буфер Юга; заполненность Ростова-на-Дону 89%.','Снизить подвоз из Волгограда в январе; промо-распродажа.']},
+      ps_tyum:{under:['Просадка ПС Тюмень после зимнего пика Сибири; задержка подвоза VHVI-4.','Дозакупка базовых масел; переброска 1 500 т из Перми.']},
+      ps_volg:{over:['Буфер перед капремонтом линии №2 (июнь 2027) создан с запасом.','Плановый буфер — контролировать распродажу в июле.']},
+      ps_perm:{over:['Буфер перед плановым ТО (сентябрь 2027).','Плановый буфер — держать до завершения ТО.']},
+      '3pl_nsk':{under:['Длинное ЖД-плечо до Новосибирска (12 суток) в зимний пик.','Заблаговременная отгрузка +20% в октябре; резерв авто.']},
+      ps_torzh:{over:['Буфер перед модернизацией фасовки (январь 2028).','Плановый буфер — держать до завершения модернизации.']},
+      '3pl_khv':{under:['Срыв подвоза на Восток: ЖД-плечо + останов Торжка (январь 2028).','Аренда крытых вагонов; ранняя отгрузка в декабре.']},
+      '3pl_vvo':{under:['Срыв подвоза на Восток: ЖД-плечо + останов Торжка (январь 2028).','Аренда крытых вагонов; ранняя отгрузка в декабре.']},
+      grs:{over:['Перетовар смазок (46 дн. при цели 35): спрос ниже прогноза, выпуск не скорректирован.','Сократить выпуск на Торжке; промо-распродажа EP-2.']},
+      trm:{under:['Дефицит трансмиссионных (16 дн. при страховом 19): зимний всплеск спроса.','Переброска с ПС Пермь; +смена фасовки.']},
+      mot:{under:['Дефицит моторных в зимний пик (18 дн. при страховом 20).','Приоритет отгрузок сегменту Бриллиант; доп. выпуск 5W-30.']},
+      ind:{over:['Буфер индустриальных масел перед ТО Перми (сентябрь 2027).','Плановый буфер — держать до завершения ТО.']},
+    };
     /* Модуляция весов складов вокруг плановых остановов (буфер до/после и просадка в месяц ремонта на соответствующем заводе) */
     const whWeightsForMonth=mi=>{
       return warehouses.map(w=>{
@@ -854,34 +903,47 @@ export const PLANS={
         return w.base*mult;
       });
     };
-    const buildCube=series18=>{
+    const buildCube=(series18,mods)=>{
+      const catMod=mods&&mods.cat?mods.cat:()=>1,whMod=mods&&mods.wh?mods.wh:()=>1;
       return series18.map((tot,mi)=>{
-        const catTotals=lrm(tot,products.map(p=>p.base));
-        const ww=whWeightsForMonth(mi);
+        const catTotals=lrm(tot,products.map(p=>p.base*(catMod(p.id,mi)||1)));
+        const ww=whWeightsForMonth(mi).map((w,wi)=>w*(whMod(warehouses[wi].id,mi)||1));
         const byCatWh=catTotals.map(ct=>lrm(ct,ww)); // [catIdx][whIdx]
         return warehouses.map((_,wi)=>products.map((__,ci)=>byCatWh[ci][wi])); // [whIdx][catIdx]
       });
     };
-    const cubeActual=buildCube(inv);
+    const cubeActual=buildCube(inv,{cat:(id,mi)=>CAT_RISK_MODS[id]&&CAT_RISK_MODS[id][mi]!=null?CAT_RISK_MODS[id][mi]:1,wh:(id,mi)=>WH_RISK_MODS[id]&&WH_RISK_MODS[id][mi]!=null?WH_RISK_MODS[id][mi]:1});
     const cubeTarget=buildCube(invTarget);
     const cubeSafety=buildCube(invSafety);
     const cubeSales=buildCube(sales);
 
+    const ALL_CAT=products.map((_,i)=>i),ALL_WH=warehouses.map((_,i)=>i),ALL_GRP=whGroups.map((_,i)=>i);
+    const whOfGroup=gid=>warehouses.map((w,i)=>w.group===gid?i:-1).filter(i=>i>=0);
+    const TPL_WH=whGroups.filter(g=>g.kind==='3pl').flatMap(g=>whOfGroup(g.id));
+    const AGG_GROUPS=()=>[...whGroups.filter(g=>g.kind==='plant'),{id:'3pl_all',name:'Все склады 3PL',short:'Все склады 3PL',kind:'3pl',color:'#7C3AED'}];
+    const whOfAgg=g=>g.id==='3pl_all'?TPL_WH:whOfGroup(g.id);
+
     const resolveFilters=(opts={})=>{
       const catSet=opts.cats&&opts.cats.size?opts.cats:null;
       const nodeSet=opts.nodes&&opts.nodes.size?opts.nodes:null;
+      const whSet=opts.whs&&opts.whs.size?opts.whs:null;
       const catIdxs=products.map((p,i)=>!catSet||catSet.has(p.id)?i:-1).filter(i=>i>=0);
       const grpIdxs=whGroups.map((g,i)=>!nodeSet||nodeSet.has(g.id)?i:-1).filter(i=>i>=0);
       const activeGroupIds=new Set(grpIdxs.map(i=>whGroups[i].id));
       const whIdxs=warehouses.map((w,i)=>activeGroupIds.has(w.group)?i:-1).filter(i=>i>=0);
+      const detWhIdxs=warehouses.map((w,i)=>!whSet||whSet.has(w.id)?i:-1).filter(i=>i>=0);
       return {
         view:opts.view||'summary',
         mode:opts.mode||'tons',
-        catIdxs:catIdxs.length?catIdxs:products.map((_,i)=>i),
-        grpIdxs:grpIdxs.length?grpIdxs:whGroups.map((_,i)=>i),
-        whIdxs:whIdxs.length?whIdxs:warehouses.map((_,i)=>i),
+        level:opts.level==='Detail'?'Detail':'agg',
+        riskOnly:!!opts.riskOnly,
+        catIdxs:catIdxs.length?catIdxs:ALL_CAT.slice(),
+        grpIdxs:grpIdxs.length?grpIdxs:ALL_GRP.slice(),
+        whIdxs:whIdxs.length?whIdxs:ALL_WH.slice(),
+        detWhIdxs:detWhIdxs.length?detWhIdxs:ALL_WH.slice(),
         isCatFiltered:!!(catSet&&catSet.size&&catSet.size<products.length),
         isNodeFiltered:!!(nodeSet&&nodeSet.size&&nodeSet.size<whGroups.length),
+        isWhFiltered:!!(whSet&&whSet.size&&whSet.size<warehouses.length),
       };
     };
     const sumCells=(cube,mi,wList,cList)=>{
@@ -892,26 +954,111 @@ export const PLANS={
     const valConv=(v,mode)=>mode==='money'?+(v*COST_TON).toFixed(1):v;
     const valConvInt=(v,mode)=>mode==='money'?Math.round(v*COST_TON):v;
 
-    const baseInsight='<b>📌 План запасов:</b> базовый уровень следует целевому запасу. <b>Красная зона — превышение плана IBP над целью</b>: буфер создаётся на один период до и один период после каждой плановой остановки завода (Волгоград — июнь 2027, Пермь — сентябрь 2027, Торжок — январь 2028), а в сам месяц ремонта запас возвращается к цели или чуть ниже.';
+    /* ── Движок рисков плана запасов ── */
+    const assessRisk=(plan,tgt,saf)=>{
+      if(!(tgt>0))return null;
+      if(plan<saf)return{type:'under',pct:Math.round((plan/saf-1)*100)};
+      if(plan>tgt*RISK_OVER)return{type:'over',pct:Math.round((plan/tgt-1)*100)};
+      return null;
+    };
+    /* Сканирует сущность (склады × категории) по месяцам [a,b): возвращает худший
+       кейс (дефицит приоритетнее перетовара) и все месяцы с риском. */
+    const scanRisk=(a,b,wList,cList)=>{
+      const months=[];
+      for(let mi=a;mi<b;mi++){
+        const plan=sumCells(cubeActual,mi,wList,cList);
+        const tgt=sumCells(cubeTarget,mi,wList,cList);
+        const saf=sumCells(cubeSafety,mi,wList,cList);
+        const r=assessRisk(plan,tgt,saf);
+        if(r)months.push({mi,type:r.type,pct:r.pct,plan,tgt,saf});
+      }
+      if(!months.length)return null;
+      const under=months.filter(m=>m.type==='under');
+      const pool=(under.length?under:months.filter(m=>m.type==='over')).slice().sort((x,y)=>Math.abs(y.pct)-Math.abs(x.pct));
+      return{type:pool[0].type,worstMi:pool[0].mi,worstPct:pool[0].pct,months};
+    };
+    const riskText=r=>r.type==='under'
+      ?`−${Math.abs(r.worstPct)}% ниже страхового · ${PLAN_MONTHS[r.worstMi]}`
+      :`+${r.worstPct}% к цели · ${PLAN_MONTHS[r.worstMi]}`;
+    const groupMemberRisks=(wList,a,b,cList)=>wList.map(wi=>{
+      const r=scanRisk(a,b,[wi],cList);
+      return r?{name:warehouses[wi].name,text:riskText(r)}:null;
+    }).filter(Boolean);
+    /* Риски текущего вида/уровня/скоупа. list — риски в гранулярности вида
+       (для бейджей и фильтра «Только риски»); detailCount — сколько рисков видно
+       на детальном уровне 3PL (подсказка «от общего к частному» для агрегатного режима). */
+    const risksFor=(a,b,f)=>{
+      const out=[];
+      const push=(key,name,color,wList,cList)=>{
+        const r=scanRisk(a,b,wList,cList);
+        if(!r)return;
+        let cause='Отклонение плана от целевого коридора.',action='Скорректировать план подвоза/выпуска.';
+        const direct=RISK_INFO[key]&&RISK_INFO[key][r.type];
+        if(direct){cause=direct[0];action=direct[1];}
+        else{
+          const members=groupMemberRisks(wList,a,b,cList);
+          if(members.length){
+            cause='Склады с рисками внутри группы: '+members.map(m=>m.name+' ('+m.text+')').join('; ')+'.';
+            action='Детализируйте до складов (вид «Динамика по складам») и разберите каждый кейс.';
+          }
+        }
+        out.push({key,name,color,type:r.type,worstMi:r.worstMi,worstPct:r.worstPct,months:r.months,
+          text:riskText(r),cause,action});
+      };
+      if(f.view==='warehouses'){
+        if(f.level==='agg'){
+          AGG_GROUPS().forEach(g=>push(g.id,g.short,g.color,whOfAgg(g),f.catIdxs));
+        }else{
+          whGroups.forEach(g=>push(g.id,g.short,g.color,whOfGroup(g.id),f.catIdxs));
+        }
+      }else if(f.view==='wh_detail'){
+        f.detWhIdxs.forEach(wi=>{const w=warehouses[wi];push(w.id,w.name,w.color,[wi],ALL_CAT);});
+      }else if(f.view==='products'){
+        products.forEach((p,ci)=>push(p.id,p.name,p.color,f.whIdxs,[ci]));
+      }
+      let detailCount=null;
+      if(f.view==='warehouses'&&f.level==='agg'){
+        detailCount=whGroups.filter(g=>scanRisk(a,b,whOfGroup(g.id),f.catIdxs)).length;
+      }
+      return{list:out,detailCount};
+    };
+    const risks=(a,b,opts={})=>{
+      const f=resolveFilters(opts);
+      if(f.view==='summary')return{list:[],detailCount:null,f};
+      const r=risksFor(a,b,f);
+      return{list:r.list,detailCount:r.detailCount,f};
+    };
+
+    const baseInsight='<b>📌 План запасов:</b> базовый уровень следует целевому запасу. В 4 кв. 2026 план сходится к сниженной цели сверху: <b>46 500 / 47 000 / 47 500 т при цели 43 000 / 45 000 / 47 000 т</b> (+8,1% → +4,4% → +1,1%, красная зона). Далее <b>красная зона — превышение плана IBP над целью</b>: буфер создаётся на один период до и один период после каждой плановой остановки завода (Волгоград — июнь 2027, Пермь — сентябрь 2027, Торжок — январь 2028), а в сам месяц ремонта запас возвращается к цели или чуть ниже.';
 
     const insightFor=(a,b,opts={})=>{
       const f=resolveFilters(opts);
       const unit=f.mode==='money'?'млн руб.':'т';
       if(f.view==='summary'){
         return f.mode==='money'
-          ?'<b>📌 План запасов:</b> базовый уровень следует целевому запасу. Денежный план повторяет логику тонн: <b>красная зона — стоимость запаса сверх цели</b> за один период до и после плановых остановов производства (Волгоград, Пермь, Торжок).'
+          ?'<b>📌 План запасов:</b> базовый уровень следует целевому запасу. В 4 кв. 2026 план сходится к сниженной цели сверху (46 500 / 47 000 / 47 500 т при цели 43 000 / 45 000 / 47 000 т). Денежный план повторяет логику тонн: <b>красная зона — стоимость запаса сверх цели</b> за один период до и после плановых остановов производства (Волгоград, Пермь, Торжок).'
           :baseInsight;
       }
+      const riskNote=f.riskOnly?' Фильтр <b>«Только риски»</b> включён: показаны только позиции с перетоваром (+15% к цели и выше) или дефицитом (ниже страхового).':' Риски периода (перетовар +15% к цели и выше, дефицит ниже страхового) отмечены бейджами над графиком; фильтр <b>«Только риски»</b> оставляет только проблемные позиции.';
       if(f.view==='warehouses'){
         const catNames=f.isCatFiltered?f.catIdxs.map(i=>products[i].short).join(', '):'все 8 категорий продуктов';
-        return `<b>📌 План запасов по складам (заводы и 3PL по регионам):</b> базовый уровень следует целевому запасу. Показана помесячная динамика в разбивке на <b>5 заводских складов ПС</b> (~73,8% объёма) и <b>5 регионов 3PL</b> (~26,2%: СЗ, Центр, Юг, Сибирь, Восток) в единицах «${unit}». Фильтр категорий: <b>${catNames}</b>.`;
+        const lvl=f.level==='agg'
+          ?'разбивке на <b>5 заводских складов ПС</b> (~73,8% объёма) и агрегированные <b>Все склады 3PL</b> (~26,2%)'
+          :'разбивке на <b>5 заводских складов ПС</b> и <b>5 регионов 3PL</b> (СЗ, Центр, Юг, Сибирь, Восток)';
+        const lvlHint=f.level==='agg'?' Детализация до регионов 3PL — переключатель «По регионам (10)».':' Общий уровень (заводы + Все 3PL) — переключатель «Заводы + Все 3PL».';
+        return `<b>📌 План запасов по складам:</b> базовый уровень следует целевому запасу. Помесячная динамика в ${lvl} в единицах «${unit}». Фильтр категорий: <b>${catNames}</b>.${lvlHint}${riskNote}`;
       }
       if(f.view==='wh_detail'){
-        const catNames=f.isCatFiltered?f.catIdxs.map(i=>products[i].short).join(', '):'все 8 категорий продуктов';
-        return `<b>📌 Разбивка плана запасов по каждому складу (17 площадок):</b> базовый уровень следует целевому запасу. Сравнение среднего планового запаса, целевого и страхового уровней по <b>5 заводским складам ПС</b> и <b>12 складам 3PL</b> за период ${PLAN_MONTHS[a]} – ${PLAN_MONTHS[b-1]}. Фильтр категорий: <b>${catNames}</b>.`;
+        const n=f.detWhIdxs.length;
+        const whNames=!f.isWhFiltered?'все 17 складов (5 ПС + 12 3PL)':n<=4?f.detWhIdxs.map(i=>warehouses[i].name).join(', '):n+' складов';
+        const linesNote=n===1?' Показаны страховой, целевой запас и план выбранного склада, как в сводном плане.'
+          :n<=6?' Жирные линии — суммарные страховой, целевой запас и план выборки; тонкие — план каждого склада (клик по легенде скрывает линию).'
+          :' Выбрано больше 6 складов — показаны только суммарные линии выборки; выберите до 6 складов, чтобы увидеть их индивидуальные линии плана.';
+        const allNote=!f.isWhFiltered?' Сейчас выбраны все склады, поэтому суммарная динамика совпадает со сводным планом — сузьте выборку до 1–6 складов для детализации.':'';
+        return `<b>📌 Динамика плана запасов по складам:</b> тот же формат, что и сводный план (периоды + страховой/целевой/план IBP с красной зоной превышения и тёмной зоной дефицита), но для выборки: <b>${whNames}</b> за ${PLAN_MONTHS[a]} – ${PLAN_MONTHS[b-1]}.${linesNote}${allNote}${riskNote}`;
       }
       const nodeNames=f.isNodeFiltered?f.grpIdxs.map(i=>whGroups[i].short).join(', '):'все 5 заводов ПС и 5 регионов 3PL';
-      return `<b>📌 План запасов по категориям продуктов (8 категорий):</b> базовый уровень следует целевому запасу. Помесячная структура запаса по всем 8 продуктовым линейкам (моторные, гидравлические, индустриальные, смазки, СОЖ, ОЖ, тех. жидкости, трансмиссионные) в единицах «${unit}». Фильтр площадок: <b>${nodeNames}</b>.`;
+      return `<b>📌 План запасов по категориям продуктов (8 категорий):</b> базовый уровень следует целевому запасу. Помесячная структура запаса по всем 8 продуктовым линейкам (моторные, гидравлические, индустриальные, смазки, СОЖ, ОЖ, тех. жидкости, трансмиссионные) в единицах «${unit}». Фильтр площадок: <b>${nodeNames}</b>.${riskNote}`;
     };
 
     const chart=(a,b,opts={})=>{
@@ -920,45 +1067,73 @@ export const PLANS={
       const stopsInRange=INV_STOPS.map(m=>({...m,i:m.i-a})).filter(m=>m.i>=0&&m.i<b-a);
       const yTitle=f.mode==='money'?'млн руб.':'т';
       if(f.view==='warehouses'){
-        /* Помесячный стек по 10 складским узлам (5 заводов ПС + 5 регионов 3PL), с учётом фильтра по категориям продуктов */
-        const series=whGroups.map(g=>{
-          const gWhIdxs=warehouses.map((w,i)=>w.group===g.id?i:-1).filter(i=>i>=0);
+        /* Концепция «от общего к частному»: agg — 5 заводов ПС + агрегированные Все склады 3PL;
+           Detail — те же заводы + 5 регионов 3PL. Фильтр категорий сужает скоуп, «Только риски»
+           оставляет лишь проблемные узлы (если рисков нет — показываем всё, чтобы не пугать пустым графиком). */
+        const groups=f.level==='agg'?AGG_GROUPS():whGroups;
+        let list=groups;
+        if(f.riskOnly){
+          const rk=groups.filter(g=>scanRisk(a,b,whOfAgg(g),f.catIdxs));
+          if(rk.length)list=rk;
+        }
+        const series=list.map(g=>{
+          const idxs=whOfAgg(g);
           const data=[];
-          for(let mi=a;mi<b;mi++)data.push(valConv(sumCells(cubeActual,mi,gWhIdxs,f.catIdxs),f.mode));
+          for(let mi=a;mi<b;mi++)data.push(valConv(sumCells(cubeActual,mi,idxs,f.catIdxs),f.mode));
           return {data,color:g.color};
         });
-        return {type:'stacked',labels,series,opts:{height:360,legend:whGroups.map(g=>g.short),yTitle,marks:stopsInRange}};
+        return {type:'stacked',labels,series,opts:{height:360,legend:list.map(g=>g.short),yTitle,marks:stopsInRange}};
       }
       if(f.view==='wh_detail'){
-        /* Горизонтальный рейтинг по всем 17 складам (5 ПС + 12 3PL) за период [a,b) с учётом фильтра по категориям продуктов */
-        const span=Math.max(1,b-a);
-        const avgFor=(cube,wi)=>{
-          let s=0;for(let mi=a;mi<b;mi++)s+=sumCells(cube,mi,[wi],f.catIdxs);
-          return valConv(Math.round(s/span),f.mode);
-        };
-        const planData=warehouses.map((_,wi)=>avgFor(cubeActual,wi));
-        const targetData=warehouses.map((_,wi)=>avgFor(cubeTarget,wi));
-        const safetyData=warehouses.map((_,wi)=>avgFor(cubeSafety,wi));
-        return {
-          type:'hbar',
-          labels:warehouses.map(w=>w.name),
-          series:[
-            {data:planData,color:'#20A7C9',pointColors:warehouses.map(w=>w.group.startsWith('3pl')?'#7C3AED':'#20A7C9')},
-            {data:targetData,color:'#4CAF50'},
-            {data:safetyData,color:'#8c9bae'},
+        /* Динамика выборки складов в формате сводного плана: суммарные страховой/целевой/план
+           + красная зона превышения и тёмная зона дефицита; при выборке 2–6 складов —
+           тонкие индивидуальные линии плана каждого склада. */
+        let idxs=f.detWhIdxs;
+        if(f.riskOnly){
+          const rk=idxs.filter(wi=>scanRisk(a,b,[wi],ALL_CAT));
+          if(rk.length)idxs=rk;
+        }
+        const agg=cube=>{const d=[];for(let mi=a;mi<b;mi++)d.push(valConv(sumCells(cube,mi,idxs,ALL_CAT),f.mode));return d;};
+        const series=[
+          {data:agg(cubeSafety),color:'#8c9bae',dash:true},
+          {data:agg(cubeTarget),color:'#4CAF50',dash:true},
+          {data:agg(cubeActual),color:'#20A7C9'},
+        ];
+        const singleName=idxs.length===1?warehouses[idxs[0]].name:null;
+        const legend=singleName
+          ?['Страховой запас — '+singleName,'Целевой запас — '+singleName,'План IBP — '+singleName]
+          :['Страховой запас (выборка)','Целевой запас (выборка)','План запасов IBP (выборка)'];
+        if(idxs.length>1&&idxs.length<=6){
+          idxs.forEach(wi=>{
+            const d=[];for(let mi=a;mi<b;mi++)d.push(valConv(sumCells(cubeActual,mi,[wi],ALL_CAT),f.mode));
+            series.push({data:d,color:warehouses[wi].color});
+            legend.push(warehouses[wi].name+' — план');
+          });
+        }
+        return {type:'line',labels,series,opts:{height:360,legend,yTitle,marks:stopsInRange,
+          fillBetween:[
+            {upper:2,lower:1,color:'#D93025',alpha:.16},
+            {upper:0,lower:2,color:'#D93025',alpha:.22},
           ],
-          opts:{height:540,legend:['Заводские склады ПС — план ('+yTitle+')','Целевой запас ('+yTitle+')','Страховой запас ('+yTitle+')'],
-            legendExtra:[{t:'Склады 3PL — план ('+yTitle+')',color:'#7C3AED'}]}
-        };
+          legendExtra:[
+            {t:'Превышение плана над целью',color:'rgba(217,48,37,.35)'},
+            {t:'Падение плана ниже страхового',color:'rgba(217,48,37,.5)'},
+          ]}};
       }
       if(f.view==='products'){
-        /* Помесячный стек по 8 категориям продуктов, с учётом фильтра по заводам и регионам 3PL */
-        const series=products.map((p,ci)=>{
+        /* Помесячный стек по 8 категориям продуктов, с учётом фильтра по заводам и регионам 3PL;
+           «Только риски» оставляет лишь проблемные категории. */
+        let items=products.map((p,ci)=>({p,ci}));
+        if(f.riskOnly){
+          const rk=items.filter(x=>scanRisk(a,b,f.whIdxs,[x.ci]));
+          if(rk.length)items=rk;
+        }
+        const series=items.map(x=>{
           const data=[];
-          for(let mi=a;mi<b;mi++)data.push(valConv(sumCells(cubeActual,mi,f.whIdxs,[ci]),f.mode));
-          return {data,color:p.color};
+          for(let mi=a;mi<b;mi++)data.push(valConv(sumCells(cubeActual,mi,f.whIdxs,[x.ci]),f.mode));
+          return {data,color:x.p.color};
         });
-        return {type:'stacked',labels,series,opts:{height:360,legend:products.map(p=>p.name),yTitle,marks:stopsInRange}};
+        return {type:'stacked',labels,series,opts:{height:360,legend:items.map(x=>x.p.name),yTitle,marks:stopsInRange}};
       }
       /* Режим по умолчанию ('summary'): график «План запасов на 18 месяцев» из раздела Запасы, адаптированный под период [a,b) */
       const sSafety=f.mode==='money'?SL(invCostSafety,a,b):SL(invSafety,a,b);
@@ -992,65 +1167,88 @@ export const PLANS={
       const fmtV=v=>isMoney?F(v*COST_TON,1):F(v);
 
       if(f.view==='wh_detail'){
-        const heads=['Период / Месяц','Склад (ПС / 3PL)','Тип / Регион',uLbl,'Дни покрытия',tLbl,sLbl,'Δ к цели'];
+        const heads=['Месяц','Склад (ПС / 3PL)','Тип / Регион',uLbl,'Дни покрытия',tLbl,sLbl,'Δ к цели','Риск'];
         const rows=[];
-        const span=Math.max(1,b-a);
-        warehouses.forEach((w,wi)=>{
-          let sAct=0,sTgt=0,sSaf=0,sSal=0;
-          for(let mi=a;mi<b;mi++){
-            sAct+=sumCells(cubeActual,mi,[wi],f.catIdxs);
-            sTgt+=sumCells(cubeTarget,mi,[wi],f.catIdxs);
-            sSaf+=sumCells(cubeSafety,mi,[wi],f.catIdxs);
-            sSal+=sumCells(cubeSales,mi,[wi],f.catIdxs);
-          }
-          const mAct=Math.round(sAct/span),mTgt=Math.round(sTgt/span),mSaf=Math.round(sSaf/span),mSal=sSal/span;
-          const days=mSal>0?+(mAct/(mSal/30)).toFixed(1):w.targetDays;
-          const pc=mTgt>0?Math.round((mAct/mTgt-1)*100):0;
-          rows.push([`${PLAN_MONTHS[a]}–${PLAN_MONTHS[b-1]} (средн.)`,w.name,w.region,fmtV(mAct),F(days,1),fmtV(mTgt),fmtV(mSaf),(mAct>=mTgt?'+':'−')+fmtV(Math.abs(mAct-mTgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%']);
-        });
+        let idxs=f.detWhIdxs;
+        if(f.riskOnly){
+          const rk=idxs.filter(wi=>scanRisk(a,b,[wi],ALL_CAT));
+          if(rk.length)idxs=rk;
+        }
+        const scopeLbl=idxs.length===warehouses.length?'Все 17 складов (5 ПС + 12 3PL)':'Итого выборки ('+idxs.length+' скл.)';
         for(let mi=a;mi<b;mi++){
-          const tot=sumCells(cubeActual,mi,warehouses.map((_,i)=>i),f.catIdxs);
-          const tgt=sumCells(cubeTarget,mi,warehouses.map((_,i)=>i),f.catIdxs);
-          const saf=sumCells(cubeSafety,mi,warehouses.map((_,i)=>i),f.catIdxs);
-          const sal=sumCells(cubeSales,mi,warehouses.map((_,i)=>i),f.catIdxs);
+          idxs.forEach(wi=>{
+            const w=warehouses[wi];
+            const v=sumCells(cubeActual,mi,[wi],ALL_CAT);
+            const t=sumCells(cubeTarget,mi,[wi],ALL_CAT);
+            const s=sumCells(cubeSafety,mi,[wi],ALL_CAT);
+            const sal=sumCells(cubeSales,mi,[wi],ALL_CAT);
+            const d=sal>0?+(v/(sal/30)).toFixed(1):w.targetDays;
+            const pc=t>0?Math.round((v/t-1)*100):0;
+            const rk=assessRisk(v,t,s);
+            const rkLbl=!rk?'—':rk.type==='under'?'🔴 Ниже страхового':'🟠 Выше цели +'+rk.pct+'%';
+            rows.push([PLAN_MONTHS[mi],w.name,w.region,fmtV(v),F(d,1),fmtV(t),fmtV(s),(v>=t?'+':'−')+fmtV(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%',rkLbl]);
+          });
+          const tot=sumCells(cubeActual,mi,idxs,ALL_CAT);
+          const tgt=sumCells(cubeTarget,mi,idxs,ALL_CAT);
+          const saf=sumCells(cubeSafety,mi,idxs,ALL_CAT);
+          const sal=sumCells(cubeSales,mi,idxs,ALL_CAT);
           const d=sal>0?+(tot/(sal/30)).toFixed(1):invDays[mi];
           const pc=tgt>0?Math.round((tot/tgt-1)*100):0;
-          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','Все 17 складов (5 ПС + 12 3PL)','Итого портфель',fmtV(tot),F(d,1),fmtV(tgt),fmtV(saf),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%'],cls:'row-sum'});
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого',scopeLbl,'Итого выборки',fmtV(tot),F(d,1),fmtV(tgt),fmtV(saf),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%','—'],cls:'row-sum'});
         }
         return {heads,rows};
       }
 
       if(f.view==='products'){
-        const heads=['Месяц','Площадки (фильтр)','Категория продукта',uLbl,'Дни покрытия',tLbl,sLbl,'Δ к цели'];
+        const heads=['Месяц','Площадки (фильтр)','Категория продукта',uLbl,'Дни покрытия',tLbl,sLbl,'Δ к цели','Риск'];
         const rows=[];
         const scopeLbl=f.isNodeFiltered?f.grpIdxs.map(i=>whGroups[i].short).join(', '):'Все заводы и 3PL';
+        let items=products.map((p,ci)=>({p,ci}));
+        if(f.riskOnly){
+          const rk=items.filter(x=>scanRisk(a,b,f.whIdxs,[x.ci]));
+          if(rk.length)items=rk;
+        }
+        const totCats=items.map(x=>x.ci);
         for(let mi=a;mi<b;mi++){
-          products.forEach((p,ci)=>{
+          items.forEach(x=>{
+            const p=x.p,ci=x.ci;
             const v=sumCells(cubeActual,mi,f.whIdxs,[ci]);
             const t=sumCells(cubeTarget,mi,f.whIdxs,[ci]);
             const s=sumCells(cubeSafety,mi,f.whIdxs,[ci]);
             const sal=sumCells(cubeSales,mi,f.whIdxs,[ci]);
             const d=sal>0?+(v/(sal/30)).toFixed(1):p.targetDays;
             const pc=t>0?Math.round((v/t-1)*100):0;
-            rows.push([PLAN_MONTHS[mi],scopeLbl,p.name,fmtV(v),F(d,1),fmtV(t),fmtV(s),(v>=t?'+':'−')+fmtV(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%']);
+            const rk=assessRisk(v,t,s);
+            const rkLbl=!rk?'—':rk.type==='under'?'🔴 Ниже страхового':'🟠 Выше цели +'+rk.pct+'%';
+            rows.push([PLAN_MONTHS[mi],scopeLbl,p.name,fmtV(v),F(d,1),fmtV(t),fmtV(s),(v>=t?'+':'−')+fmtV(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%',rkLbl]);
           });
-          const tot=sumCells(cubeActual,mi,f.whIdxs,products.map((_,i)=>i));
-          const tgt=sumCells(cubeTarget,mi,f.whIdxs,products.map((_,i)=>i));
-          const saf=sumCells(cubeSafety,mi,f.whIdxs,products.map((_,i)=>i));
-          const sal=sumCells(cubeSales,mi,f.whIdxs,products.map((_,i)=>i));
+          const tot=sumCells(cubeActual,mi,f.whIdxs,totCats);
+          const tgt=sumCells(cubeTarget,mi,f.whIdxs,totCats);
+          const saf=sumCells(cubeSafety,mi,f.whIdxs,totCats);
+          const sal=sumCells(cubeSales,mi,f.whIdxs,totCats);
           const d=sal>0?+(tot/(sal/30)).toFixed(1):invDays[mi];
           const pc=tgt>0?Math.round((tot/tgt-1)*100):0;
-          rows.push({cells:[PLAN_MONTHS[mi]+' — итого',scopeLbl,'Итого по категориям',fmtV(tot),F(d,1),fmtV(tgt),fmtV(saf),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%'],cls:'row-sum'});
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого',scopeLbl,f.riskOnly?'Итого по рисковым категориям':'Итого по категориям',fmtV(tot),F(d,1),fmtV(tgt),fmtV(saf),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%','—'],cls:'row-sum'});
         }
         return {heads,rows};
       }
 
-      /* summary и warehouses: детализация по складским узлам (5 ПС + 5 регионов 3PL) и выбранным категориям */
+      /* summary и warehouses: детализация по складским узлам и выбранным категориям.
+         В виде «По складам» таблица повторяет уровень графика: «Заводы + Все 3PL»
+         либо «По регионам (10)». Фильтр «Только риски» оставляет лишь проблемные узлы
+         (узел показан целиком по всем месяцам, проблемные месяцы помечены иконкой);
+         в сводном виде фильтр рисков игнорируется. */
       const heads=['Месяц','Склад / Регион 3PL','Категория продукта',uLbl,'Дни покрытия','Δ к цели'];
       const rows=[];
+      const listGroups=(f.view==='warehouses'&&f.level==='agg')?AGG_GROUPS():whGroups;
+      let detGroups=listGroups;
+      if(f.view==='warehouses'&&f.riskOnly){
+        const rk=listGroups.filter(g=>scanRisk(a,b,whOfAgg(g),f.catIdxs));
+        if(rk.length)detGroups=rk;
+      }
       for(let mi=a;mi<b;mi++){
-        whGroups.forEach(g=>{
-          const gWh=warehouses.map((w,i)=>w.group===g.id?i:-1).filter(i=>i>=0);
+        detGroups.forEach(g=>{
+          const gWh=whOfAgg(g);
           f.catIdxs.forEach(ci=>{
             const p=products[ci];
             const v=sumCells(cubeActual,mi,gWh,[ci]);
@@ -1062,26 +1260,51 @@ export const PLANS={
           });
           const wv=sumCells(cubeActual,mi,gWh,f.catIdxs);
           const wt=sumCells(cubeTarget,mi,gWh,f.catIdxs);
+          const ws=sumCells(cubeSafety,mi,gWh,f.catIdxs);
           const wsal=sumCells(cubeSales,mi,gWh,f.catIdxs);
           const wd=wsal>0?+(wv/(wsal/30)).toFixed(1):invDays[mi];
           const wpc=wt>0?Math.round((wv/wt-1)*100):invPct[mi];
-          rows.push({cells:[PLAN_MONTHS[mi],g.name,'Итого по складу',fmtV(wv),F(wd,1),(wpc>=0?'+':'−')+Math.abs(wpc)+'%'],cls:'row-fc'});
+          const gr=f.view==='warehouses'?assessRisk(wv,wt,ws):null;
+          const mark=!gr?'':gr.type==='under'?' 🔴':' 🟠';
+          rows.push({cells:[PLAN_MONTHS[mi],g.name,'Итого по складу'+mark,fmtV(wv),F(wd,1),(wpc>=0?'+':'−')+Math.abs(wpc)+'%'],cls:'row-fc'});
         });
-        const allWh=warehouses.map((_,i)=>i);
-        const tot=sumCells(cubeActual,mi,allWh,f.catIdxs);
-        const tgt=sumCells(cubeTarget,mi,allWh,f.catIdxs);
-        const sal=sumCells(cubeSales,mi,allWh,f.catIdxs);
+        const totWh=(f.view==='warehouses'&&f.riskOnly)?detGroups.flatMap(g=>whOfAgg(g)):ALL_WH;
+        const tot=sumCells(cubeActual,mi,totWh,f.catIdxs);
+        const tgt=sumCells(cubeTarget,mi,totWh,f.catIdxs);
+        const sal=sumCells(cubeSales,mi,totWh,f.catIdxs);
         const d=sal>0?+(tot/(sal/30)).toFixed(1):invDays[mi];
         const pc=tgt>0?Math.round((tot/tgt-1)*100):invPct[mi];
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',fmtV(tot),F(d,1),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%'],cls:'row-sum'});
+        const totLbl=PLAN_MONTHS[mi]+' — итого'+((f.view==='warehouses'&&f.riskOnly)?' по рисковым узлам':'');
+        rows.push({cells:[totLbl,'—','—',fmtV(tot),F(d,1),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%'],cls:'row-sum'});
       }
       return {heads,rows};
     };
 
     const summaryFor=(a,b,opts={})=>{
       const f=resolveFilters(opts);
-      const whSet=(f.view==='products')?f.whIdxs:warehouses.map((_,i)=>i);
-      const catSet=(f.view==='warehouses'||f.view==='wh_detail')?f.catIdxs:products.map((_,i)=>i);
+      /* Скоуп KPI повторяет скоуп графика и таблицы: фильтры категорий/узлов/складов
+         и «Только риски» действуют везде одинаково. */
+      let whSet,catSet;
+      if(f.view==='products'){
+        whSet=f.whIdxs;catSet=ALL_CAT.slice();
+        if(f.riskOnly){
+          const rk=catSet.filter(ci=>scanRisk(a,b,whSet,[ci]));
+          if(rk.length)catSet=rk;
+        }
+      }else if(f.view==='warehouses'){
+        catSet=f.catIdxs;whSet=ALL_WH.slice();
+        if(f.riskOnly){
+          const groups=f.level==='agg'?AGG_GROUPS():whGroups;
+          const rk=groups.filter(g=>scanRisk(a,b,whOfAgg(g),catSet));
+          if(rk.length)whSet=rk.flatMap(g=>whOfAgg(g));
+        }
+      }else if(f.view==='wh_detail'){
+        catSet=ALL_CAT.slice();whSet=f.detWhIdxs;
+        if(f.riskOnly){
+          const rk=whSet.filter(wi=>scanRisk(a,b,[wi],catSet));
+          if(rk.length)whSet=rk;
+        }
+      }else{whSet=ALL_WH.slice();catSet=ALL_CAT.slice();}
       const mAct=[],mTgt=[],mSaf=[],mDays=[],mCost=[],mCostTgt=[],mPct=[];
       for(let mi=a;mi<b;mi++){
         const act=sumCells(cubeActual,mi,whSet,catSet);
@@ -1110,6 +1333,8 @@ export const PLANS={
       chart,
       build,
       summaryFor,
+      risks,
+      RISK_OVER,
     };
   })(),
   cost:{tab:'Структура себестоимости',insight:'<b>📌 Структура себестоимости:</b> 4 статьи затрат — закупка, производство, логистика, хранение. В сценарии В себестоимость 4 кв. снижена до 72,6% выручки (закупка 50,6% · производство 11,0% · логистика 7,1% · хранение 3,9%) благодаря маржинальному миксу; далее нормализуется до 77,0% (закупка 53,7% · производство 11,7% · логистика 7,5% · хранение 4,1%). За 18 месяцев — 83 529 млн руб. (76,3% выручки).',
@@ -1207,10 +1432,17 @@ export function planView(pl,a,b,qlabel,opts={}){
     const sm=PLANS.inventory.summaryFor(a,b,opts);
     const mean=avg(sm.mAct,0,span),md=avg(sm.mDays,0,span),meanCost=avg(sm.mCost,0,span);
     const meanTgt=avg(sm.mTgt,0,span),meanCostTgt=avg(sm.mCostTgt,0,span),meanPct=avg(sm.mPct,0,span);
-    const fltSub=sm.f.isCatFiltered?`фильтр: ${sm.f.catIdxs.length} из 8 кат.`:sm.f.isNodeFiltered?`фильтр: ${sm.f.grpIdxs.length} из 10 узлов`:'буферы вокруг остановов';
+    let fltSub='буферы вокруг остановов';
+    if(sm.f.riskOnly)fltSub='⚠️ только рисковые позиции';
+    else if(sm.f.isCatFiltered)fltSub=`фильтр: ${sm.f.catIdxs.length} из 8 кат.`;
+    else if(sm.f.isNodeFiltered)fltSub=`фильтр: ${sm.f.grpIdxs.length} из 10 узлов`;
+    else if(sm.f.isWhFiltered)fltSub=`выборка: ${sm.f.detWhIdxs.length} из 17 складов`;
     return{kpis:[K('Средний запас',F(mean,0)+' т',F(md,1)+' дней покрытия'),K('Стоимость запасов',F(meanCost,0)+' млн','вблизи целевой '+F(meanCostTgt,0)+' млн'),K('Δ к цели',(meanPct>=0?'+':'−')+F(Math.abs(meanPct),0)+'%',fltSub),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
       table:{heads:['Месяц','План запасов (т)','Дней покрытия','Стоимость (млн)','Цель (т)','Δ к цели','Статус'],
-        rows:[...L.slice(a,b).map((m,i)=>{const v=sm.mAct[i],t=sm.mTgt[i],pc=sm.mPct[i];return[m,F(v),F(sm.mDays[i],1),F(sm.mCost[i]),F(t),(v>=t?'+':'−')+F(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%',Math.abs(pc)<=3?'🟢 У цели':pc>3?'🟠 Буфер остановки':'🔵 Период остановки'];}),
+        rows:[...L.slice(a,b).map((m,i)=>{const v=sm.mAct[i],t=sm.mTgt[i],pc=sm.mPct[i];
+          const mi=a+i,nearStop=INV_STOPS.some(s=>Math.abs(s.i-mi)<=1);
+          const st=Math.abs(pc)<=3?'🟢 У цели':pc>3?(nearStop?'🟠 Буфер остановки':'🟠 Выше цели'):(nearStop?'🔵 Период остановки':'🔵 Ниже цели');
+          return[m,F(v),F(sm.mDays[i],1),F(sm.mCost[i]),F(t),(v>=t?'+':'−')+F(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%',st];}),
           totalRow(['<b>'+impliedLabel()+'</b>','<b>'+F(mean,0)+'</b>','<b>'+F(md,1)+'</b>','<b>'+F(meanCost,0)+'</b>','<b>'+F(meanTgt,0)+'</b>','<b>'+(meanPct>=0?'+':'−')+F(Math.abs(meanPct),0)+'%</b>','—'])]},
       detail:PLANS.inventory.build(a,b,opts)};
   }
