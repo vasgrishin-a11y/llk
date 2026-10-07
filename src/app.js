@@ -362,7 +362,7 @@ function vStock(){
 /* Интерактивная схема-граф цепочки поставок (SVG): узлы → потоки, подсветка ограничений */
 function chainGraphHTML(){
   const R=SUPPLY.mapRows;
-  const VW=1640,leftPad=160,rightPad=34,top=76,rowGap=176,NH=70;
+  const VW=1712,leftPad=232,rightPad=34,top=76,rowGap=176,NH=70;
   const VH=top+rowGap*(R.length-1)+NH+52;
   const slot=t=>(VW-leftPad-rightPad)/R[t].nodes.length;
   const nw=t=>Math.min(168,slot(t)*0.84);
@@ -406,7 +406,7 @@ function chainGraphHTML(){
           :n.w?`<g><rect x="${(x+W-26).toFixed(1)}" y="${y-12}" width="30" height="21" rx="6" fill="${WARN}"/>`
              +`<text x="${(x+W-11).toFixed(1)}" y="${y+3}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">!</text></g>`:'')
         +`</g>`;});});
-  return `<div class="chaingraph"><svg class="cg-svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Схема цепочки поставок">${edges}${labels}${nodes}</svg>`
+  return `<div class="chaingraph"><svg class="cg-svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Схема цепочки поставок">${edges}${nodes}${labels}</svg>`
     +`<div class="cg-legend">`
       +`<span><i style="border-top-color:${RAIL}"></i>ЖД</span>`
       +`<span><i style="border-top-color:${AUTO}"></i>Авто</span>`

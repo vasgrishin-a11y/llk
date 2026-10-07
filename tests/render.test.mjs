@@ -66,6 +66,10 @@ test('приложение рендерит все рабочие вкладки
 
   // поставки: зоны разрыва в полосах, без отдельной строки «Не покрыто (разрыв)»
   click('[data-tab="supply"]');
+  const spbNode=$$('.cg-node').find(g=>g.textContent.includes('Санкт-Петербург'));
+  assert.ok(spbNode,'узел СЗ Санкт-Петербург найден на карте цепочки поставок');
+  const spbX=parseFloat(spbNode.querySelector('rect').getAttribute('x'));
+  assert.ok(spbX>=235,`узел СЗ Санкт-Петербург (x=${spbX}) не перекрывает подпись «Склады 3PL по регионам»`);
   assert.ok($$('.gap-bar-un').length>=2,'штрихуемые зоны разрыва в полосах');
   assert.ok(!$('.gap-chart').textContent.includes('Не покрыто (разрыв)'),'отдельная строка разрыва удалена');
   assert.match($('#content').textContent,/Серебро −8 000 т \+ Бронза −11 000 т = −19 000 т/);
