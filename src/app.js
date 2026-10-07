@@ -316,23 +316,29 @@ function vStock(){
       +'. Зимний всплеск спроса ускорил оборачиваемость: требуется срочное пополнение и переброска объёма с заводских складов.')
     :'';
   const covRows=v==='channels'?S.coverage.channelsRows:v==='products'?S.coverage.productsRows:S.coverage.echelonsRows;
-  const IP=S.invPlan;
+  const IH=S.invHistory;
+  const retroFill=[
+    {upper:2,lower:1,color:'#FF9800',alpha:.20},
+    {upper:0,lower:2,color:'#D93025',alpha:.24},
+  ];
+  const retroLegendExtra=[
+    {t:'Выше целевого запаса (перетовар)',color:'rgba(255,152,0,.40)'},
+    {t:'Ниже страхового запаса (пробой)',color:'rgba(217,48,37,.42)'},
+  ];
   if(im==='tons'){
     J('#c-invplan','line',[
-      {data:IP.safety,color:'#8c9bae',dash:true},
-      {data:IP.target,color:'#4CAF50',dash:true},
-      {data:IP.actual,color:'#20A7C9'},
-    ],IP.labels,{height:340,legend:['Страховой запас','Целевой запас','План запасов IBP'],yTitle:'т',marks:IP.stops,
-      fillBetween:{upper:2,lower:1,color:'#D93025',alpha:.16},
-      legendExtra:[{t:'Превышение плана над целью',color:'rgba(217,48,37,.35)'}]});
+      {data:IH.safety,color:'#8c9bae',dash:true},
+      {data:IH.target,color:'#4CAF50',dash:true},
+      {data:IH.actual,color:'#20A7C9'},
+    ],IH.labels,{height:340,legend:IH.legend,yTitle:'т',marks:IH.stops,
+      fillBetween:retroFill,legendExtra:retroLegendExtra});
   }else{
     J('#c-invplan','line',[
-      {data:IP.costSafety,color:'#8c9bae',dash:true},
-      {data:IP.costTarget,color:'#4CAF50',dash:true},
-      {data:IP.cost,color:'#20A7C9'},
-    ],IP.labels,{height:340,legend:['Страховой запас','Целевой запас','План запасов IBP'],yTitle:'млн руб.',marks:IP.stops,
-      fillBetween:{upper:2,lower:1,color:'#D93025',alpha:.16},
-      legendExtra:[{t:'Превышение плана над целью',color:'rgba(217,48,37,.35)'}]});
+      {data:IH.costSafety,color:'#8c9bae',dash:true},
+      {data:IH.costTarget,color:'#4CAF50',dash:true},
+      {data:IH.cost,color:'#20A7C9'},
+    ],IH.labels,{height:340,legend:IH.legendMoney,yTitle:'млн руб.',marks:IH.stops,
+      fillBetween:retroFill,legendExtra:retroLegendExtra});
   }
   const DD=S.dead[dm];
   J('#c-dead','hbar',DD.series.map(([n,d,c])=>({data:d,color:c})),DD.labels,{height:300,legend:DD.series.map(x=>x[0])});
@@ -342,8 +348,8 @@ function vStock(){
   const statCard=x=>`<article class="kpi bt-${x.cls}"><div class="muted kpi-label">${x.name}</div><div class="value ${x.cls}">${x.days}</div><div class="kpi-sub">${x.target}</div><div class="dev dev-${x.cls==='green'?'pos':x.cls==='red'?'neg':'neu'}">${x.delta}</div><div class="kpi-foot ${x.cls}">${x.effect}</div></article>`;
   return kpis('stock')
     +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов'],['echelons','По эшелонам']])+canvas('c-cover','Диаграмма покрытия запасов в днях; красные столбцы — ниже страхового уровня')+covAlertHtml+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
-    +card('📈 План запасов на 18 месяцев',(IP.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — плановые остановы производства: ${IP.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','План запасов на 18 месяцев: зона страхового запаса, целевой коридор и фактический запас')+insight(im==='tons'?IP.insightTons:IP.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IP.heads:IP.headsM,im==='tons'?IP.rows:IP.rowsM))
     +card('🔴 Неликвиды',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
+    +card('📈 Проекция запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Проекция запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IH.heads:IH.headsM,im==='tons'?IH.rows:IH.rowsM))
     +card('🏭 Сырье: состояние запасов',`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
     +card('📦 Готовая продукция: состояние запасов',`<div class="grid-3">${S.fgm.map(statCard).join('')}</div>`+tbl('tbl-fg',S.fgTable.heads,S.fgTable.rows))
     +`<div class="grid">`
@@ -356,7 +362,7 @@ function vStock(){
 /* Интерактивная схема-граф цепочки поставок (SVG): узлы → потоки, подсветка ограничений */
 function chainGraphHTML(){
   const R=SUPPLY.mapRows;
-  const VW=1640,leftPad=160,rightPad=34,top=76,rowGap=176,NH=70;
+  const VW=1712,leftPad=232,rightPad=34,top=76,rowGap=176,NH=70;
   const VH=top+rowGap*(R.length-1)+NH+52;
   const slot=t=>(VW-leftPad-rightPad)/R[t].nodes.length;
   const nw=t=>Math.min(168,slot(t)*0.84);
@@ -400,7 +406,7 @@ function chainGraphHTML(){
           :n.w?`<g><rect x="${(x+W-26).toFixed(1)}" y="${y-12}" width="30" height="21" rx="6" fill="${WARN}"/>`
              +`<text x="${(x+W-11).toFixed(1)}" y="${y+3}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">!</text></g>`:'')
         +`</g>`;});});
-  return `<div class="chaingraph"><svg class="cg-svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Схема цепочки поставок">${edges}${labels}${nodes}</svg>`
+  return `<div class="chaingraph"><svg class="cg-svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Схема цепочки поставок">${edges}${nodes}${labels}</svg>`
     +`<div class="cg-legend">`
       +`<span><i style="border-top-color:${RAIL}"></i>ЖД</span>`
       +`<span><i style="border-top-color:${AUTO}"></i>Авто</span>`
@@ -507,9 +513,16 @@ function vPlans(){
   const pl=ui.plan??'sales';
   const q=ui.pq;
   const [a,b]=planRange(q,ui.pcFrom,ui.pcTo);
-  const P=PLANS[pl],cdef=P.chart(a,b);
+  const P=PLANS[pl];
+  const invOpts=pl==='inventory'?{
+    view:ui.planinvview??'summary',
+    mode:ui.planinvmode??'tons',
+    cats:ui.invCats,
+    nodes:ui.invNodes,
+  }:{};
+  const cdef=pl==='inventory'?P.chart(a,b,invOpts):P.chart(a,b);
   J('#c-plan',cdef.type,cdef.series,cdef.labels,cdef.opts);
-  const view=planView(pl,a,b,q);
+  const view=planView(pl,a,b,q,invOpts);
   const kpiStrip=`<section class="kpis">${view.kpis.map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div></article>`).join('')}</section>`;
   // быстрые фильтры + выбор произвольного периода
   const monthOpts=(sel)=>MONTHS18.map((m,i)=>`<option value="${i}"${i===sel?' selected':''}>${m}</option>`).join('');
@@ -519,12 +532,64 @@ function vPlans(){
     +`<div class="switch">${PLAN_PERIODS.map(([v,l])=>`<button class="${q===v?'active':''}" data-sw="pq" data-val="${v}">${l}</button>`).join('')}</div>`
     +custom
     +`</div><div class="pb-summary">Показан период: <b>${MONTHS18[a]} – ${MONTHS18[b-1]}</b> (${b-a} мес.). Карточки, график и детальная таблица обновляются вместе.</div>`;
+  let invExtra='';
+  if(pl==='inventory'){
+    const iv=invOpts.view;
+    const stopsInRange=(P.stops||[]).filter(x=>x.i>=a&&x.i<b);
+    const stopsNote=P.stops?`<div class="muted" style="font-size:11px;margin-bottom:6px">⛔ Вертикальные отметки на графике — плановые остановы производства: ${P.stops.map(x=>`${esc(x.label.replace('Останов: ',''))} (${MONTHS18[x.i]})`).join(' · ')}${stopsInRange.length?'':` · <i>в выбранном периоде остановов нет (переключите период на «2027 год» или «Все 18 мес.»)</i>`}</div>`:'';
+    const viewSwitch=`<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">`
+      +`<div><div class="muted" style="font-size:11px;margin-bottom:2px">Вид графика запасов</div>`
+      +sw('planinvview',[
+        ['summary','📈 Сводный план на 18 мес. (IBP)'],
+        ['warehouses','🏭 По складам (заводы и 3PL по регионам)'],
+        ['wh_detail','🏬 Разбивка по каждому складу (17)'],
+        ['products','🧪 По категориям продуктов (8)'],
+      ])+`</div>`
+      +`<div><div class="muted" style="font-size:11px;margin-bottom:2px">Единицы измерения</div>`
+      +sw('planinvmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])
+      +`</div></div>`;
+    let quickFilter='';
+    if(iv==='warehouses'||iv==='wh_detail'){
+      const selCats=ui.invCats&&ui.invCats.size?ui.invCats:null;
+      const allOn=!selCats||selCats.size===P.products.length;
+      quickFilter=`<div class="periodbar" style="margin:6px 0 10px;padding:8px 12px;background:var(--scp-surface-2)">`
+        +`<span class="pb-lbl">Быстрый фильтр по категориям (1 или несколько):</span>`
+        +`<div class="switch" style="margin:0">`
+        +`<button class="${allOn?'active':''}" data-invcat="all">Все категории (${P.products.length})</button>`
+        +P.products.map(p=>{
+          const act=selCats?selCats.has(p.id):false;
+          return `<button class="${act?'active':''}" data-invcat="${p.id}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:5px"></span>${esc(p.name)}</button>`;
+        }).join('')
+        +`</div></div>`;
+    }else if(iv==='products'){
+      const selNodes=ui.invNodes&&ui.invNodes.size?ui.invNodes:null;
+      const allOn=!selNodes||selNodes.size===P.whGroups.length;
+      const plantIds=P.whGroups.filter(g=>g.kind==='plant').map(g=>g.id);
+      const threePlIds=P.whGroups.filter(g=>g.kind==='3pl').map(g=>g.id);
+      const onlyPlants=selNodes&&selNodes.size===plantIds.length&&plantIds.every(id=>selNodes.has(id));
+      const only3pl=selNodes&&selNodes.size===threePlIds.length&&threePlIds.every(id=>selNodes.has(id));
+      quickFilter=`<div class="periodbar" style="margin:6px 0 10px;padding:8px 12px;background:var(--scp-surface-2)">`
+        +`<span class="pb-lbl">Быстрый фильтр по заводам и регионам 3PL (1 или несколько):</span>`
+        +`<div class="switch" style="margin:0">`
+        +`<button class="${allOn?'active':''}" data-invnode="all">Все площадки (${P.whGroups.length})</button>`
+        +`<button class="${onlyPlants?'active':''}" data-invnode="plants">🏭 Все заводы ПС (5)</button>`
+        +`<button class="${only3pl?'active':''}" data-invnode="3pl">🏬 Все регионы 3PL (5)</button>`
+        +P.whGroups.map(g=>{
+          const act=selNodes?selNodes.has(g.id):false;
+          return `<button class="${act?'active':''}" data-invnode="${g.id}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${g.color};margin-right:5px"></span>${esc(g.name)}</button>`;
+        }).join('')
+        +`</div></div>`;
+    }
+    invExtra=stopsNote+viewSwitch+quickFilter;
+  }
+  const insText=pl==='inventory'?P.insightFor(a,b,invOpts):P.insight;
   return periodBar
     +`<div class="switch" style="margin-bottom:12px">${Object.entries(PLANS).map(([id,p])=>`<button class="${pl===id?'active':''}" data-sw="plan" data-val="${id}">${p.tab}</button>`).join('')}</div>`
     +kpiStrip
     +card('📊 '+P.tab+' · '+MONTHS18[a]+' – '+MONTHS18[b-1],
-      canvas('c-plan','График: '+P.tab)
-      +insight(P.insight)
+      invExtra
+      +canvas('c-plan','График: '+P.tab)
+      +insight(insText)
       +tbl('tbl-plan-'+pl,view.detail.heads,view.detail.rows));
 }
 
@@ -622,6 +687,30 @@ document.addEventListener('click',e=>{
   if(tb){tab=tb.dataset.tab;storage.set('tab',tab);render();window.scrollTo({top:0,behavior:'smooth'});return;}
   const sg=e.target.closest('[data-segtoggle]');
   if(sg){if(!ui.segOff)ui.segOff=new Set();const c=sg.dataset.segtoggle;ui.segOff.has(c)?ui.segOff.delete(c):ui.segOff.add(c);renderContent();return;}
+  const ic=e.target.closest('[data-invcat]');
+  if(ic){
+    const val=ic.dataset.invcat;
+    if(val==='all'){ui.invCats=null;}
+    else{
+      if(!ui.invCats)ui.invCats=new Set();
+      if(ui.invCats.has(val))ui.invCats.delete(val);else ui.invCats.add(val);
+      if(!ui.invCats.size||ui.invCats.size===PLANS.inventory.products.length)ui.invCats=null;
+    }
+    renderContent();return;
+  }
+  const ind=e.target.closest('[data-invnode]');
+  if(ind){
+    const val=ind.dataset.invnode;
+    if(val==='all'){ui.invNodes=null;}
+    else if(val==='plants'){ui.invNodes=new Set(PLANS.inventory.whGroups.filter(g=>g.kind==='plant').map(g=>g.id));}
+    else if(val==='3pl'){ui.invNodes=new Set(PLANS.inventory.whGroups.filter(g=>g.kind==='3pl').map(g=>g.id));}
+    else{
+      if(!ui.invNodes)ui.invNodes=new Set();
+      if(ui.invNodes.has(val))ui.invNodes.delete(val);else ui.invNodes.add(val);
+      if(!ui.invNodes.size||ui.invNodes.size===PLANS.inventory.whGroups.length)ui.invNodes=null;
+    }
+    renderContent();return;
+  }
   const exp=e.target.closest('[data-exp]');
   if(exp){const m=document.getElementById('exportMenu');if(m)m.hidden=true;runExport(exp.dataset.exp);return;}
   if(e.target.closest('#exportBtn')){const m=document.getElementById('exportMenu');if(m)m.hidden=!m.hidden;return;}

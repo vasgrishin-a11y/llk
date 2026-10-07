@@ -55,8 +55,21 @@ test('приложение рендерит все рабочие вкладки
   assert.equal(echelonChart.series[1].pointColors[threePlIndex],'#7C3AED','3PL выделен фиолетовым');
   assert.ok(echelonChart.opts.legendExtra.some(x=>x.t==='3PL — факт'),'3PL указан в легенде');
 
+  // запасы: карточка ретроспективы за прошедшие 18 месяцев идёт после карточки «Неликвиды»
+  const stockCards=$$('#content .card h2').map(h=>h.textContent);
+  const deadIdx=stockCards.findIndex(t=>/Неликвиды/.test(t));
+  const retroIdx=stockCards.findIndex(t=>/Проекция запасов за прошедшие 18 месяцев/.test(t));
+  assert.ok(deadIdx>=0&&retroIdx>deadIdx,'график за прошедшие 18 мес. расположен после Неликвидов');
+  assert.equal($('#c-invplan').__cfg.labels[0],'Апр 2025');
+  assert.equal($('#c-invplan').__cfg.labels[17],'Сен 2026');
+  assert.ok(Array.isArray($('#c-invplan').__cfg.opts.fillBetween),'две зоны подсветки: выше цели и ниже страхового');
+
   // поставки: зоны разрыва в полосах, без отдельной строки «Не покрыто (разрыв)»
   click('[data-tab="supply"]');
+  const spbNode=$$('.cg-node').find(g=>g.textContent.includes('Санкт-Петербург'));
+  assert.ok(spbNode,'узел СЗ Санкт-Петербург найден на карте цепочки поставок');
+  const spbX=parseFloat(spbNode.querySelector('rect').getAttribute('x'));
+  assert.ok(spbX>=235,`узел СЗ Санкт-Петербург (x=${spbX}) не перекрывает подпись «Склады 3PL по регионам»`);
   assert.ok($$('.gap-bar-un').length>=2,'штрихуемые зоны разрыва в полосах');
   assert.ok(!$('.gap-chart').textContent.includes('Не покрыто (разрыв)'),'отдельная строка разрыва удалена');
   assert.match($('#content').textContent,/Серебро −8 000 т \+ Бронза −11 000 т = −19 000 т/);
@@ -98,6 +111,34 @@ test('приложение рендерит все рабочие вкладки
   assert.match($('#content').textContent,/План запасов: базовый уровень следует целевому запасу/);
   assert.match($('#content').textContent,/Дек 2026 — итого/,'детализация по месяцам есть');
   assert.match($('#content').textContent,/ПС Ворсино/,'детализация до складов есть');
+
+  // переключение на 18 месяцев в Плане запасов показывает отметки плановых остановов
+  click('[data-sw="pq"][data-val="all"]');
+  assert.equal($('#c-plan').__cfg.opts.marks.length,3,'3 плановых останова на горизонте 18 мес.');
+
+  // переключалка видов графика в Плане запасов + быстрые мульти-фильтры
+  click('[data-sw="planinvview"][data-val="warehouses"]');
+  assert.equal($('#c-plan').__cfg.type,'stacked','помесячный стек по заводам и 3PL');
+  assert.equal($('#c-plan').__cfg.series.length,10,'5 заводов ПС + 5 регионов 3PL');
+  assert.ok($('[data-invcat="mot"]'),'быстрый фильтр по категориям продуктов есть');
+  click('[data-invcat="mot"]');
+  click('[data-invcat="grs"]');
+  assert.equal($$('[data-invcat].active').length,2,'выбраны 2 категории продуктов одновременно');
+
+  click('[data-sw="planinvview"][data-val="wh_detail"]');
+  assert.equal($('#c-plan').__cfg.type,'hbar','горизонтальный график по всем 17 складам');
+  assert.equal($('#c-plan').__cfg.labels.length,17,'17 складов: 5 ПС + 12 3PL');
+  click('[data-invcat="all"]');
+
+  click('[data-sw="planinvview"][data-val="products"]');
+  assert.equal($('#c-plan').__cfg.type,'stacked','помесячный стек по категориям продуктов');
+  assert.equal($('#c-plan').__cfg.series.length,8,'8 категорий продуктов');
+  assert.ok($('[data-invnode="ps_perm"]'),'быстрый фильтр по заводам и регионам 3PL есть');
+  click('[data-invnode="ps_perm"]');
+  click('[data-invnode="3pl_sib"]');
+  assert.equal($$('[data-invnode].active').length,2,'выбраны завод и регион 3PL одновременно');
+  click('[data-invnode="all"]');
+  click('[data-sw="planinvview"][data-val="summary"]');
 
   click('[data-tab="actions"]');
   assert.ok(!$('#theme'),'переключателя темы нет');
