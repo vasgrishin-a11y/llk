@@ -207,3 +207,20 @@ test('риски плана запасов: перетовар (+15% к цели
   const wdc2=IP.chart(0,3,{view:'wh_detail',whs:new Set(['ps_vors','3pl_msk'])});
   assert.equal(wdc2.series.length,5,'2 склада: 3 суммарные + 2 индивидуальные');
 });
+
+/* ── 22. Ретроспектива запасов × WAPE: помесячная точность прогноза ── */
+test('WAPE 18 мес: среднее 3 кв. 2026 = 16,4% (совпадает с квартальным KPI), худший месяц — Сен 2026',()=>{
+  const IH=ST.invHistory;
+  assert.equal(IH.wape.length,18);
+  assert.equal(IH.bias.length,18);
+  assert.equal(+((IH.wape[15]+IH.wape[16]+IH.wape[17])/3).toFixed(1),16.4);
+  assert.equal(Math.max(...IH.wape),IH.wape[17],'пик запаса 55 300 т — худший WAPE 17,3%');
+  assert.equal(IH.rowsW.length,18);
+  assert.equal(IH.headsW.length,6);
+});
+
+/* ── 23. Сценарий В: обновлённое описание ── */
+test('сценарий В: 27,4% маржинальности и +485 млн руб. к сценарию А',()=>{
+  const c=SUP.scenarios.find(x=>x.id==='C');
+  assert.ok(/27,4%/.test(c.desc)&&/485/.test(c.desc),c.desc.slice(0,120));
+});

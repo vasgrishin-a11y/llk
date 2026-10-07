@@ -179,9 +179,22 @@ main{padding:20px 32px 72px;flex:1}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .card{background:var(--scp-surface);border:1px solid var(--scp-line-2);border-radius:var(--r-m);
-  padding:16px 18px 14px;margin-bottom:16px;min-width:0}
-.card h2{font:600 15px/20px 'Open Sans',sans-serif;margin:0 0 4px;color:var(--scp-text)}
+  padding:16px 18px 14px;margin-bottom:16px;min-width:0;position:relative}
+.card h2{font:600 15px/20px 'Open Sans',sans-serif;margin:0 0 4px;color:var(--scp-text);padding-right:34px}
 .card-sub{margin-bottom:8px;font-size:12px}
+/* ── Разворот графика на весь экран: маленькая кнопка в правом верхнем углу карточки ── */
+.chart-expand{position:absolute;top:10px;right:12px;width:26px;height:26px;display:inline-flex;
+  align-items:center;justify-content:center;background:var(--scp-surface);border:1px solid var(--scp-line-2);
+  border-radius:var(--r-s);color:var(--scp-text-3);cursor:pointer;transition:.12s;padding:0;z-index:5}
+.chart-expand svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chart-expand:hover{border-color:var(--scp-accent);color:var(--scp-accent);background:var(--scp-b-50)}
+.card.fs{position:fixed;inset:14px;z-index:2000;overflow:auto;margin:0;
+  box-shadow:0 24px 80px rgba(15,10,35,.35);border-color:var(--scp-accent-bd)}
+.card.fs h2{padding-right:40px}
+.card.fs .chart-expand{position:fixed;top:24px;right:26px;z-index:2005;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);width:30px;height:30px}
+body.fs-lock{overflow:hidden}
+.fs-backdrop{position:fixed;inset:0;z-index:1990;background:rgba(23,23,26,.55);backdrop-filter:blur(2px)}
 .section-h{margin:10px 0 12px;font:600 13px/18px 'Open Sans',sans-serif;color:var(--scp-text-3);
   text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--scp-line);padding-bottom:6px}
 canvas.chart{width:100%;display:block;margin-top:8px;cursor:pointer}
@@ -369,6 +382,14 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .scen.rec{background:linear-gradient(135deg,rgba(76,175,80,.12),transparent 60%);
   border-color:#a5d6a7;border-left-color:#4CAF50}
 .scen h4{font:600 15px/21px 'Open Sans',sans-serif;margin:0 0 6px;color:var(--scp-text)}
+.scen-head{display:flex;align-items:flex-start;gap:8px}
+.scen-head h4{flex:1;min-width:0}
+.scen-toggle{flex:0 0 auto;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--scp-surface);border:1px solid var(--scp-line-2);border-radius:var(--r-s);
+  color:var(--scp-text-3);cursor:pointer;transition:.12s;padding:0;font-size:14px;line-height:1}
+.scen-toggle:hover{border-color:var(--scp-accent);color:var(--scp-accent);background:var(--scp-b-50)}
+.scen.collapsed .scen-body{display:none}
+.scen.collapsed{padding-bottom:12px}
 .scen-rank{font-size:12.5px;font-weight:600;color:var(--scp-text-2);margin:0 0 8px;padding:4px 10px;
   background:var(--scp-n-50);border-radius:9999px;display:inline-block}
 .scen-desc{font-size:13px;color:var(--scp-text-3);line-height:1.55;margin-bottom:10px}

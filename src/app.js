@@ -286,7 +286,7 @@ function vDemand(){
 
 /* ═══════════════ 3. Запасы ═══════════════ */
 function vStock(){
-  const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons',im=ui.invmode??'tons';
+  const S=STOCK,v=ui.invview??'channels',dm=ui.deadmode??'tons',im=ui.invmode??'tons',hv=ui.invhistview??'stocks';
   const covKey=v==='channels'?'channels':v==='products'?'products':'echelons';
   const CV=S.coverage[covKey];
   /* страховой запас — заливкой под линией; таблица синхронизирована с переключателем.
@@ -325,7 +325,17 @@ function vStock(){
     {t:'Выше целевого запаса (перетовар)',color:'rgba(255,152,0,.40)'},
     {t:'Ниже страхового запаса (пробой)',color:'rgba(217,48,37,.42)'},
   ];
-  if(im==='tons'){
+  const histBarColor=i=>IH.actual[i]<IH.safety[i]?'#D93025':IH.actual[i]>IH.target[i]*1.05?'#FF9800':'#20A7C9';
+  if(hv==='wape'){
+    const WAPE_TGT=IH.labels.map(()=>10);
+    J('#c-invplan','combo',[
+      {data:im==='tons'?IH.actual:IH.cost,kind:'bar',color:'#20A7C9',pointColors:IH.labels.map((_,i)=>histBarColor(i))},
+      {data:IH.wape,kind:'line',color:'#7c3aed',axis:1},
+      {data:WAPE_TGT,kind:'line',color:'#4CAF50',axis:1,dash:true},
+    ],IH.labels,{height:340,legend:im==='tons'?['Фактический запас, т','WAPE прогноза спроса %','Цель WAPE ≤10%']:['Стоимость запаса, млн руб.','WAPE прогноза спроса %','Цель WAPE ≤10%'],
+      yTitle:im==='tons'?'т':'млн руб.',y1Title:'WAPE %',marks:IH.stops,
+      legendExtra:[{t:'Столбец оранжевый — выше целевого (перетовар)',color:'#FF9800'},{t:'Столбец красный — ниже страхового (пробой)',color:'#D93025'}]});
+  }else if(im==='tons'){
     J('#c-invplan','line',[
       {data:IH.safety,color:'#8c9bae',dash:true},
       {data:IH.target,color:'#4CAF50',dash:true},
@@ -349,7 +359,7 @@ function vStock(){
   return kpis('stock')
     +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов'],['echelons','По эшелонам']])+canvas('c-cover','Диаграмма покрытия запасов в днях; красные столбцы — ниже страхового уровня')+covAlertHtml+insight(CV.insight||CV.insightShort)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
     +card('🔴 Неликвиды',sw('deadmode',[['tons','В тоннах'],['money','В деньгах']])+canvas('c-dead','Столбчатая диаграмма неликвидов')+insight(S.dead.insight)+info('success',S.dead.effect)+tbl('tbl-dead',S.dead.heads,S.dead.rows),S.dead.methodology)
-    +card('📈 Анализ запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Анализ запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',im==='tons'?IH.heads:IH.headsM,im==='tons'?IH.rows:IH.rowsM))
+    +card('📈 Анализ запасов за прошедшие 18 месяцев (Апр 2025 – Сен 2026)',(IH.stops?`<div class="muted" style="font-size:11px;margin-bottom:4px">⛔ Вертикальные отметки на графике — прошедшие остановы и ремонты: ${IH.stops.map(x=>esc(x.label.replace('Останов: ','')) ).join(' · ')}</div>`:'')+sw('invhistview',[['stocks','Запасы'],['wape','⚡ Точность прогноза']])+sw('invmode',[['tons','Тонны'],['money','Стоимость, млн руб.']])+canvas('c-invplan','Анализ запасов за прошедшие 18 месяцев: падения ниже страхового запаса и превышение целевого коридора')+insight(hv==='wape'?IH.insightWape:im==='tons'?IH.insightTons:IH.insightMoney)+tbl('tbl-inv-plan',hv==='wape'?IH.headsW:im==='tons'?IH.heads:IH.headsM,hv==='wape'?IH.rowsW:im==='tons'?IH.rows:IH.rowsM))
     +card('🏭 Сырье: состояние запасов',`<div class="grid-3">${S.rawm.map(statCard).join('')}</div>`+tbl('tbl-rm',S.rawmTable.heads,S.rawmTable.rows))
     +card('📦 Готовая продукция: состояние запасов',`<div class="grid-3">${S.fgm.map(statCard).join('')}</div>`+tbl('tbl-fg',S.fgTable.heads,S.fgTable.rows))
     +`<div class="grid">`
@@ -479,7 +489,11 @@ function vSupply(){
   ],F.labels,{height:420,legend:['Оптимистичный ('+F.pctB+')','Базовый','Пессимистичный ('+F.pctW+')'],yTitle:'Объем, т/мес',
     min:Math.floor((Math.min(...F.worst)-1500)/1000)*1000,max:Math.ceil((Math.max(...F.best)+1200)/1000)*1000});
   const fanRows=F.labels.map((m,i)=>[m,N(F.worst[i]),N(F.base[i]),N(F.best[i]),N(F.marginWorst[i]),N(F.marginBase[i]),N(F.marginBest[i]),F.drivers[i]]);
-  const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4>${s.rank?`<div class="scen-rank">${s.rank}</div>`:''}<div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</article>`).join('');
+  if(!ui.scenCollapsed)ui.scenCollapsed=new Set();
+  const scenCards=S.scenarios.map(s=>{const col=ui.scenCollapsed.has(s.id);
+    return `<article class="scen scen-${s.cls}${col?' collapsed':''}"><div class="scen-head"><h4>${s.title}</h4>`
+    +`<button class="scen-toggle" data-scen-toggle="${s.id}" aria-expanded="${!col}" title="${col?'Развернуть сценарий':'Свернуть сценарий'}" aria-label="${col?'Развернуть':'Свернуть'} ${esc(s.title)}">${col?'+':'−'}</button></div>`
+    +`<div class="scen-body">${s.rank?`<div class="scen-rank">${s.rank}</div>`:''}<div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</div></article>`;}).join('');
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
   const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Фокус на валовой прибыли)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
@@ -638,7 +652,7 @@ function vPlans(){
     }
     invExtra=stopsNote+viewSwitch+quickFilter+riskStripHTML(P,a,b,invOpts);
   }
-  const insText=pl==='inventory'?P.insightFor(a,b,invOpts):P.insight;
+  const insText=typeof P.insightFor==='function'?(pl==='inventory'?P.insightFor(a,b,invOpts):P.insightFor(a,b)):P.insight;
   return periodBar
     +`<div class="switch" style="margin-bottom:12px">${Object.entries(PLANS).map(([id,p])=>`<button class="${pl===id?'active':''}" data-sw="plan" data-val="${id}">${p.tab}</button>`).join('')}</div>`
     +kpiStrip
@@ -667,12 +681,61 @@ function vActions(){
    Единственная навигация — горизонтальное меню сверху; тема светлая,
    действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
 const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions};
+/* ── Разворот карточек с графиками на весь экран ── */
+const ICON_EXPAND='<svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+const ICON_COLLAPSE='<svg viewBox="0 0 24 24"><polyline points="7 3 3 3 3 7"/><polyline points="17 21 21 21 21 17"/><line x1="3" y1="3" x2="10" y2="10"/><line x1="21" y1="21" x2="14" y2="14"/></svg>';
+function repaintCardCanvases(card,fs){
+  const cvs=[...card.querySelectorAll('canvas.chart')];
+  cvs.forEach(cv=>{
+    const cfg=cv.__cfg;if(!cfg)return;
+    if(fs&&cv.__origH==null)cv.__origH=cfg.opts.height||280;
+    const h=fs?(cvs.length===1?Math.max(cv.__origH||280,Math.floor((window.innerHeight||800)*0.62)):cv.__origH):(cv.__origH||cfg.opts.height);
+    drawChart(cv,cfg.type,cfg.series,cfg.labels,{...cfg.opts,height:h});
+    if(!fs)cv.__origH=null;
+  });
+}
+function closeFullscreen(){
+  const fsCard=document.querySelector('.card.fs');
+  if(fsCard){fsCard.classList.remove('fs');
+    const b=fsCard.querySelector('.chart-expand');
+    if(b){b.innerHTML=ICON_EXPAND;b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть график на весь экран');}
+    repaintCardCanvases(fsCard,false);}
+  document.querySelector('.fs-backdrop')?.remove();
+  document.body.classList.remove('fs-lock');
+}
+function wireCardExpand(root){
+  root.querySelectorAll('.card').forEach(card=>{
+    if(!card.querySelector('canvas.chart'))return;
+    if(card.querySelector('.chart-expand'))return;
+    const b=document.createElement('button');
+    b.className='chart-expand';b.innerHTML=ICON_EXPAND;
+    b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть график на весь экран');
+    b.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      const isFs=card.classList.contains('fs');
+      closeFullscreen();
+      if(isFs)return;
+      card.classList.add('fs');
+      b.innerHTML=ICON_COLLAPSE;b.title='Свернуть обратно';b.setAttribute('aria-label','Свернуть график обратно');
+      const bd=document.createElement('div');bd.className='fs-backdrop';
+      bd.addEventListener('click',closeFullscreen);
+      document.body.appendChild(bd);
+      document.body.classList.add('fs-lock');
+      repaintCardCanvases(card,true);
+      card.scrollTop=0;
+    });
+    card.appendChild(b);
+  });
+}
 function renderContent(){
+  closeFullscreen();
   jobs=[];
   const el=document.querySelector('#content');
+  if(!el)return;
   el.innerHTML=(VIEWS[tab]||vOverview)();
   jobs.forEach(([sel,...rest])=>drawChart(el.querySelector(sel),...rest));
   jobs=[];
+  wireCardExpand(el);
 }
 /* Рендер любой вкладки в произвольный контейнер (используется экспортом PDF/PPTX):
    графики отрисовываются в канвасы внутри host, текущий экран не затрагивается. */
@@ -785,6 +848,10 @@ document.addEventListener('click',e=>{
   if(exp){const m=document.getElementById('exportMenu');if(m)m.hidden=true;runExport(exp.dataset.exp);return;}
   if(e.target.closest('#exportBtn')){const m=document.getElementById('exportMenu');if(m)m.hidden=!m.hidden;return;}
   if(!e.target.closest('.tb-export')){const m=document.getElementById('exportMenu');if(m)m.hidden=true;}
+  const st=e.target.closest('[data-scen-toggle]');
+  if(st){if(!ui.scenCollapsed)ui.scenCollapsed=new Set();const id=st.dataset.scenToggle;
+    if(ui.scenCollapsed.has(id))ui.scenCollapsed.delete(id);else ui.scenCollapsed.add(id);
+    renderContent();return;}
   const s=e.target.closest('[data-sw]');
   if(s){ui[s.dataset.sw]=s.dataset.val;renderContent();return;}
   const tg=e.target.closest('[data-toggle]');
@@ -819,5 +886,10 @@ document.addEventListener('mousemove',e=>{if(e.target.closest?.('[data-info],[da
 document.addEventListener('mouseout',e=>{if(e.target.closest?.('[data-info],[data-smtip]')){const t=document.getElementById('__infoTip');if(t)t.style.display='none';}});
 /* перерисовка canvas при изменении ширины (дебаунс) */
 let rzT=null;
-window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(renderContent,220);});
+window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{
+  const fsCard=document.querySelector('.card.fs');
+  if(fsCard){repaintCardCanvases(fsCard,true);return;}
+  renderContent();
+},220);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFullscreen();});
 render();
