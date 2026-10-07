@@ -64,6 +64,28 @@ test('приложение рендерит все рабочие вкладки
   assert.equal($('#c-invplan').__cfg.labels[17],'Сен 2026');
   assert.ok(Array.isArray($('#c-invplan').__cfg.opts.fillBetween),'две зоны подсветки: выше цели и ниже страхового');
 
+  // режим «Точность прогноза»: без «светофора» — все столбцы одного цвета,
+  // отклонения показаны бейджами недопоставки/перетовара, а линии страхового и
+  // целевого уровня есть в легенде, но выключены по умолчанию
+  click('[data-sw="invhistview"][data-val="wape"]');
+  const wapeChart=$('#c-invplan').__cfg;
+  assert.equal(wapeChart.type,'combo');
+  assert.ok(!wapeChart.series[0].pointColors,'светофор по столбцам убран');
+  assert.equal(wapeChart.series[0].color,'#20A7C9','все столбцы одного цвета');
+  const risks=wapeChart.series[0].risks;
+  assert.ok(Array.isArray(risks)&&risks.length===18,'индикаторы отклонений по всем месяцам');
+  assert.ok(risks.some(r=>r&&r.type==='under')&&risks.some(r=>r&&r.type==='over'),'есть бейджи недопоставки и перетовара');
+  assert.deepEqual(risks.slice(2,4).map(r=>r&&r.type),['under','under'],'пробои июн–июл 2025 отмечены');
+  assert.equal(wapeChart.series.filter(s=>s.hidden).length,2,'страховой и целевой уровни выключены по умолчанию');
+  assert.equal(typeof wapeChart.opts.tipExtra,'function','интерактивный тултип с Δ к цели в режиме точности прогноза');
+  // стоимостный режим того же графика — те же минималистичные правила
+  click('[data-sw="invmode"][data-val="money"]');
+  const wapeMoney=$('#c-invplan').__cfg;
+  assert.ok(!wapeMoney.series[0].pointColors&&Array.isArray(wapeMoney.series[0].risks),'стоимостный режим: один цвет + бейджи');
+  assert.equal(wapeMoney.series.filter(s=>s.hidden).length,2,'стоимостный режим: уровни выключены по умолчанию');
+  click('[data-sw="invmode"][data-val="tons"]');
+  click('[data-sw="invhistview"][data-val="stocks"]');
+
   // поставки: зоны разрыва в полосах, без отдельной строки «Не покрыто (разрыв)»
   click('[data-tab="supply"]');
   const spbNode=$$('.cg-node').find(g=>g.textContent.includes('Санкт-Петербург'));

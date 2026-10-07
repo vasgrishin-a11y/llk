@@ -10,10 +10,12 @@
 
    series — массив рядов; ряд — либо массив значений [1,2,3], либо объект:
    { data:[...], kind:'bar'|'line', axis:0|1, color:'#hex', dash:true,
-     fill:true, r:6, pointColors:[...] }.
+     fill:true, r:6, pointColors:[...], hidden:true (ряд виден в легенде,
+     но выключен по умолчанию; включается кликом по легенде) }.
    opts: { height, legend:[...], colors:[...], yTitle, y1Title, max, min,
            max1, min1, barValues, compact, center, maxX, maxY, xTitle,
-           quadrants, unit, valueFmt, stackH:true (гориз. стек) }. */
+           quadrants, unit, valueFmt, stackH:true (гориз. стек),
+           tipExtra:(i,label)=>html — доп. блок тултипа по индексу точки }. */
 const PALETTE=['#20A7C9','#4CAF50','#FF9800','#D93025','#8c9bae','#90CAF9','#9C27B0','#1a2b4a'];
 export const CHART_TYPES=['line','bar','stacked','hbar','combo','area','waterfall','band','donut','radar','scatter'];
 const FONT="'Open Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
@@ -42,7 +44,11 @@ function hideTip(){const t=document.getElementById('__chartTip');if(t)t.style.di
 export function drawChart(canvas,type,series,labels=[],opts={}){
   if(!canvas||typeof canvas.getContext!=='function')return;
   canvas.__cfg={type,series:series||[],labels:labels||[],opts:opts||{}};
-  if(!canvas.__state)canvas.__state={hidden:new Set(),hover:null,zoom:null,drag:null};
+  if(!canvas.__state){
+    canvas.__state={hidden:new Set(),hover:null,zoom:null,drag:null};
+    /* ряды с hidden:true выключены по умолчанию, но остаются в легенде (включаются кликом) */
+    (series||[]).forEach((s,i)=>{if(s&&!Array.isArray(s)&&s.hidden===true)canvas.__state.hidden.add(i);});
+  }
   ensureInteractive(canvas);
   paint(canvas);
 }
@@ -495,12 +501,15 @@ function ensureInteractive(canvas){
       const rkArr=!Array.isArray(ser)&&ser&&ser.risks?ser.risks:null;
       const rk=rkArr?(zoom?rkArr.slice(zoom.i0,zoom.i1+1):rkArr)[i]:null;
       if(rk){const t=typeof rk==='string'?rk:rk.type;
-        const pct=typeof rk==='object'&&rk.pct!=null?(rk.pct>0?'+'+rk.pct+'%':rk.pct+'%'):'';
+        const pct=typeof rk==='object'&&rk.pct!=null?((rk.pct>0?'+':rk.pct<0?'−':'')+Math.abs(rk.pct)+'%'):'';
         const rc=t==='under'?'#FF8A80':'#FFB74D';
         riskHtml=' <b style="color:'+rc+'">⚠'+(pct?' '+pct:'')+'</b>';}
       return '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:'+col+';display:inline-block"></span>'+name+': <b>'+fm(v)+'</b>'+riskHtml+'</div>';
     }).filter(Boolean).join('');
-    if(rows)showTip('<div style="margin-bottom:3px;opacity:.8">'+(lab!=null?lab:'')+'</div>'+rows,e.clientX,e.clientY);else hideTip();
+    /* opts.tipExtra(realIndex, label) — дополнительный контекст в тултипе (например, Δ к цели) */
+    let extra='';
+    if(typeof opts.tipExtra==='function'){try{extra=opts.tipExtra(realI,lab)||'';}catch(_e){extra='';}}
+    if(rows||extra)showTip('<div style="margin-bottom:3px;opacity:.8">'+(lab!=null?lab:'')+'</div>'+rows+extra,e.clientX,e.clientY);else hideTip();
   });
   canvas.addEventListener('mouseleave',()=>{const s=st();if(s.hover!=null){s.hover=null;paint(canvas);}s.drag=null;hideTip();});
 
