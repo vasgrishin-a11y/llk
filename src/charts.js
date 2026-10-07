@@ -67,7 +67,7 @@ function paint(canvas){
     const i0=Math.max(0,st.zoom.i0),i1=Math.min((labels.length||1)-1,st.zoom.i1);
     if(i1-i0>=1&&(i0>0||i1<labels.length-1)){zoomActive=true;
       labels=labels.slice(i0,i1+1);
-      S=S.map(o=>{const c=Object.assign({},o);c.data=(o.data||[]).slice(i0,i1+1);if(o.pointColors)c.pointColors=o.pointColors.slice(i0,i1+1);return c;});}
+      S=S.map(o=>{const c=Object.assign({},o);c.data=(o.data||[]).slice(i0,i1+1);if(o.pointColors)c.pointColors=o.pointColors.slice(i0,i1+1);if(o.risks)c.risks=o.risks.slice(i0,i1+1);return c;});}
   }
   /* скрытые ряды (клик по легенде) — исключаем из осей и отрисовки, но помним для легенды */
   const vis=S.filter(s=>!st.hidden.has(s.__i));
@@ -291,9 +291,26 @@ function paint(canvas){
       ctx.restore();ctx.font=fs+'px '+FONT;ctx.textAlign='left';});
   }
 
+  /* ── Минималистичный бейдж риска на столбце: белый круг с «!» ──
+     type 'under' (дефицит/ниже страхового) — красный, 'over' (перетовар/выше цели) — оранжевый. */
+  const riskCol=t=>t==='under'?'#D93025':'#E8930C';
+  const drawRiskBadge=(cx,cy,rk)=>{
+    const t=typeof rk==='string'?rk:(rk&&rk.type)||'over';
+    const col=riskCol(t),r=compact?6:7.5;
+    ctx.save();
+    ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fillStyle='#fff';ctx.fill();
+    ctx.lineWidth=1.6;ctx.strokeStyle=col;ctx.stroke();
+    ctx.fillStyle=col;ctx.font='700 '+(compact?8:10)+'px '+FONT;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('!',cx,cy+0.5);
+    ctx.restore();
+    ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  };
+  const riskMarkers=[];
+
   const linePoints=s=>{const pts=[];s.data.forEach((v,i)=>{if(v!=null)pts.push([cxL(i),(s.axis===1?Y1:Y0)(v),i])});return pts;};
   const drawLineSeries=s=>{const pts=linePoints(s);if(!pts.length)return;
-    ctx.setLineDash(s.dash?[6,4]:[]);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();
+    ctx.setLineDash(s.dash?[6,4]:[]);ctx.strokeStyle=s.color;ctx.lineWidth=s.w||s.lineWidth||2;ctx.beginPath();
     let prevI=null;pts.forEach(([x,y,i])=>{if(prevI!==null&&i===prevI+1)ctx.lineTo(x,y);else ctx.moveTo(x,y);prevI=i;});
     ctx.stroke();ctx.setLineDash([]);
     pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,compact?1.6:2.6,0,7);ctx.fillStyle=s.color;ctx.fill();});};
@@ -382,8 +399,13 @@ function paint(canvas){
     const cumPos=new Array(n).fill(0),cumNeg=new Array(n).fill(0),bw=slot*0.6;
     vis.forEach(s=>{for(let i=0;i<n;i++){const v=s.data[i];if(v==null)continue;
       const x=cxL(i)-bw/2;ctx.fillStyle=(s.pointColors&&s.pointColors[i])||s.color;
-      if(v>=0){const yT=Y0(cumPos[i]+v),yB=Y0(cumPos[i]);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));cumPos[i]+=v;}
-      else{const yT=Y0(cumNeg[i]),yB=Y0(cumNeg[i]+v);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));cumNeg[i]+=v;}}});
+      if(v>=0){const yT=Y0(cumPos[i]+v),yB=Y0(cumPos[i]);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));
+        if(s.risks&&s.risks[i])riskMarkers.push({x:x+bw/2,y:(yT+yB)/2,rk:s.risks[i]});
+        cumPos[i]+=v;}
+      else{const yT=Y0(cumNeg[i]),yB=Y0(cumNeg[i]+v);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));
+        if(s.risks&&s.risks[i])riskMarkers.push({x:x+bw/2,y:(yT+yB)/2,rk:s.risks[i]});
+        cumNeg[i]+=v;}}});
+    riskMarkers.forEach(m=>drawRiskBadge(m.x,m.y,m.rk));
   }
   else{ /* bar / combo */
     const bars=vis.filter(s=>s.kind!=='line');
@@ -393,8 +415,10 @@ function paint(canvas){
       ctx.fillStyle=(s.pointColors&&s.pointColors[i])||s.color;
       const yT=Y(Math.max(v,0)),yB=Y(Math.min(v,0));
       ctx.fillRect(x,yT,bw*0.9,Math.max(yB-yT,1));
+      if(s.risks&&s.risks[i]){const h=Math.abs(yB-yT);riskMarkers.push({x:x+bw*0.45,y:h>20?(yT+yB)/2:yT-10,rk:s.risks[i]});}
       if(opts.barValues){ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.fillText(fm(v),x+bw*0.45,yT-3);}}});
     vis.filter(s=>s.kind==='line').forEach(s=>{if(s.fill)fillUnder(s);drawLineSeries(s);});
+    riskMarkers.forEach(m=>drawRiskBadge(m.x,m.y,m.rk));
   }
 
   /* ── crosshair + подсветка точек при наведении ── */
@@ -467,7 +491,14 @@ function ensureInteractive(canvas){
       if(s.hidden.has(si))return null;const arr=Array.isArray(ser)?ser:ser.data;const col=(Array.isArray(ser)?PALETTE[si%PALETTE.length]:ser.color)||PALETTE[si%PALETTE.length];
       const v=(zoom?arr.slice(zoom.i0,zoom.i1+1):arr)[i];if(v==null)return null;
       const name=leg[si]||('Ряд '+(si+1));
-      return '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:'+col+';display:inline-block"></span>'+name+': <b>'+fm(v)+'</b></div>';
+      let riskHtml='';
+      const rkArr=!Array.isArray(ser)&&ser&&ser.risks?ser.risks:null;
+      const rk=rkArr?(zoom?rkArr.slice(zoom.i0,zoom.i1+1):rkArr)[i]:null;
+      if(rk){const t=typeof rk==='string'?rk:rk.type;
+        const pct=typeof rk==='object'&&rk.pct!=null?(rk.pct>0?'+'+rk.pct+'%':rk.pct+'%'):'';
+        const rc=t==='under'?'#FF8A80':'#FFB74D';
+        riskHtml=' <b style="color:'+rc+'">⚠'+(pct?' '+pct:'')+'</b>';}
+      return '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:'+col+';display:inline-block"></span>'+name+': <b>'+fm(v)+'</b>'+riskHtml+'</div>';
     }).filter(Boolean).join('');
     if(rows)showTip('<div style="margin-bottom:3px;opacity:.8">'+(lab!=null?lab:'')+'</div>'+rows,e.clientX,e.clientY);else hideTip();
   });

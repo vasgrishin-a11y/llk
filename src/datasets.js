@@ -694,6 +694,26 @@ const movementRail=movementAuto.map(x=>Math.round(x*0.54));
    накладные) свёрнуты в «Закупку», чтобы сумма долей осталась 77,0% выручки (steady-state)
    и совпадала со средневзвешенной себестоимостью 76,3% за 18 месяцев. */
 const costItems=[['Закупка',.537,'#4CAF50'],['Производство',.117,'#20A7C9'],['Логистика',.075,'#FF9800'],['Хранение',.041,'#8c9bae']];
+/* ── Придуманные аномалии структуры себестоимости: в отдельные месяцы доля статьи
+   заметно превышает среднегодовую — подсвечиваются значком «!» на столбце ── */
+const COST_ANOMS=[
+  {mi:2,item:'Логистика',mult:1.26,
+   cause:'Предновогодний спот-фрахт и аренда транспорта для закрытия зимнего пика.',
+   action:'Зафиксировать тарифы заранее; перенести часть объёма на ЖД.'},
+  {mi:8,item:'Закупка',mult:1.05,
+   cause:'Спот-закупка базового масла VHVI-4 в период капремонта линии №2 (Волгоград).',
+   action:'Создать страховой запас VHVI-4 перед ремонтом; дубль-контракт с ПНОС.'},
+  {mi:15,item:'Хранение',mult:1.32,
+   cause:'Аренда внешнего склада на период модернизации фасовки (Торжок) и переполнение Ворсино.',
+   action:'Разгрузить Ворсино в 3PL Центр; пересмотреть норматив буфера.'},
+];
+const costAnomAt=(name,mi)=>COST_ANOMS.find(x=>x.mi===mi&&x.item===name)||null;
+const costWeightA=(name,w,mi)=>{const an=costAnomAt(name,mi);return costWeight(w,mi)*(an?an.mult:1);};
+/* Среднегодовая доля статьи (% выручки) за 18 мес. — база для сравнения аномалий. */
+const COST_AVG_SHARE=(()=>{const totRev=revenue.reduce((a,b)=>a+b,0);const o={};
+  costItems.forEach(([n,w])=>{let s=0;for(let i=0;i<18;i++)s+=revenue[i]*costWeightA(n,w,i);o[n]=s/totRev*100;});
+  return o;})();
+const COST_TOTAL_ANOM=(()=>{let s=0;for(let i=0;i<18;i++)costItems.forEach(([n,w])=>{s+=revenue[i]*costWeightA(n,w,i);});return s;})();
 const purchG3=[1350,1380,1400,1290,1260,1240,1200,1230,1270,1330,1360,1310,1300,1340,1380,1320,1280,1250];
 const purchBase=[1000,1010,1020,980,960,950,930,940,960,1000,1020,990,980,1000,1020,990,970,950];
 const purchAdd=[560,565,570,545,535,530,520,525,535,555,565,550,545,555,565,550,540,530];
@@ -1039,26 +1059,29 @@ export const PLANS={
           ?'<b>📌 План запасов:</b> базовый уровень следует целевому запасу. В 4 кв. 2026 план сходится к сниженной цели сверху (46 500 / 47 000 / 47 500 т при цели 43 000 / 45 000 / 47 000 т). Денежный план повторяет логику тонн: <b>красная зона — стоимость запаса сверх цели</b> за один период до и после плановых остановов производства (Волгоград, Пермь, Торжок).'
           :baseInsight;
       }
-      const riskNote=f.riskOnly?' Фильтр <b>«Только риски»</b> включён: показаны только позиции с перетоваром (+15% к цели и выше) или дефицитом (ниже страхового).':' Риски периода (перетовар +15% к цели и выше, дефицит ниже страхового) отмечены бейджами над графиком; фильтр <b>«Только риски»</b> оставляет только проблемные позиции.';
+      const riskNoteStack=f.riskOnly?' Фильтр <b>«Только риски»</b> включён: в каждом месяце показаны только сегменты с риском (перетовар +15% к цели и выше, дефицит ниже страхового), месяцы без рисков — пустые, но остаются на оси. Наведите на столбец — в подсказке виден % отклонения.':' Риски отмечены бейджами над графиком и значком <b>«!»</b> прямо на сегменте столбца (красный — дефицит, оранжевый — перетовар; наведите — подсказка покажет % отклонения). Фильтр <b>«Только риски»</b> оставляет в каждом месяце только проблемные сегменты, пустые месяцы остаются на оси без столбиков.';
+      const riskNoteLine=f.riskOnly?' Фильтр <b>«Только риски»</b> включён: показаны только склады с перетоваром (+15% к цели и выше) или дефицитом (ниже страхового) в периоде.':' Риски периода (перетовар +15% к цели и выше, дефицит ниже страхового) отмечены бейджами над графиком; фильтр <b>«Только риски»</b> оставляет только проблемные склады.';
       if(f.view==='warehouses'){
         const catNames=f.isCatFiltered?f.catIdxs.map(i=>products[i].short).join(', '):'все 8 категорий продуктов';
         const lvl=f.level==='agg'
           ?'разбивке на <b>5 заводских складов ПС</b> (~73,8% объёма) и агрегированные <b>Все склады 3PL</b> (~26,2%)'
           :'разбивке на <b>5 заводских складов ПС</b> и <b>5 регионов 3PL</b> (СЗ, Центр, Юг, Сибирь, Восток)';
         const lvlHint=f.level==='agg'?' Детализация до регионов 3PL — переключатель «По регионам (10)».':' Общий уровень (заводы + Все 3PL) — переключатель «Заводы + Все 3PL».';
-        return `<b>📌 План запасов по складам:</b> базовый уровень следует целевому запасу. Помесячная динамика в ${lvl} в единицах «${unit}». Фильтр категорий: <b>${catNames}</b>.${lvlHint}${riskNote}`;
+        return `<b>📌 План запасов по складам:</b> базовый уровень следует целевому запасу. Помесячная динамика в ${lvl} в единицах «${unit}». Фильтр категорий: <b>${catNames}</b>.${lvlHint}${riskNoteStack}`;
       }
       if(f.view==='wh_detail'){
         const n=f.detWhIdxs.length;
-        const whNames=!f.isWhFiltered?'все 17 складов (5 ПС + 12 3PL)':n<=4?f.detWhIdxs.map(i=>warehouses[i].name).join(', '):n+' складов';
+        const isPlants=n===5&&f.detWhIdxs.every(wi=>!warehouses[wi].id.startsWith('3pl_'));
+        const is3pl=n===12&&f.detWhIdxs.every(wi=>warehouses[wi].id.startsWith('3pl_'));
+        const whNames=!f.isWhFiltered?'все 17 складов (5 ПС + 12 3PL)':isPlants?'заводы ПС (5)':is3pl?'склады 3PL (12)':n<=4?f.detWhIdxs.map(i=>warehouses[i].name).join(', '):'выборка: '+n+' складов';
         const linesNote=n===1?' Показаны страховой, целевой запас и план выбранного склада, как в сводном плане.'
-          :n<=6?' Жирные линии — суммарные страховой, целевой запас и план выборки; тонкие — план каждого склада (клик по легенде скрывает линию).'
+          :n<=6?' Утолщённые тёмные линии — суммарные страховой, целевой запас и план выборки; тонкие цветные — план каждого склада (клик по легенде скрывает линию).'
           :' Выбрано больше 6 складов — показаны только суммарные линии выборки; выберите до 6 складов, чтобы увидеть их индивидуальные линии плана.';
-        const allNote=!f.isWhFiltered?' Сейчас выбраны все склады, поэтому суммарная динамика совпадает со сводным планом — сузьте выборку до 1–6 складов для детализации.':'';
-        return `<b>📌 Динамика плана запасов по складам:</b> тот же формат, что и сводный план (периоды + страховой/целевой/план IBP с красной зоной превышения и тёмной зоной дефицита), но для выборки: <b>${whNames}</b> за ${PLAN_MONTHS[a]} – ${PLAN_MONTHS[b-1]}.${linesNote}${allNote}${riskNote}`;
+        const allNote=!f.isWhFiltered?' Сейчас выбраны все склады, поэтому суммарная динамика совпадает со сводным планом — сузьте выборку до 1–6 складов или выберите пресет «Заводы ПС (5)» / «Склады 3PL (12)» для детализации.':'';
+        return `<b>📌 Динамика плана запасов по складам:</b> тот же формат, что и сводный план (периоды + страховой/целевой/план IBP с красной зоной превышения и тёмной зоной дефицита), но для выборки: <b>${whNames}</b> за ${PLAN_MONTHS[a]} – ${PLAN_MONTHS[b-1]}.${linesNote}${allNote}${riskNoteLine}`;
       }
       const nodeNames=f.isNodeFiltered?f.grpIdxs.map(i=>whGroups[i].short).join(', '):'все 5 заводов ПС и 5 регионов 3PL';
-      return `<b>📌 План запасов по категориям продуктов (8 категорий):</b> базовый уровень следует целевому запасу. Помесячная структура запаса по всем 8 продуктовым линейкам (моторные, гидравлические, индустриальные, смазки, СОЖ, ОЖ, тех. жидкости, трансмиссионные) в единицах «${unit}». Фильтр площадок: <b>${nodeNames}</b>.${riskNote}`;
+      return `<b>📌 План запасов по категориям продуктов (8 категорий):</b> базовый уровень следует целевому запасу. Помесячная структура запаса по всем 8 продуктовым линейкам (моторные, гидравлические, индустриальные, смазки, СОЖ, ОЖ, тех. жидкости, трансмиссионные) в единицах «${unit}». Фильтр площадок: <b>${nodeNames}</b>.${riskNoteStack}`;
     };
 
     const chart=(a,b,opts={})=>{
@@ -1068,45 +1091,68 @@ export const PLANS={
       const yTitle=f.mode==='money'?'млн руб.':'т';
       if(f.view==='warehouses'){
         /* Концепция «от общего к частному»: agg — 5 заводов ПС + агрегированные Все склады 3PL;
-           Detail — те же заводы + 5 регионов 3PL. Фильтр категорий сужает скоуп, «Только риски»
-           оставляет лишь проблемные узлы (если рисков нет — показываем всё, чтобы не пугать пустым графиком). */
+           Detail — те же заводы + 5 регионов 3PL. Фильтр категорий сужает скоуп.
+           Риски подсвечиваются бейджем «!» прямо на сегменте столбца (красный — дефицит,
+           оранжевый — перетовар). «Только риски» оставляет лишь проблемные узлы и только
+           в проблемных месяцах (месяцы без рисков — пустые, но период на оси остаётся);
+           если рисков нет вообще — показываем всё, чтобы не пугать пустым графиком. */
         const groups=f.level==='agg'?AGG_GROUPS():whGroups;
-        let list=groups;
+        let list=groups,riskActive=false;
         if(f.riskOnly){
           const rk=groups.filter(g=>scanRisk(a,b,whOfAgg(g),f.catIdxs));
-          if(rk.length)list=rk;
+          if(rk.length){list=rk;riskActive=true;}
         }
+        let hasOver=false,hasUnder=false;
         const series=list.map(g=>{
           const idxs=whOfAgg(g);
-          const data=[];
-          for(let mi=a;mi<b;mi++)data.push(valConv(sumCells(cubeActual,mi,idxs,f.catIdxs),f.mode));
-          return {data,color:g.color};
+          const data=[],risks=[];
+          for(let mi=a;mi<b;mi++){
+            const plan=sumCells(cubeActual,mi,idxs,f.catIdxs);
+            const tgt=sumCells(cubeTarget,mi,idxs,f.catIdxs);
+            const saf=sumCells(cubeSafety,mi,idxs,f.catIdxs);
+            const rk=assessRisk(plan,tgt,saf);
+            risks.push(rk);
+            if(rk){if(rk.type==='under')hasUnder=true;else hasOver=true;}
+            data.push(riskActive&&!rk?null:valConv(plan,f.mode));
+          }
+          return {data,risks,color:g.color};
         });
-        return {type:'stacked',labels,series,opts:{height:360,legend:list.map(g=>g.short),yTitle,marks:stopsInRange}};
+        const legendExtra=[];
+        if(hasUnder)legendExtra.push({t:'! Дефицит (ниже страхового)',color:'#D93025'});
+        if(hasOver)legendExtra.push({t:'! Перетовар (+15% к цели и выше)',color:'#E8930C'});
+        return {type:'stacked',labels,series,opts:{height:360,legend:list.map(g=>g.short),yTitle,marks:stopsInRange,
+          legendExtra:legendExtra.length?legendExtra:null}};
       }
       if(f.view==='wh_detail'){
         /* Динамика выборки складов в формате сводного плана: суммарные страховой/целевой/план
            + красная зона превышения и тёмная зона дефицита; при выборке 2–6 складов —
-           тонкие индивидуальные линии плана каждого склада. */
+           тонкие индивидуальные линии плана каждого склада.
+           Подпись агрегата называет выборку явно (Все склады / Заводы ПС / Склады 3PL / N),
+           а не безликое «(выборка)». При показанных индивидуальных линиях агрегаты рисуются
+           утолщёнными тёмными линиями, индивидуальные — тонкими: цвета ПС Волгоград (#20A7C9)
+           и агрегата плана больше не сливаются. */
         let idxs=f.detWhIdxs;
         if(f.riskOnly){
           const rk=idxs.filter(wi=>scanRisk(a,b,[wi],ALL_CAT));
           if(rk.length)idxs=rk;
         }
+        const isAll=idxs.length===warehouses.length;
+        const isPlants=idxs.length===5&&idxs.every(wi=>!warehouses[wi].id.startsWith('3pl_'));
+        const is3pl=idxs.length===12&&idxs.every(wi=>warehouses[wi].id.startsWith('3pl_'));
+        const hasIndiv=idxs.length>1&&idxs.length<=6;
         const agg=cube=>{const d=[];for(let mi=a;mi<b;mi++)d.push(valConv(sumCells(cube,mi,idxs,ALL_CAT),f.mode));return d;};
         const series=[
-          {data:agg(cubeSafety),color:'#8c9bae',dash:true},
-          {data:agg(cubeTarget),color:'#4CAF50',dash:true},
-          {data:agg(cubeActual),color:'#20A7C9'},
+          {data:agg(cubeSafety),color:hasIndiv?'#6b7280':'#8c9bae',dash:true,w:hasIndiv?2.6:2},
+          {data:agg(cubeTarget),color:hasIndiv?'#137333':'#4CAF50',dash:true,w:hasIndiv?2.6:2},
+          {data:agg(cubeActual),color:hasIndiv?'#1a2b4a':'#20A7C9',w:hasIndiv?2.8:2},
         ];
         const singleName=idxs.length===1?warehouses[idxs[0]].name:null;
-        const legend=singleName
-          ?['Страховой запас — '+singleName,'Целевой запас — '+singleName,'План IBP — '+singleName]
-          :['Страховой запас (выборка)','Целевой запас (выборка)','План запасов IBP (выборка)'];
-        if(idxs.length>1&&idxs.length<=6){
+        const suffix=singleName||(isAll?'Все склады':isPlants?'Заводы ПС (5)':is3pl?'Склады 3PL (12)':'Выборка ('+idxs.length+')');
+        const legend=['Страховой запас — '+suffix,'Целевой запас — '+suffix,'План запасов IBP — '+suffix];
+        if(hasIndiv){
           idxs.forEach(wi=>{
             const d=[];for(let mi=a;mi<b;mi++)d.push(valConv(sumCells(cubeActual,mi,[wi],ALL_CAT),f.mode));
-            series.push({data:d,color:warehouses[wi].color});
+            series.push({data:d,color:warehouses[wi].color,w:1.5});
             legend.push(warehouses[wi].name+' — план');
           });
         }
@@ -1121,19 +1167,33 @@ export const PLANS={
           ]}};
       }
       if(f.view==='products'){
-        /* Помесячный стек по 8 категориям продуктов, с учётом фильтра по заводам и регионам 3PL;
-           «Только риски» оставляет лишь проблемные категории. */
-        let items=products.map((p,ci)=>({p,ci}));
+        /* Помесячный стек по 8 категориям продуктов, с учётом фильтра по заводам и регионам 3PL.
+           Риски — бейджем «!» на сегменте; «Только риски» оставляет лишь проблемные категории
+           и только в проблемных месяцах (пустые месяцы без столбиков остаются на оси). */
+        let items=products.map((p,ci)=>({p,ci})),riskActive=false;
         if(f.riskOnly){
           const rk=items.filter(x=>scanRisk(a,b,f.whIdxs,[x.ci]));
-          if(rk.length)items=rk;
+          if(rk.length){items=rk;riskActive=true;}
         }
+        let hasOver=false,hasUnder=false;
         const series=items.map(x=>{
-          const data=[];
-          for(let mi=a;mi<b;mi++)data.push(valConv(sumCells(cubeActual,mi,f.whIdxs,[x.ci]),f.mode));
-          return {data,color:x.p.color};
+          const data=[],risks=[];
+          for(let mi=a;mi<b;mi++){
+            const plan=sumCells(cubeActual,mi,f.whIdxs,[x.ci]);
+            const tgt=sumCells(cubeTarget,mi,f.whIdxs,[x.ci]);
+            const saf=sumCells(cubeSafety,mi,f.whIdxs,[x.ci]);
+            const rk=assessRisk(plan,tgt,saf);
+            risks.push(rk);
+            if(rk){if(rk.type==='under')hasUnder=true;else hasOver=true;}
+            data.push(riskActive&&!rk?null:valConv(plan,f.mode));
+          }
+          return {data,risks,color:x.p.color};
         });
-        return {type:'stacked',labels,series,opts:{height:360,legend:items.map(x=>x.p.name),yTitle,marks:stopsInRange}};
+        const legendExtra=[];
+        if(hasUnder)legendExtra.push({t:'! Дефицит (ниже страхового)',color:'#D93025'});
+        if(hasOver)legendExtra.push({t:'! Перетовар (+15% к цели и выше)',color:'#E8930C'});
+        return {type:'stacked',labels,series,opts:{height:360,legend:items.map(x=>x.p.name),yTitle,marks:stopsInRange,
+          legendExtra:legendExtra.length?legendExtra:null}};
       }
       /* Режим по умолчанию ('summary'): график «План запасов на 18 месяцев» из раздела Запасы, адаптированный под период [a,b) */
       const sSafety=f.mode==='money'?SL(invCostSafety,a,b):SL(invSafety,a,b);
@@ -1174,7 +1234,9 @@ export const PLANS={
           const rk=idxs.filter(wi=>scanRisk(a,b,[wi],ALL_CAT));
           if(rk.length)idxs=rk;
         }
-        const scopeLbl=idxs.length===warehouses.length?'Все 17 складов (5 ПС + 12 3PL)':'Итого выборки ('+idxs.length+' скл.)';
+        const _isP=idxs.length===5&&idxs.every(wi=>!warehouses[wi].id.startsWith('3pl_'));
+        const _is3=idxs.length===12&&idxs.every(wi=>warehouses[wi].id.startsWith('3pl_'));
+        const scopeLbl=idxs.length===warehouses.length?'Все 17 складов (5 ПС + 12 3PL)':_isP?'Заводы ПС (5)':_is3?'Склады 3PL (12)':'Итого выборки ('+idxs.length+' скл.)';
         for(let mi=a;mi<b;mi++){
           idxs.forEach(wi=>{
             const w=warehouses[wi];
@@ -1337,18 +1399,49 @@ export const PLANS={
       RISK_OVER,
     };
   })(),
-  cost:{tab:'Структура себестоимости',insight:'<b>📌 Структура себестоимости:</b> 4 статьи затрат — закупка, производство, логистика, хранение. В сценарии В себестоимость 4 кв. снижена до 72,6% выручки (закупка 50,6% · производство 11,0% · логистика 7,1% · хранение 3,9%) благодаря маржинальному миксу; далее нормализуется до 77,0% (закупка 53,7% · производство 11,7% · логистика 7,5% · хранение 4,1%). За 18 месяцев — 83 529 млн руб. (76,3% выручки).',
-    chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:costItems.map(([n,w,c])=>({data:SL(revenue.map((x,i)=>+(x*costWeight(w,i)).toFixed(1)),a,b),color:c})),opts:{height:340,legend:costItems.map(x=>x[0]),yTitle:'млн руб.'}}),
+  cost:{tab:'Структура себестоимости',
+    insight:'<b>📌 Структура себестоимости:</b> 4 статьи затрат — закупка, производство, логистика, хранение. В сценарии В себестоимость 4 кв. снижена до 72,6% выручки (закупка 50,6% · производство 11,0% · логистика 7,1% · хранение 3,9%) благодаря маржинальному миксу; далее нормализуется до 77,0% (закупка 53,7% · производство 11,7% · логистика 7,5% · хранение 4,1%). За 18 месяцев — 83 884 млн руб. (76,6% выручки). Аномалии подсвечены значком «!» на столбце: доля статьи превышает среднегодовую.',
+    insightFor:(a,b)=>{
+      const base='<b>📌 Структура себестоимости:</b> 4 статьи затрат — закупка, производство, логистика, хранение. В сценарии В себестоимость 4 кв. снижена до 72,6% выручки (закупка 50,6% · производство 11,0% · логистика 7,1% · хранение 3,9%) благодаря маржинальному миксу; далее нормализуется до 77,0% (закупка 53,7% · производство 11,7% · логистика 7,5% · хранение 4,1%). За 18 месяцев — 83 884 млн руб. (76,6% выручки).';
+      const inRange=COST_ANOMS.filter(x=>x.mi>=a&&x.mi<b);
+      if(!inRange.length)return base+' В выбранном периоде аномалий долей нет — все статьи в пределах среднегодовых значений.';
+      const lines=inRange.map(x=>{
+        const w=costItems.find(c=>c[0]===x.item)[1];
+        const sh=costWeightA(x.item,w,x.mi)*100,avg=COST_AVG_SHARE[x.item];
+        return `<b>${PLAN_MONTHS[x.mi]} · ${x.item} — ${F(sh,1)}% выручки при среднегодовых ${F(avg,1)}% (+${F(sh-avg,1)} п.п.)</b> ⚠️ ${x.cause} Действие: ${x.action}`;
+      }).join('<br>');
+      return base+'<br><b>⚠️ Аномалии периода (доля выше среднегодовой, значок «!» на столбце):</b><br>'+lines;
+    },
+    chart:(a,b)=>{
+      const inRange=COST_ANOMS.some(x=>x.mi>=a&&x.mi<b);
+      const series=costItems.map(([n,w,c])=>{
+        const data=[],risks=[];
+        for(let mi=a;mi<b;mi++){
+          data.push(+(revenue[mi]*costWeightA(n,w,mi)).toFixed(1));
+          const an=costAnomAt(n,mi);
+          if(an){const sh=costWeightA(n,w,mi)*100,avg=COST_AVG_SHARE[n];
+            risks.push({type:'over',pct:+((sh/avg-1)*100).toFixed(0)});}
+          else risks.push(null);
+        }
+        return {data,risks,color:c};
+      });
+      return {type:'stacked',labels:SL(PLAN_MONTHS,a,b),series,
+        opts:{height:340,legend:costItems.map(x=>x[0]),yTitle:'млн руб.',
+          legendExtra:inRange?[{t:'! Аномалия: доля выше среднегодовой',color:'#E8930C'}]:null}};
+    },
     build:(a,b)=>{
-      const heads=['Месяц','Статья затрат','Сумма (млн руб.)','% выручки','Δ к предыдущему мес., п.п.'];
+      const heads=['Месяц','Статья затрат','Сумма (млн руб.)','% выручки','Среднегодовая %','Δ к предыдущему мес., п.п.'];
       const rows=[];
       for(let mi=a;mi<b;mi++){
         costItems.forEach(([n,w],k)=>{
-          const v=+(revenue[mi]*costWeight(w,mi)).toFixed(1),prev=mi>a?+(revenue[mi-1]*costWeight(w,mi-1)).toFixed(1):null;
-          rows.push([PLAN_MONTHS[mi],n,F(v,1),F(costWeight(w,mi)*100,1)+'%',prev==null?'—':(v-prev>=0?'+':'−')+F(Math.abs(v-prev),1)]);
+          const v=+(revenue[mi]*costWeightA(n,w,mi)).toFixed(1),prev=mi>a?+(revenue[mi-1]*costWeightA(n,w,mi-1)).toFixed(1):null;
+          const an=costAnomAt(n,mi);
+          const avg=COST_AVG_SHARE[n],sh=costWeightA(n,w,mi)*100;
+          rows.push([PLAN_MONTHS[mi],an?'⚠️ '+n+' — выше среднегодовой':n,F(v,1),
+            F(sh,1)+(an?'% ⚠️':'%'),F(avg,1)+'%',prev==null?'—':(v-prev>=0?'+':'−')+F(Math.abs(v-prev),1)]);
         });
-        const tot=+(revenue[mi]*(1-marginRate(mi))).toFixed(1);
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot,1),F((1-marginRate(mi))*100,1)+'%','—'],cls:'row-sum'});
+        let tot=0;costItems.forEach(([n,w])=>{tot+=revenue[mi]*costWeightA(n,w,mi);});tot=+tot.toFixed(1);
+        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot,1),F(tot/revenue[mi]*100,1)+'%','—','—'],cls:'row-sum'});
       }
       return {heads,rows};
     }},
@@ -1447,13 +1540,16 @@ export function planView(pl,a,b,qlabel,opts={}){
       detail:PLANS.inventory.build(a,b,opts)};
   }
   if(pl==='cost'){
-    const items=costItems.map(([n,w])=>[n,sr(revenue.map((x,i)=>+(x*costWeight(w,i)).toFixed(1)),a,b)]);
-    const tot=sr(revenue.map((x,i)=>+(x*(1-marginRate(i))).toFixed(1)),a,b),rev=sr(revenue,a,b);
-    return{kpis:[K('Себестоимость',F(tot,0)+' млн',F(rev?tot/rev*100:0,1)+'% выручки'),K('Закупка',F(items[0][1],0)+' млн',F(rev?items[0][1]/rev*100:0,1)+'% выручки'),K('Производство + логистика',F(items[1][1]+items[2][1],0)+' млн',F(rev?(items[1][1]+items[2][1])/rev*100:0,1)+'%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
+    const items=costItems.map(([n,w])=>[n,sr(revenue.map((x,i)=>+(x*costWeightA(n,w,i)).toFixed(1)),a,b)]);
+    const tot=items.reduce((s,x)=>s+x[1],0),rev=sr(revenue,a,b);
+    const anCount=COST_ANOMS.filter(x=>x.mi>=a&&x.mi<b).length;
+    return{kpis:[K('Себестоимость',F(tot,0)+' млн',F(rev?tot/rev*100:0,1)+'% выручки'),K('Закупка',F(items[0][1],0)+' млн',F(rev?items[0][1]/rev*100:0,1)+'% выручки'),K('Производство + логистика',F(items[1][1]+items[2][1],0)+' млн',F(rev?(items[1][1]+items[2][1])/rev*100:0,1)+'%'),K('Период',span+' мес.',L[a]+' – '+L[b-1]+(anCount?' · ⚠️ аномалий: '+anCount:''))],
       table:{heads:['Месяц',...costItems.map(x=>x[0]),'Итого','% выручки'],
         rows:[...L.slice(a,b).map((m,i)=>{
-          const rs=costItems.map(([n,w])=>F(revenue[a+i]*costWeight(w,a+i),1));
-          return [m,...rs,F(revenue[a+i]*(1-marginRate(a+i)),1),F((1-marginRate(a+i))*100,1)+'%'];}),
+          const mi=a+i;
+          const rs=costItems.map(([n,w])=>{const an=costAnomAt(n,mi);return F(revenue[mi]*costWeightA(n,w,mi),1)+(an?' ⚠️':'');});
+          const t=costItems.reduce((s,[n,w])=>s+revenue[mi]*costWeightA(n,w,mi),0);
+          return [m,...rs,F(t,1),F(t/revenue[mi]*100,1)+'%'];}),
           totalRow(['<b>Итого</b>',...items.map(([n,v])=>'<b>'+F(v,1)+'</b>'),'<b>'+F(tot,1)+'</b>','<b>'+F(rev?tot/rev*100:0,1)+'%</b>'])]},
       detail:PLANS.cost.build(a,b)};
   }
