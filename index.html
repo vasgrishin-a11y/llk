@@ -193,24 +193,36 @@ main{padding:20px 32px 72px;flex:1}
 .card.fs h2{padding-right:40px}
 .card.fs .chart-expand{position:fixed;top:24px;right:26px;z-index:2005;
   box-shadow:0 2px 8px rgba(0,0,0,.18);width:30px;height:30px}
-/* разворот на весь экран: карточки сценариев и панель «Выполнение бизнес-плана 2026» */
-.scen.fs,.scen-year.fs{position:fixed;inset:14px;z-index:2000;overflow:auto;margin:0;
-  box-shadow:0 24px 80px rgba(15,10,35,.35);border-color:var(--scp-accent-bd)}
-.scen.fs{padding:24px 28px}
-.scen.fs:hover{transform:none}
-.scen.fs .chart-expand,.scen-year.fs .chart-expand{position:fixed;top:24px;right:26px;z-index:2005;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);width:30px;height:30px}
-.scen.fs h4{font-size:19px;line-height:26px;margin-bottom:12px;max-width:calc(100% - 70px)}
-.scen.fs .scen-rank{font-size:14px;margin-bottom:14px}
-.scen.fs .scen-desc{font-size:15.5px;line-height:1.65;max-width:860px;margin-bottom:18px}
-.scen.fs .scen-metric{font-size:16px;padding:10px 0;max-width:860px}
-.scen.fs .scen-metric b{font-size:18px}
-.scen-year.fs{padding:20px 26px}
-.scen-year.fs .sy-head{font-size:15px;max-width:calc(100% - 50px)}
-.scen-year.fs .sy-row{max-width:1020px}
-.scen-year.fs .sy-name{font-size:16px}
-.scen-year.fs .sy-m{grid-template-columns:150px auto auto 1fr;font-size:15px}
-.scen-year.fs .sy-note{font-size:14px;max-width:1020px}
+/* ── Пропорциональное увеличение: карточка сценария и панель «Выполнение бизнес-плана 2026» ──
+   Окно занимает ≈70% экрана (32 px от краёв), контент масштабируется целиком
+   (transform: scale, 1…2,2×), а размер окна равен размеру масштабированного контента —
+   пустых полей внутри не остаётся. Геометрию считает zoomGeom() в src/app.js. */
+.zoomable{cursor:zoom-in}
+/* наведение на блок подсвечивает кнопку увеличения — видно, что блок можно укрупнить */
+.zoomable:hover .chart-expand{border-color:var(--scp-accent);color:var(--scp-accent);background:var(--scp-b-50)}
+.zoom-layer{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
+  padding:16px;pointer-events:none}
+.zoom-stage{position:relative;flex:0 0 auto;pointer-events:auto;animation:zoomPop .22s cubic-bezier(.2,.85,.3,1)}
+@keyframes zoomPop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.zoom-win{position:absolute;inset:0;overflow:hidden;background:var(--scp-surface);border-radius:var(--r-m);
+  box-shadow:0 30px 90px rgba(15,10,35,.42),0 0 0 1px var(--scp-accent-bd)}
+.zoom-fit{position:relative}
+.zoom-scale{transform-origin:0 0}
+/* клон внутри окна: без внешних отступов и без «прыжка» при наведении */
+.zoom-scale>.scen,.zoom-scale>.scen-year{margin:0}
+.zoom-scale>.scen:hover{transform:none}
+.zoom-close{position:absolute;top:-13px;right:-13px;z-index:3;width:30px;height:30px;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;
+  background:var(--scp-surface);border:1px solid var(--scp-line-2);color:var(--scp-text-2);
+  box-shadow:0 6px 18px rgba(15,10,35,.3);transition:.14s}
+.zoom-close svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.zoom-close:hover{border-color:var(--scp-accent);color:var(--scp-accent);background:var(--scp-b-50);transform:rotate(90deg)}
+.zoom-hint{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);display:flex;
+  pointer-events:none;align-items:center;gap:7px;white-space:nowrap;padding:5px 12px;border-radius:9999px;
+  background:rgba(23,23,26,.88);color:#eceaf0;font-size:11.5px;line-height:16px;box-shadow:0 6px 18px rgba(0,0,0,.26)}
+.zoom-hint .zoom-k{color:var(--scp-accent-2);font-size:12px;font-variant-numeric:tabular-nums}
+@media (max-height:660px){.zoom-hint{display:none}}
+@media (prefers-reduced-motion:reduce){.zoom-stage{animation:none}}
 body.fs-lock{overflow:hidden}
 .fs-backdrop{position:fixed;inset:0;z-index:1990;background:rgba(23,23,26,.55);backdrop-filter:blur(2px)}
 .section-h{margin:10px 0 12px;font:600 13px/18px 'Open Sans',sans-serif;color:var(--scp-text-3);
@@ -393,22 +405,14 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .scen{background:var(--scp-surface);border:1px solid var(--scp-line-2);
   border-left:4px solid var(--scp-text-3);border-radius:var(--r-m);padding:14px 16px;
   transition:.15s;position:relative}
-.scen > .chart-expand{right:44px}
 .scen:hover{transform:translateY(-2px)}
 .scen-a{border-left-color:var(--scp-accent)}
 .scen-b{border-left-color:#FF9800}
 .scen-c{border-left-color:#4CAF50}
 .scen.rec{background:linear-gradient(135deg,rgba(76,175,80,.12),transparent 60%);
   border-color:#a5d6a7;border-left-color:#4CAF50}
-.scen h4{font:600 15px/21px 'Open Sans',sans-serif;margin:0 0 6px;color:var(--scp-text)}
-.scen-head{display:flex;align-items:flex-start;gap:8px}
-.scen-head h4{flex:1;min-width:0}
-.scen-toggle{flex:0 0 auto;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;
-  background:var(--scp-surface);border:1px solid var(--scp-line-2);border-radius:var(--r-s);
-  color:var(--scp-text-3);cursor:pointer;transition:.12s;padding:0;font-size:14px;line-height:1}
-.scen-toggle:hover{border-color:var(--scp-accent);color:var(--scp-accent);background:var(--scp-b-50)}
-.scen.collapsed .scen-body{display:none}
-.scen.collapsed{padding-bottom:12px}
+/* заголовок укорочен справа — там кнопка увеличения 🔍 */
+.scen h4{font:600 15px/21px 'Open Sans',sans-serif;margin:0 0 6px;color:var(--scp-text);padding-right:30px}
 .scen-rank{font-size:12.5px;font-weight:600;color:var(--scp-text-2);margin:0 0 8px;padding:4px 10px;
   background:var(--scp-n-50);border-radius:9999px;display:inline-block}
 .scen-desc{font-size:13px;color:var(--scp-text-3);line-height:1.55;margin-bottom:10px}
@@ -541,6 +545,8 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
   body{background:#fff}
   .topnav,.hdr-actions,.ctxbar{display:none}
   .card,.kpi{break-inside:avoid;border-color:#bbb}
+  /* кнопки укрупнения, подложка и окно увеличения в печать не попадают */
+  .chart-expand,.fs-backdrop,.zoom-layer{display:none}
 }
 </style>
 </head>

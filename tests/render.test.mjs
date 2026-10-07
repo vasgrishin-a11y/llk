@@ -103,23 +103,67 @@ test('приложение рендерит все рабочие вкладки
   click('[data-sw="hmmode"][data-val="mrg"]');
   assert.match($('#content').innerHTML,/hm-cell/);
 
-  // разворот на весь экран: карточки сценариев и панель «Выполнение бизнес-плана 2026»
-  const scen=$('.scen');assert.ok(scen,'карточка сценария есть');
+  // сценарии: кнопок «Свернуть сценарий» нет — вместо них пропорциональное увеличение
+  assert.equal($$('.scen-toggle').length,0,'кнопки «+/−» у сценариев удалены');
+  assert.equal($$('[data-scen-toggle]').length,0,'переключателей сворачивания сценария нет');
+  assert.ok(!$('#content').innerHTML.includes('Свернуть сценарий'),'подписи «Свернуть сценарий» нет');
+  assert.ok(!$$('.scen').some(x=>x.classList.contains('collapsed')),'сценарии всегда раскрыты');
+  assert.equal($$('.scen > .chart-expand').length,3,'кнопки увеличения у всех трёх сценариев');
+
+  const scen=$('#content .scen');assert.ok(scen,'карточка сценария есть');
   const scenExp=scen.querySelector(':scope > .chart-expand');
-  assert.ok(scenExp,'у карточки сценария есть кнопка разворота');
+  assert.ok(scenExp,'у карточки сценария есть кнопка увеличения');
+  const vw=w.innerWidth,vh=w.innerHeight;
+  const stageW=()=>parseFloat($('.zoom-stage').style.width);
+  const stageH=()=>parseFloat($('.zoom-stage').style.height);
+  const zoomK=()=>parseFloat(/scale\(([\d.]+)\)/.exec($('.zoom-scale').style.transform)[1]);
   scenExp.click();
-  assert.ok(scen.classList.contains('fs'),'сценарий развернулся на весь экран');
+  assert.ok($('.zoom-layer')&&$('.zoom-stage'),'открылось окно увеличения');
+  assert.ok($('.zoom-win .zoom-scale .scen.zoom-clone'),'внутри окна — копия карточки сценария');
+  assert.equal($('.zoom-clone .chart-expand'),null,'у копии нет кнопки увеличения');
   assert.ok($('.fs-backdrop'),'фон-подложка показана');
-  scenExp.click();
-  assert.ok(!scen.classList.contains('fs')&&!$('.fs-backdrop'),'повторный клик сворачивает обратно');
-  assert.equal($$('.scen > .chart-expand').length,3,'кнопки разворота у всех трёх сценариев');
-  const sy=$('.scen-year');assert.ok(sy,'панель выполнения бизнес-плана есть');
+  assert.ok(w.document.body.classList.contains('fs-lock'),'страница под окном не прокручивается');
+  assert.ok(!scen.classList.contains('fs'),'сценарий больше не растягивается на весь экран');
+  assert.ok(scen.closest('#content'),'исходная карточка осталась на своём месте');
+  assert.ok(stageW()<=vw*0.7+1,`ширина окна ${stageW()}px ≤ 70% экрана (${vw}px)`);
+  assert.ok(stageH()<=vh*0.7+1,`высота окна ${stageH()}px ≤ 70% экрана (${vh}px)`);
+  assert.ok(zoomK()>=1&&zoomK()<=2.2,`масштаб ${zoomK()} в пределах 1…2,2`);
+  /* окно равно масштабированному контенту — пустых полей внутри нет */
+  const fitW=parseFloat($('.zoom-fit').style.width),fitH=parseFloat($('.zoom-fit').style.height);
+  const scW=parseFloat($('.zoom-scale').style.width),scH=parseFloat($('.zoom-scale').style.height);
+  assert.ok(Math.abs(scW*zoomK()-fitW)<1.01,'ширина окна = ширине контента');
+  assert.ok(Math.abs(scH*zoomK()-fitH)<1.01,'высота окна = высоте контента');
+  assert.ok(Math.abs(stageW()-fitW)<1.01&&Math.abs(stageH()-fitH)<1.01,'окно обрезано ровно по контенту');
+  assert.equal(w.document.activeElement,$('.zoom-win'),'фокус переведён в окно увеличения');
+  $('.zoom-win').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true}));
+  assert.equal(w.document.activeElement,$('.zoom-close'),'Tab не выпускает фокус из окна');
+  $('.zoom-close').click();
+  assert.ok(!$('.zoom-layer')&&!$('.fs-backdrop'),'крестик закрывает окно увеличения');
+  scen.click();
+  assert.ok($('.zoom-layer'),'клик по самой карточке тоже увеличивает её');
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));
+  assert.ok(!$('.zoom-layer')&&!$('.fs-backdrop'),'Esc закрывает окно увеличения');
+  scenExp.click();assert.ok($('.zoom-layer'),'кнопка снова открывает увеличение');
+  scenExp.click();assert.ok(!$('.zoom-layer'),'повторный клик по кнопке возвращает обычный размер');
+  assert.match(scenExp.title,/70% экрана/,'подсказка кнопки объясняет размер окна');
+
+  // то же самое для панели «Выполнение бизнес-плана 2026»
+  const sy=$('#content .scen-year');assert.ok(sy,'панель выполнения бизнес-плана есть');
   const syExp=sy.querySelector(':scope > .chart-expand');
-  assert.ok(syExp,'у панели бизнес-плана есть кнопка разворота');
+  assert.ok(syExp,'у панели бизнес-плана есть кнопка увеличения');
   syExp.click();
-  assert.ok(sy.classList.contains('fs'),'панель бизнес-плана развернулась');
+  assert.ok($('.zoom-win .zoom-scale .scen-year.zoom-clone'),'панель бизнес-плана увеличена в окне');
+  assert.match($('.zoom-win').getAttribute('aria-label'),/Выполнение бизнес-плана 2026/,'у окна есть подписанная метка');
+  assert.ok(stageW()<=vw*0.7+1&&stageH()<=vh*0.7+1,'окно панели тоже ≤ 70% экрана');
+  assert.ok(!sy.classList.contains('fs'),'панель не разворачивается на весь экран');
   syExp.click();
-  assert.ok(!sy.classList.contains('fs'),'панель бизнес-плана свернулась');
+  assert.ok(!$('.zoom-layer'),'панель вернулась к обычному размеру');
+  // карточки с графиками по-прежнему разворачиваются на весь экран
+  const chartCard=$$('#content .card').find(c=>c.querySelector('canvas.chart'));
+  chartCard.querySelector(':scope > .chart-expand').click();
+  assert.ok(chartCard.classList.contains('fs'),'карточка с графиком разворачивается на весь экран');
+  chartCard.querySelector(':scope > .chart-expand').click();
+  assert.ok(!chartCard.classList.contains('fs'),'повторный клик сворачивает карточку обратно');
   // радар сравнения сценариев — с подписями осей
   assert.equal($('#c-radar').__cfg.type,'radar','радар сравнения сценариев');
 
@@ -222,4 +266,31 @@ test('приложение рендерит все рабочие вкладки
   assert.ok($('#exportBtn').closest('.topbar-actions'),'кнопка в правой группе топбара');
   click('#reset');
   assert.ok($('[data-tab="overview"]'),'сброс вернул обзор');
+});
+
+test('геометрия окна увеличения: ≈70% экрана, пропорционально и без пустых полей',async()=>{
+  const {zoomGeom}=await import('../src/app.js');
+  /* карточка сценария (450×340) на экране 1440×900 */
+  const g=zoomGeom(450,340,1440,900);
+  assert.ok(g.k>1&&g.k<=2.2,`масштаб ${g.k.toFixed(3)} — увеличение в допустимых пределах`);
+  assert.ok(g.w<=1440*0.7+1e-6&&g.h<=900*0.7+1e-6,'окно не больше 70% экрана');
+  assert.ok(Math.abs(g.h-900*0.7)<1e-6,'по ограничивающей стороне окно занимает ровно 70% высоты');
+  assert.ok(Math.abs(g.w/g.h-450/340)<1e-9,'пропорции контента сохранены');
+  assert.ok(Math.abs(g.w-g.w0*g.k)<1e-6&&Math.abs(g.h-g.h0*g.k)<1e-6,'размер окна = размеру контента');
+  assert.equal(g.winW,g.w);assert.equal(g.winH,g.h,'пустых полей внутри окна нет');
+  /* широкая панель «Выполнение бизнес-плана 2026» (726×520) увеличивается скромнее */
+  const sy=zoomGeom(726,520,1440,900);
+  assert.ok(sy.k>1&&sy.k<g.k,`широкая панель: масштаб ${sy.k.toFixed(3)} < ${g.k.toFixed(3)}`);
+  assert.ok(Math.abs(sy.h-900*0.7)<1e-6,'панель тоже упирается в 70% высоты');
+  /* очень большой экран — масштаб ограничен потолком 2,2× */
+  assert.equal(zoomGeom(300,200,3840,2160).k,2.2,'масштаб не превышает 2,2×');
+  /* блок крупнее 70% экрана: не уменьшаем, окно ограничено экраном, появляется прокрутка */
+  const big=zoomGeom(1600,1200,1440,900);
+  assert.equal(big.k,1,'крупный блок не уменьшается');
+  assert.equal(big.winW,1440-32,'окно не выходит за пределы экрана');
+  assert.ok(big.winW<big.w&&big.winH<big.h,'окно крупного блока меньше контента — появится прокрутка');
+  /* узкий экран (ноутбук 1280×720) — окно всё равно вписывается в 70% */
+  const small=zoomGeom(420,320,1280,720);
+  assert.ok(small.winW<=1280*0.7+1e-6&&small.winH<=720*0.7+1e-6,'на 1280×720 окно ≤ 70% экрана');
+  assert.ok(small.k>1,'на небольшом экране контент всё равно увеличивается');
 });

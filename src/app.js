@@ -509,11 +509,10 @@ function vSupply(){
   ],F.labels,{height:420,legend:['Оптимистичный ('+F.pctB+')','Базовый','Пессимистичный ('+F.pctW+')'],yTitle:'Объем, т/мес',
     min:Math.floor((Math.min(...F.worst)-1500)/1000)*1000,max:Math.ceil((Math.max(...F.best)+1200)/1000)*1000});
   const fanRows=F.labels.map((m,i)=>[m,N(F.worst[i]),N(F.base[i]),N(F.best[i]),N(F.marginWorst[i]),N(F.marginBase[i]),N(F.marginBest[i]),F.drivers[i]]);
-  if(!ui.scenCollapsed)ui.scenCollapsed=new Set();
-  const scenCards=S.scenarios.map(s=>{const col=ui.scenCollapsed.has(s.id);
-    return `<article class="scen scen-${s.cls}${col?' collapsed':''}"><div class="scen-head"><h4>${s.title}</h4>`
-    +`<button class="scen-toggle" data-scen-toggle="${s.id}" aria-expanded="${!col}" title="${col?'Развернуть сценарий':'Свернуть сценарий'}" aria-label="${col?'Развернуть':'Свернуть'} ${esc(s.title)}">${col?'+':'−'}</button></div>`
-    +`<div class="scen-body">${s.rank?`<div class="scen-rank">${s.rank}</div>`:''}<div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</div></article>`;}).join('');
+  /* Карточки сценариев: без кнопок «+/−» — укрупнение делается кликом по карточке
+     или кнопкой 🔍 (пропорциональное увеличение в окне ≈70% экрана, см. openZoom). */
+  const scenCards=S.scenarios.map(s=>`<article class="scen scen-${s.cls}"><h4>${s.title}</h4>`
+    +`<div class="scen-body">${s.rank?`<div class="scen-rank">${s.rank}</div>`:''}<div class="scen-desc">${s.desc}</div>${s.metrics.map(([k,v,c])=>`<div class="scen-metric"><span>${k}</span><b class="${c}">${v}</b></div>`).join('')}</div></article>`).join('');
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
   const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Фокус на валовой прибыли)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
@@ -701,11 +700,24 @@ function vActions(){
    Единственная навигация — горизонтальное меню сверху; тема светлая,
    действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
 const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions};
-/* ── Разворот на весь экран: карточки с графиками, карточки сценариев
-     и панель «Выполнение бизнес-плана 2026» (.scen-year) ── */
-const FS_SEL='.card.fs,.scen.fs,.scen-year.fs';
+/* ── Два способа укрупнения ──
+   1) карточки с графиками (.card) — разворот на весь экран: canvas перерисовывается крупнее;
+   2) карточка сценария (.scen) и панель «Выполнение бизнес-плана 2026» (.scen-year) —
+      пропорциональное увеличение в окне ≈70% экрана: контент масштабируется целиком
+      (transform: scale), поэтому окно повторяет размер контента и пустых полей не остаётся. */
+const FS_SEL='.card.fs';
+const ZOOM_SEL='.scen,.scen-year';
+/* Расчёт окна: 70% ширины и высоты экрана — достаточно крупно, но виден контекст вокруг;
+   отступ 32 px от краёв; масштаб 1…2,2 — при 2,2× текст 13 px становится 29 px (читается
+   с расстояния экрана-презентации) и дальше увеличивать его уже бессмысленно. */
+const ZOOM_FIT=0.70,ZOOM_MAX=2.2,ZOOM_EDGE=32;
 const ICON_EXPAND='<svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
 const ICON_COLLAPSE='<svg viewBox="0 0 24 24"><polyline points="7 3 3 3 3 7"/><polyline points="17 21 21 21 21 17"/><line x1="3" y1="3" x2="10" y2="10"/><line x1="21" y1="21" x2="14" y2="14"/></svg>';
+const ICON_ZOOM='<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.3" y1="15.3" x2="21" y2="21"/><line x1="7.7" y1="10.5" x2="13.3" y2="10.5"/><line x1="10.5" y1="7.7" x2="10.5" y2="13.3"/></svg>';
+const ICON_ZOOM_OUT='<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.3" y1="15.3" x2="21" y2="21"/><line x1="7.7" y1="10.5" x2="13.3" y2="10.5"/></svg>';
+const ICON_CLOSE='<svg viewBox="0 0 24 24"><line x1="5.5" y1="5.5" x2="18.5" y2="18.5"/><line x1="18.5" y1="5.5" x2="5.5" y2="18.5"/></svg>';
+const ZOOM_TIP='Увеличить · окно ≈70% экрана';
+const ZOOM_TIP_OFF='Вернуть обычный размер';
 function repaintCardCanvases(card,fs){
   const cvs=[...card.querySelectorAll('canvas.chart')];
   cvs.forEach(cv=>{
@@ -716,43 +728,137 @@ function repaintCardCanvases(card,fs){
     if(!fs)cv.__origH=null;
   });
 }
-function closeFullscreen(){
+/* Геометрия окна увеличения. Масштаб k — наибольший из тех, при которых контент целиком
+   входит в 70% экрана (но не больше 2,2× и не меньше 1× — уменьшать смысла нет).
+   Размер окна равен размеру масштабированного контента: w = w0·k, h = h0·k,
+   поэтому контент заполняет окно полностью, без пустых полей.
+   Если контент крупнее 70% экрана (узкий экран / очень длинный блок), k остаётся 1,
+   а окно ограничивается экраном и появляется прокрутка. */
+export function zoomGeom(w0,h0,vw=window.innerWidth||1280,vh=window.innerHeight||800){
+  const availW=Math.max(280,Math.min(vw*ZOOM_FIT,vw-ZOOM_EDGE*2));
+  const availH=Math.max(220,Math.min(vh*ZOOM_FIT,vh-ZOOM_EDGE*2));
+  /* размеры не измерить (скрытый элемент / jsdom) — окно на всю доступную область, масштаб 1 */
+  if(!(w0>8&&h0>8))return{k:1,w0:availW,h0:availH,w:availW,h:availH,winW:availW,winH:availH,availW,availH};
+  const k=Math.max(1,Math.min(ZOOM_MAX,availW/w0,availH/h0));
+  const w=w0*k,h=h0*k;
+  return{k,w0,h0,w,h,winW:Math.min(w,vw-ZOOM_EDGE),winH:Math.min(h,vh-ZOOM_EDGE),availW,availH};
+}
+let zoomState=null;
+function applyZoomGeom(){
+  const z=zoomState;if(!z)return;
+  const g=zoomGeom(z.el.offsetWidth,z.el.offsetHeight);z.g=g;
+  /* все размеры — из одного набора чисел (w = w0·k), поэтому контент заполняет окно
+     целиком; прокрутка появляется, только если блок крупнее 70% экрана */
+  z.stage.style.width=g.winW+'px';z.stage.style.height=g.winH+'px';
+  z.fit.style.width=g.w+'px';z.fit.style.height=g.h+'px';
+  z.scale.style.width=g.w0+'px';z.scale.style.height=g.h0+'px';
+  z.scale.style.transform='scale('+g.k.toFixed(4)+')';
+  z.win.style.overflow=(g.winW<g.w-0.5||g.winH<g.h-0.5)?'auto':'hidden';
+  if(z.kLabel)z.kLabel.textContent='×'+g.k.toFixed(1).replace('.',',');
+  z.win.scrollTop=0;z.win.scrollLeft=0;
+}
+function openZoom(el,btn){
+  closeOverlays();
+  const clone=el.cloneNode(true);
+  clone.classList.add('zoom-clone');
+  clone.classList.remove('zoomable','fs');   // внутри окна курсор обычный и клик уже ничего не открывает
+  clone.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+  clone.querySelectorAll('.chart-expand,canvas').forEach(n=>n.remove());
+  const title=((el.querySelector('h4,.sy-head,h2')||{}).textContent||'').replace(/\s+/g,' ').trim().slice(0,140)||'Увеличенный фрагмент';
+  const bd=document.createElement('div');bd.className='fs-backdrop';
+  bd.addEventListener('click',()=>closeOverlays({focus:true}));
+  const layer=document.createElement('div');layer.className='zoom-layer';
+  layer.innerHTML=`<div class="zoom-stage"><div class="zoom-win" role="dialog" aria-modal="true" tabindex="-1" aria-label="${esc(title)}">`
+    +`<div class="zoom-fit"><div class="zoom-scale"></div></div></div>`
+    +`<button class="zoom-close" type="button" title="Закрыть (Esc)" aria-label="Закрыть увеличенный вид">${ICON_CLOSE}</button>`
+    +`<div class="zoom-hint"><b class="zoom-k">×1</b><span>окно ≈${Math.round(ZOOM_FIT*100)}% экрана · Esc — закрыть</span></div></div>`;
+  const stage=layer.querySelector('.zoom-stage'),win=layer.querySelector('.zoom-win');
+  const fit=layer.querySelector('.zoom-fit'),scale=layer.querySelector('.zoom-scale');
+  const closeBtn=layer.querySelector('.zoom-close');
+  scale.appendChild(clone);
+  closeBtn.addEventListener('click',()=>closeOverlays({focus:true}));
+  /* фокус остаётся внутри окна: Tab переключается между содержимым (его можно листать
+     с клавиатуры, если блок крупнее 70% экрана) и крестиком закрытия */
+  const focusables=[win,closeBtn];
+  layer.addEventListener('keydown',ev=>{
+    if(ev.key!=='Tab')return;
+    ev.preventDefault();
+    const i=focusables.indexOf(document.activeElement);
+    const next=ev.shiftKey?(i<=0?focusables.length-1:i-1):(i<0||i>=focusables.length-1?0:i+1);
+    try{focusables[next].focus();}catch(_){/* noop */}
+  });
+  document.body.appendChild(bd);
+  document.body.appendChild(layer);
+  document.body.classList.add('fs-lock');
+  zoomState={el,btn,layer,stage,win,fit,scale,kLabel:layer.querySelector('.zoom-k')};
+  applyZoomGeom();
+  if(btn){btn.innerHTML=ICON_ZOOM_OUT;btn.title=ZOOM_TIP_OFF;btn.setAttribute('aria-label',ZOOM_TIP_OFF);}
+  try{win.focus();}catch(_){/* noop */}
+}
+/* Закрытие всего, что поверх страницы: развёрнутая карточка и/или окно увеличения.
+   focus=true — вернуть фокус на кнопку, которой закрыли (Esc, фон, крестик). */
+function closeOverlays(opts){
+  const wantFocus=!!(opts&&opts.focus);
   const fsCard=document.querySelector(FS_SEL);
   if(fsCard){fsCard.classList.remove('fs');
     const b=fsCard.querySelector(':scope > .chart-expand');
     if(b){b.innerHTML=ICON_EXPAND;b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть на весь экран');}
     repaintCardCanvases(fsCard,false);}
+  const z=zoomState;
+  if(z){z.layer.remove();zoomState=null;
+    if(z.btn){z.btn.innerHTML=ICON_ZOOM;z.btn.title=ZOOM_TIP;z.btn.setAttribute('aria-label',ZOOM_TIP);
+      if(wantFocus&&document.contains(z.btn)){try{z.btn.focus();}catch(_){/* noop */}}}}
   document.querySelector('.fs-backdrop')?.remove();
   document.body.classList.remove('fs-lock');
 }
 function wireCardExpand(root){
-  const targets=[...root.querySelectorAll('.card'),...root.querySelectorAll('.scen'),...root.querySelectorAll('.scen-year')];
+  const targets=[...root.querySelectorAll('.card'),...root.querySelectorAll(ZOOM_SEL)];
   targets.forEach(el=>{
+    const zoomable=el.matches(ZOOM_SEL);
     /* карточки — только с графиками; сценарии и панель бизнес-плана — всегда */
-    if(el.classList.contains('card')&&!el.querySelector('canvas.chart'))return;
+    if(!zoomable&&!el.querySelector('canvas.chart'))return;
     if(el.querySelector(':scope > .chart-expand'))return;
     const b=document.createElement('button');
-    b.className='chart-expand';b.innerHTML=ICON_EXPAND;
-    b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть на весь экран');
+    b.className='chart-expand'+(zoomable?' zoom-trigger':'');
+    b.innerHTML=zoomable?ICON_ZOOM:ICON_EXPAND;
+    b.title=zoomable?ZOOM_TIP:'Развернуть на весь экран';
+    b.setAttribute('aria-label',b.title);
     b.addEventListener('click',ev=>{
       ev.stopPropagation();
+      if(zoomable){
+        const wasOpen=!!(zoomState&&zoomState.el===el);
+        closeOverlays({focus:true});
+        if(!wasOpen)openZoom(el,b);
+        return;
+      }
       const isFs=el.classList.contains('fs');
-      closeFullscreen();
+      closeOverlays();
       if(isFs)return;
       el.classList.add('fs');
       b.innerHTML=ICON_COLLAPSE;b.title='Свернуть обратно';b.setAttribute('aria-label','Свернуть обратно');
       const bd=document.createElement('div');bd.className='fs-backdrop';
-      bd.addEventListener('click',closeFullscreen);
+      bd.addEventListener('click',()=>closeOverlays({focus:true}));
       document.body.appendChild(bd);
       document.body.classList.add('fs-lock');
       repaintCardCanvases(el,true);
       el.scrollTop=0;
     });
     el.appendChild(b);
+    /* сценарий и панель бизнес-плана увеличиваются и кликом по самому блоку;
+       выделение текста при этом не перехватывается */
+    if(zoomable){
+      el.classList.add('zoomable');
+      el.addEventListener('click',ev=>{
+        if(ev.target.closest('.chart-expand'))return;
+        const sel=window.getSelection?window.getSelection():null;
+        if(sel&&!sel.isCollapsed)return;
+        openZoom(el,b);
+      });
+    }
   });
 }
 function renderContent(){
-  closeFullscreen();
+  closeOverlays();
   jobs=[];
   const el=document.querySelector('#content');
   if(!el)return;
@@ -872,10 +978,6 @@ document.addEventListener('click',e=>{
   if(exp){const m=document.getElementById('exportMenu');if(m)m.hidden=true;runExport(exp.dataset.exp);return;}
   if(e.target.closest('#exportBtn')){const m=document.getElementById('exportMenu');if(m)m.hidden=!m.hidden;return;}
   if(!e.target.closest('.tb-export')){const m=document.getElementById('exportMenu');if(m)m.hidden=true;}
-  const st=e.target.closest('[data-scen-toggle]');
-  if(st){if(!ui.scenCollapsed)ui.scenCollapsed=new Set();const id=st.dataset.scenToggle;
-    if(ui.scenCollapsed.has(id))ui.scenCollapsed.delete(id);else ui.scenCollapsed.add(id);
-    renderContent();return;}
   const s=e.target.closest('[data-sw]');
   if(s){ui[s.dataset.sw]=s.dataset.val;renderContent();return;}
   const tg=e.target.closest('[data-toggle]');
@@ -911,9 +1013,11 @@ document.addEventListener('mouseout',e=>{if(e.target.closest?.('[data-info],[dat
 /* перерисовка canvas при изменении ширины (дебаунс) */
 let rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{
+  /* окно увеличения пересчитывает масштаб под новый размер экрана — без перерисовки вкладки */
+  if(zoomState){applyZoomGeom();return;}
   const fsCard=document.querySelector(FS_SEL);
   if(fsCard){repaintCardCanvases(fsCard,true);return;}
   renderContent();
 },220);});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFullscreen();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverlays({focus:true});});
 render();
