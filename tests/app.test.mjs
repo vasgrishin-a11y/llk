@@ -189,3 +189,24 @@ test('drawChart: красная зона fillBetween и доп. пункты л�
   // only:'both' — вся область между линиями
   drawChart(canvas,'line',series,['м1','м2','м3','м4','м5'],{...opts,fillBetween:{upper:0,lower:1,only:'both'}});
 });
+
+test('drawChart: ряд с hidden:true выключен по умолчанию, но включается легендой',()=>{
+  const {canvas}=mkStub();
+  const labels=['Апр 2025','Май 2025','Июн 2025','Июл 2025'];
+  const mk=()=>[
+    {data:[44200,48600,29400,30800],kind:'bar',color:'#20A7C9',risks:[null,null,{type:'under',pct:-33},{type:'under',pct:-28}]},
+    {data:[31680,31680,32040,31680],kind:'line',dash:true,hidden:true},
+    {data:[44000,44200,44500,44000],kind:'line',dash:true,hidden:true},
+    {data:[11.8,14.6,15.3,14.8],kind:'line',axis:1},
+  ];
+  const opts={legend:['Фактический запас, т','Страховой уровень запасов','Целевой уровень запасов','WAPE прогноза спроса %']};
+  drawChart(canvas,'combo',mk(),labels,opts);
+  assert.ok(canvas.__state.hidden.has(1)&&canvas.__state.hidden.has(2),'уровни страхового и целевого запаса скрыты по умолчанию');
+  assert.ok(!canvas.__state.hidden.has(0)&&!canvas.__state.hidden.has(3),'столбцы и WAPE видимы');
+  // перерисовка на том же canvas (разворот карточки, ресайз) не сбрасывает состояние,
+  // а включение ряда кликом легенды не затирается последующей отрисовкой
+  canvas.__state.hidden.delete(1);
+  drawChart(canvas,'combo',mk(),labels,opts);
+  assert.ok(!canvas.__state.hidden.has(1),'включенный легендой ряд остаётся видимым');
+  assert.ok(canvas.__state.hidden.has(2),'остальные скрытые ряды не всплывают');
+});

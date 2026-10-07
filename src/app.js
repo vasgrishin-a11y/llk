@@ -325,29 +325,49 @@ function vStock(){
     {t:'Выше целевого запаса (перетовар)',color:'rgba(255,152,0,.40)'},
     {t:'Ниже страхового запаса (пробой)',color:'rgba(217,48,37,.42)'},
   ];
-  const histBarColor=i=>IH.actual[i]<IH.safety[i]?'#D93025':IH.actual[i]>IH.target[i]*1.05?'#FF9800':'#20A7C9';
+  /* Режим «Точность прогноза» — минималистично, без «светофора» по столбцам:
+     все столбцы одного цвета, отклонения показаны бейджами ⚠ (недопоставка/перетовар),
+     а линии страхового и целевого уровня есть в легенде, но выключены по умолчанию. */
+  const histRisk=IH.labels.map((_,i)=>IH.actual[i]<IH.safety[i]?{type:'under',pct:IH.pct[i]}
+    :IH.actual[i]>IH.target[i]*1.05?{type:'over',pct:IH.pct[i]}:null);
+  /* Интерактивный тултип для всех режимов карточки: Δ к цели, статус и остановы */
+  const histTip=i=>{
+    if(i==null||i<0||i>=IH.labels.length)return '';
+    const a=IH.actual[i],saf=IH.safety[i],tgt=IH.target[i];
+    const dev=(IH.pct[i]>=0?'+':'−')+Math.abs(IH.pct[i])+'%';
+    const st=a<saf?'<b style="color:#FF8A80">недопоставка — ниже страхового уровня</b>'
+      :a>tgt*1.05?'<b style="color:#FFB74D">перетовар — выше целевого уровня</b>':'в целевом коридоре';
+    const stop=(IH.stops||[]).find(x=>x.i===i);
+    return '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.2)">Δ к цели: <b>'+dev+'</b> · '+st
+      +(stop?'<br>⛔ '+esc(stop.label.replace('Останов: ','')):'')+'</div>';
+  };
   if(hv==='wape'){
     const WAPE_TGT=IH.labels.map(()=>10);
     J('#c-invplan','combo',[
-      {data:im==='tons'?IH.actual:IH.cost,kind:'bar',color:'#20A7C9',pointColors:IH.labels.map((_,i)=>histBarColor(i))},
+      {data:im==='tons'?IH.actual:IH.cost,kind:'bar',color:'#20A7C9',risks:histRisk},
+      {data:im==='tons'?IH.safety:IH.costSafety,kind:'line',color:'#8c9bae',dash:true,hidden:true},
+      {data:im==='tons'?IH.target:IH.costTarget,kind:'line',color:'#4CAF50',dash:true,hidden:true},
       {data:IH.wape,kind:'line',color:'#7c3aed',axis:1},
-      {data:WAPE_TGT,kind:'line',color:'#4CAF50',axis:1,dash:true},
-    ],IH.labels,{height:340,legend:im==='tons'?['Фактический запас, т','WAPE прогноза спроса %','Цель WAPE ≤10%']:['Стоимость запаса, млн руб.','WAPE прогноза спроса %','Цель WAPE ≤10%'],
-      yTitle:im==='tons'?'т':'млн руб.',y1Title:'WAPE %',marks:IH.stops,
-      legendExtra:[{t:'Столбец оранжевый — выше целевого (перетовар)',color:'#FF9800'},{t:'Столбец красный — ниже страхового (пробой)',color:'#D93025'}]});
+      {data:WAPE_TGT,kind:'line',color:'#1a2b4a',axis:1,dash:true},
+    ],IH.labels,{height:340,
+      legend:im==='tons'
+        ?['Фактический запас, т','Страховой уровень запасов','Целевой уровень запасов','WAPE прогноза спроса %','Цель WAPE ≤10%']
+        :['Стоимость запаса, млн руб.','Страховой уровень запасов','Целевой уровень запасов','WAPE прогноза спроса %','Цель WAPE ≤10%'],
+      yTitle:im==='tons'?'т':'млн руб.',y1Title:'WAPE %',marks:IH.stops,tipExtra:histTip,
+      legendExtra:[{t:'⚠ Недопоставка — ниже страхового уровня',color:'#D93025'},{t:'⚠ Перетовар — выше целевого уровня',color:'#E8930C'}]});
   }else if(im==='tons'){
     J('#c-invplan','line',[
       {data:IH.safety,color:'#8c9bae',dash:true},
       {data:IH.target,color:'#4CAF50',dash:true},
       {data:IH.actual,color:'#20A7C9'},
-    ],IH.labels,{height:340,legend:IH.legend,yTitle:'т',marks:IH.stops,
+    ],IH.labels,{height:340,legend:IH.legend,yTitle:'т',marks:IH.stops,tipExtra:histTip,
       fillBetween:retroFill,legendExtra:retroLegendExtra});
   }else{
     J('#c-invplan','line',[
       {data:IH.costSafety,color:'#8c9bae',dash:true},
       {data:IH.costTarget,color:'#4CAF50',dash:true},
       {data:IH.cost,color:'#20A7C9'},
-    ],IH.labels,{height:340,legend:IH.legendMoney,yTitle:'млн руб.',marks:IH.stops,
+    ],IH.labels,{height:340,legend:IH.legendMoney,yTitle:'млн руб.',marks:IH.stops,tipExtra:histTip,
       fillBetween:retroFill,legendExtra:retroLegendExtra});
   }
   const DD=S.dead[dm];
@@ -681,7 +701,9 @@ function vActions(){
    Единственная навигация — горизонтальное меню сверху; тема светлая,
    действия «Загрузить Excel» / «Сбросить» — ненавязчивые икон-кнопки. */
 const VIEWS={overview:vOverview,segments:vSegments,demand:vDemand,stock:vStock,supply:vSupply,plans:vPlans,actions:vActions};
-/* ── Разворот карточек с графиками на весь экран ── */
+/* ── Разворот на весь экран: карточки с графиками, карточки сценариев
+     и панель «Выполнение бизнес-плана 2026» (.scen-year) ── */
+const FS_SEL='.card.fs,.scen.fs,.scen-year.fs';
 const ICON_EXPAND='<svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
 const ICON_COLLAPSE='<svg viewBox="0 0 24 24"><polyline points="7 3 3 3 3 7"/><polyline points="17 21 21 21 21 17"/><line x1="3" y1="3" x2="10" y2="10"/><line x1="21" y1="21" x2="14" y2="14"/></svg>';
 function repaintCardCanvases(card,fs){
@@ -695,36 +717,38 @@ function repaintCardCanvases(card,fs){
   });
 }
 function closeFullscreen(){
-  const fsCard=document.querySelector('.card.fs');
+  const fsCard=document.querySelector(FS_SEL);
   if(fsCard){fsCard.classList.remove('fs');
-    const b=fsCard.querySelector('.chart-expand');
-    if(b){b.innerHTML=ICON_EXPAND;b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть график на весь экран');}
+    const b=fsCard.querySelector(':scope > .chart-expand');
+    if(b){b.innerHTML=ICON_EXPAND;b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть на весь экран');}
     repaintCardCanvases(fsCard,false);}
   document.querySelector('.fs-backdrop')?.remove();
   document.body.classList.remove('fs-lock');
 }
 function wireCardExpand(root){
-  root.querySelectorAll('.card').forEach(card=>{
-    if(!card.querySelector('canvas.chart'))return;
-    if(card.querySelector('.chart-expand'))return;
+  const targets=[...root.querySelectorAll('.card'),...root.querySelectorAll('.scen'),...root.querySelectorAll('.scen-year')];
+  targets.forEach(el=>{
+    /* карточки — только с графиками; сценарии и панель бизнес-плана — всегда */
+    if(el.classList.contains('card')&&!el.querySelector('canvas.chart'))return;
+    if(el.querySelector(':scope > .chart-expand'))return;
     const b=document.createElement('button');
     b.className='chart-expand';b.innerHTML=ICON_EXPAND;
-    b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть график на весь экран');
+    b.title='Развернуть на весь экран';b.setAttribute('aria-label','Развернуть на весь экран');
     b.addEventListener('click',ev=>{
       ev.stopPropagation();
-      const isFs=card.classList.contains('fs');
+      const isFs=el.classList.contains('fs');
       closeFullscreen();
       if(isFs)return;
-      card.classList.add('fs');
-      b.innerHTML=ICON_COLLAPSE;b.title='Свернуть обратно';b.setAttribute('aria-label','Свернуть график обратно');
+      el.classList.add('fs');
+      b.innerHTML=ICON_COLLAPSE;b.title='Свернуть обратно';b.setAttribute('aria-label','Свернуть обратно');
       const bd=document.createElement('div');bd.className='fs-backdrop';
       bd.addEventListener('click',closeFullscreen);
       document.body.appendChild(bd);
       document.body.classList.add('fs-lock');
-      repaintCardCanvases(card,true);
-      card.scrollTop=0;
+      repaintCardCanvases(el,true);
+      el.scrollTop=0;
     });
-    card.appendChild(b);
+    el.appendChild(b);
   });
 }
 function renderContent(){
@@ -887,7 +911,7 @@ document.addEventListener('mouseout',e=>{if(e.target.closest?.('[data-info],[dat
 /* перерисовка canvas при изменении ширины (дебаунс) */
 let rzT=null;
 window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{
-  const fsCard=document.querySelector('.card.fs');
+  const fsCard=document.querySelector(FS_SEL);
   if(fsCard){repaintCardCanvases(fsCard,true);return;}
   renderContent();
 },220);});
