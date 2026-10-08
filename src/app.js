@@ -498,7 +498,9 @@ function vSupply(){
   const S=SUPPLY;
   /* Полоса сегмента: цветная часть — доступный объём, лёгкая штриховка — разрыв.
      Справа остаются только объёмы: доступный и, при наличии, малый красный объём разрыва. */
-  const gap=S.gap.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
+  const gs=ui.gapscen??'A',G=S.gaps[gs]||S.gaps.A;
+  const gap=G.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
+  const gapRows=[...G.tableRows,{cells:['<b>Итого</b>','<b>'+N(G.demand)+'</b>','<b>'+NF(G.available/G.demand*100,1)+'%</b>','<b>'+N(G.available)+'</b>','<b>'+(G.gap?'−'+N(G.gap):'0')+'</b>'],cls:'row-sum'}];
   J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:280,barValuesIn:true,barValueFont:13});
   J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:400,legend:S.radar.series.map(x=>x[0]),max:S.radar.max||120});
   const F=S.fan;
@@ -526,9 +528,14 @@ function vSupply(){
       +`<div class="info info-danger"><b>🔴 Разрыв цепочки без компенсирующих мер: −19 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
       +info('warning','<b>🟡 Узкие места (предупреждения, разрыва не создают):</b> заводы Пермь (98%) и Торжок (94%); заводские склады ПС Пермь (91%), ПС Волгоград (88%) и ПС Торжок (14 из 16 рамп); склады 3PL Юг / Ростов-на-Дону (89%), Центр / Москва (88% комплектации) и Сибирь / Новосибирск (ЖД-плечо 12 суток). Держим на контроле: при росте спроса выше сценария Б они станут следующими ограничениями.')
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows),S.mapDesc)
-    +card('📊 Покрытие спроса (сценарий А «Базовый»)',`<div class="gap-chart">${gap}</div>`
-      +info('danger',`<b class="gap-break">⚠️ РАЗРЫВ: 19 000 т</b> · доступно 133 000 из 152 000 т · Серебро −8 000 т + Бронза −11 000 т = −19 000 т<br>${S.gap.reasons}`)
-      +tbl('tbl-gap',S.gap.table.heads,S.gap.table.rows))
+    +card('📊 Покрытие спроса (сценарий '+G.name+')',sw('gapscen',[
+        ['A','Сценарий А · Базовый'],['B','Сценарий Б · Захват рынка'],['C','Сценарий В · Фокус на прибыли']])
+      +`<div class="gap-chart">${gap}</div>`
+      +info(G.gap?'danger':'success',G.gap
+        ?`<b class="gap-break">⚠️ НЕ ПОКРЫТО: ${N(G.gap)} т</b> · доступно ${N(G.available)} из ${N(G.demand)} т · покрытие ${NF(G.available/G.demand*100,1)}%<br>${G.reasons}`
+        :`<b>✅ СПРОС ПОКРЫТ ПОЛНОСТЬЮ</b> · доступно ${N(G.available)} из ${N(G.demand)} т<br>${G.reasons}`)
+      +insight('<b>📌 Вывод:</b> '+G.insight)
+      +tbl('tbl-gap-'+gs,['Сегмент','Неогр. спрос (т)','Покрытие %','Доступно (т)','Разрыв (т)'],gapRows))
     +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки (значения — на полосах)')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
     +`<h3 class="section-h">🎯 Сценарии покрытия спроса (закрытие разрыва)</h3><div class="grid-3">${scenCards}</div>`
     +card('📊 Сравнение сценариев: объём против маржи и выполнение годового плана 2026',
@@ -584,7 +591,12 @@ function vPlans(){
     level:ui.invWhLevel??'agg',
     riskOnly:ui.invrisk==='1',
   }:{};
-  const cdef=pl==='inventory'?P.chart(a,b,invOpts):P.chart(a,b);
+  const availableViews=P.chartViews||[['summary','Сводный']];
+  const requestedView=ui.planview??'summary';
+  const planVariant=availableViews.some(x=>x[0]===requestedView)?requestedView:'summary';
+  if(ui.planview!==planVariant)ui.planview=planVariant;
+  const showPlanAnomalies=ui.plananom==='1';
+  const cdef=pl==='inventory'?P.chart(a,b,invOpts):(P.chartFor?P.chartFor(a,b,planVariant,showPlanAnomalies):P.chart(a,b));
   J('#c-plan',cdef.type,cdef.series,cdef.labels,cdef.opts);
   const view=planView(pl,a,b,q,invOpts);
   const kpiStrip=`<section class="kpis">${view.kpis.map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div></article>`).join('')}</section>`;
@@ -672,11 +684,14 @@ function vPlans(){
     invExtra=stopsNote+viewSwitch+quickFilter+riskStripHTML(P,a,b,invOpts);
   }
   const insText=typeof P.insightFor==='function'?(pl==='inventory'?P.insightFor(a,b,invOpts):P.insightFor(a,b)):P.insight;
+  const planChartControls=pl==='inventory'?'':`<div class="plan-chart-controls"><div><div class="muted control-label">Детализация графика</div>${sw('planview',availableViews)}</div><div><div class="muted control-label">Контроль отклонений</div>${sw('plananom',[['0','Обычный вид'],['1','⚠️ Показать аномалии']])}</div></div>`
+    +(showPlanAnomalies?info('warning','<b>⚠️ Аномалии выбранного среза:</b> '+esc(P.anomalyText||'Отклонения от плановых нормативов отмечены значком «!».')):'');
   return periodBar
     +`<div class="switch" style="margin-bottom:12px">${Object.entries(PLANS).map(([id,p])=>`<button class="${pl===id?'active':''}" data-sw="plan" data-val="${id}">${p.tab}</button>`).join('')}</div>`
     +kpiStrip
     +card('📊 '+P.tab+' · '+MONTHS18[a]+' – '+MONTHS18[b-1],
       invExtra
+      +planChartControls
       +canvas('c-plan','График: '+P.tab)
       +insight(insText)
       +tbl('tbl-plan-'+pl,view.detail.heads,view.detail.rows));
@@ -816,7 +831,7 @@ function wireCardExpand(root){
   targets.forEach(el=>{
     const zoomable=el.matches(ZOOM_SEL);
     /* карточки — только с графиками; сценарии и панель бизнес-плана — всегда */
-    if(!zoomable&&!el.querySelector('canvas.chart'))return;
+    if(!zoomable&&!el.querySelector('canvas.chart,.gap-chart'))return;
     if(el.querySelector(':scope > .chart-expand'))return;
     const b=document.createElement('button');
     b.className='chart-expand'+(zoomable?' zoom-trigger':'');
