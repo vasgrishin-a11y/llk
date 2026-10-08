@@ -568,22 +568,43 @@ export const SUPPLY={
     ['ЛУКОЙЛ-ПНОС (Пермь)','Поставщик сырья','Нет ограничений','0','0','🟢 Норма'],
     ['Татнефть (Нижнекамск)','Поставщик сырья','Нет ограничений','0','0','🟢 Норма'],
     ['Сибур-Нефтехим (Тобольск)','Поставщик сырья','Нет ограничений','0','0','🟢 Норма']]},
-  gap:{rows:[{label:'Неограниченный спрос',value:'152 000 т',w:100,c:'#20A7C9',main:true},{div:true},
-    {label:'💎 Бриллиант · спрос 46 000 т',value:'46 000 т',w:100,c:'#0082a9'},
-    {label:'⬣ Платина · спрос 35 000 т',value:'35 000 т',w:100,c:'#7c3aed'},
-    {label:'● Золото · спрос 27 000 т',value:'27 000 т',w:100,c:'#e8930c'},
-    {label:'⚪ Серебро · спрос 23 000 т',value:'15 000 т',w:65.2,c:'#94a3b8',gapW:34.8,gapVal:'8 000 т'},
-    {label:'🟤 Бронза · спрос 21 000 т',value:'10 000 т',w:47.6,c:'#b45309',gapW:52.4,gapVal:'11 000 т'},{div:true},
-    {label:'Доступно к отгрузке',value:'133 000 т',w:88,c:'#1a2b4a',main:true}],
-    methodology:'Из-за ограничений доступно 133 000 т из 152 000 т спроса. Объём распределяется по матрице приоритетов сегментации: Бриллиант → Платина → Золото закрыты на 100%. В полосе сегмента цветная часть показывает доступный объём, тонкая красная штриховка — разрыв; справа указаны только объёмы. Серебро −8 000 т + Бронза −11 000 т = <b>−19 000 т</b> — ровно общий разрыв сценария.',
-    reasons:'<b>Причины разрыва (по объектам цепочки):</b> базовое масло VHVI-4 — поставщик <b>ЛУКОЙЛ-ННОС (Кстово)</b> −8 200 т; <b>завод Волгоград, линия №2</b> (загрузка 100%) −5 400 т; <b>склад 3PL Тюмень (ОК)</b> (авто-доставка 78 из 92 машин/сутки) −3 400 т; <b>заводской склад ПС Ворсино</b> (заполненность 96%) −2 000 т. Итого <b>−19 000 т</b> (8 200 + 5 400 + 3 400 + 2 000). Компенсирующие меры (доп. смены, дозакупка сырья, аренда транспорта, пересборка совмещения) появляются только в сценариях Б и В.',
-    table:{heads:['Сегмент','Неогр. спрос (т)','Доля %','Приоритет','Покрытие %','Доступно (т)','Разрыв (т)','Причина'],rows:[
-      ['💎 Бриллиант','46 000','30,3%','⭐⭐⭐','100%','46 000','0','Закрыт первым'],
-      ['⬣ Платина','35 000','23,0%','⭐⭐','100%','35 000','0','Закрыт вторым'],
-      ['● Золото','27 000','17,8%','⭐','100%','27 000','0','Закрыт третьим'],
-      ['⚪ Серебро','23 000','15,1%','◻️','65,2%','15 000','−8 000','Дефицит без компенсирующих мер'],
-      ['🟤 Бронза','21 000','13,8%','◻️','47,6%','10 000','−11 000','Дефицит без компенсирующих мер'],
-      {cells:['<b>Итого</b>','<b>152 000</b>','<b>100%</b>','—','<b>87,5%</b>','<b>133 000</b>','<b>−19 000</b>','<b>8 000 + 11 000 = 19 000 т</b>'],cls:'row-sum'}]}},
+  gaps:{
+    A:{id:'A',name:'А «Базовый»',available:133000,demand:152000,gap:19000,
+      rows:[{label:'Неограниченный спрос',value:'152 000 т',w:100,c:'#20A7C9',main:true},{div:true},
+        {label:'💎 Бриллиант · спрос 46 000 т',value:'46 000 т',w:100,c:'#0082a9'},
+        {label:'⬣ Платина · спрос 35 000 т',value:'35 000 т',w:100,c:'#7c3aed'},
+        {label:'● Золото · спрос 27 000 т',value:'27 000 т',w:100,c:'#e8930c'},
+        {label:'⚪ Серебро · спрос 23 000 т',value:'15 000 т',w:65.2,c:'#94a3b8',gapW:34.8,gapVal:'8 000 т'},
+        {label:'🟤 Бронза · спрос 21 000 т',value:'10 000 т',w:47.6,c:'#b45309',gapW:52.4,gapVal:'11 000 т'},{div:true},
+        {label:'Доступно к отгрузке',value:'133 000 т',w:87.5,c:'#1a2b4a',main:true}],
+      reasons:'<b>Серебро −8 000 т + Бронза −11 000 т = −19 000 т.</b> Причины разрыва: VHVI-4 −8 200 т; Волгоград, линия №2 −5 400 т; 3PL Тюмень −3 400 т; ПС Ворсино −2 000 т. Компенсирующих мер нет.',
+      insight:'Приоритетная матрица полностью закрывает Бриллиант, Платину и Золото. Весь дефицит приходится на Серебро и Бронзу.',
+      tableRows:[['💎 Бриллиант','46 000','100%','46 000','0'],['⬣ Платина','35 000','100%','35 000','0'],['● Золото','27 000','100%','27 000','0'],['⚪ Серебро','23 000','65,2%','15 000','−8 000'],['🟤 Бронза','21 000','47,6%','10 000','−11 000']]},
+    B:{id:'B',name:'Б «Захват рынка»',available:152000,demand:152000,gap:0,
+      rows:[{label:'Неограниченный спрос',value:'152 000 т',w:100,c:'#20A7C9',main:true},{div:true},
+        {label:'💎 Бриллиант · спрос 46 000 т',value:'46 000 т',w:100,c:'#0082a9'},
+        {label:'⬣ Платина · спрос 35 000 т',value:'35 000 т',w:100,c:'#7c3aed'},
+        {label:'● Золото · спрос 27 000 т',value:'27 000 т',w:100,c:'#e8930c'},
+        {label:'⚪ Серебро · спрос 23 000 т',value:'23 000 т',w:100,c:'#94a3b8'},
+        {label:'🟤 Бронза · спрос 21 000 т',value:'21 000 т',w:100,c:'#b45309'},{div:true},
+        {label:'Доступно к отгрузке',value:'152 000 т',w:100,c:'#1a2b4a',main:true}],
+      reasons:'<b>Компенсирующие меры:</b> спот-закупка VHVI-4, дополнительные смены Волгограда, аренда транспорта и внешнего склада закрывают все 19 000 т.',
+      insight:'Спрос всех сегментов покрыт полностью. Цена 100% покрытия — рост логистики на 41% и снижение маржинальности до 21,5%.',
+      tableRows:[['💎 Бриллиант','46 000','100%','46 000','0'],['⬣ Платина','35 000','100%','35 000','0'],['● Золото','27 000','100%','27 000','0'],['⚪ Серебро','23 000','100%','23 000','0'],['🟤 Бронза','21 000','100%','21 000','0']]},
+    C:{id:'C',name:'В «Фокус на валовой прибыли»',available:129000,demand:152000,gap:23000,
+      rows:[{label:'Неограниченный спрос',value:'152 000 т',w:100,c:'#20A7C9',main:true},{div:true},
+        {label:'💎 Бриллиант · спрос 46 000 т',value:'46 000 т',w:100,c:'#0082a9'},
+        {label:'⬣ Платина · спрос 35 000 т',value:'35 000 т',w:100,c:'#7c3aed'},
+        {label:'● Золото · спрос 27 000 т',value:'27 000 т',w:100,c:'#e8930c'},
+        {label:'⚪ Серебро · спрос 23 000 т',value:'15 000 т',w:65.2,c:'#94a3b8',gapW:34.8,gapVal:'8 000 т'},
+        {label:'🟤 Бронза · спрос 21 000 т',value:'6 000 т',w:28.6,c:'#b45309',gapW:71.4,gapVal:'15 000 т'},{div:true},
+        {label:'Доступно к отгрузке',value:'129 000 т',w:84.9,c:'#1a2b4a',main:true}],
+      reasons:'<b>Правило распределения:</b> сохраняем сервис Бриллианта, Платины и Золота; в Серебре оставляем маржинальные контракты, в Бронзе — только прибыльные SKU/MTO. Низкомаржинальные 23 000 т не принимаются в план.',
+      insight:'Покрытие ниже базового по объёму, но продуктово-клиентский микс повышает валовую прибыль до 5 002 млн руб. (+485 млн к А) и маржу до 27,4%.',
+      tableRows:[['💎 Бриллиант','46 000','100%','46 000','0'],['⬣ Платина','35 000','100%','35 000','0'],['● Золото','27 000','100%','27 000','0'],['⚪ Серебро','23 000','65,2%','15 000','−8 000'],['🟤 Бронза','21 000','28,6%','6 000','−15 000']]}
+  },
+  /* alias for backwards compatibility and consistency checks */
+  gap:null,
   constraints:{labels:['VHVI-4 · ЛУКОЙЛ-ННОС (Кстово)','Завод Волгоград, линия №2','3PL Тюмень (ОК)','ПС Ворсино'],data:[-8200,-5400,-3400,-2000],colors:['#D93025','#D93025','#FF9800','#FF9800'],
     insight:'<b>📌 Вывод:</b> четыре ограничения на реальных объектах цепочки суммарно снимают −19 000 т предложения. Крупнейшее — базовое масло VHVI-4 от ЛУКОЙЛ-ННОС (Кстово): −8 200 т, поставка ожидается 18.10. Компенсирующие меры определяются выбором сценария.',
     heads:['Ограничение','Текущий уровень','Максимум / цель','Загрузка %','Влияние (т)','Тип'],
@@ -645,6 +666,15 @@ export const SUPPLY={
    Контрольные дистрибьюторы (убыточные в 4 кв. на споте): Сургутнефтегаз и Уральская Сталь. */
 const Q4_GP_SHARE=0.263;
 const HM_CLIENT_KEYS=[...CLIENTS.slice(0,14),{...CLIENTS[18],gp:-55},{...CLIENTS[21],gp:-52}];
+SUPPLY.gap=SUPPLY.gaps.A;
+SUPPLY.gap.table={heads:['Сегмент','Неогр. спрос (т)','Доля %','Приоритет','Покрытие %','Доступно (т)','Разрыв (т)','Причина'],rows:[
+  ['💎 Бриллиант','46 000','30,3%','⭐⭐⭐','100%','46 000','0','Закрыт первым'],
+  ['⬣ Платина','35 000','23,0%','⭐⭐','100%','35 000','0','Закрыт вторым'],
+  ['● Золото','27 000','17,8%','⭐','100%','27 000','0','Закрыт третьим'],
+  ['⚪ Серебро','23 000','15,1%','◻️','65,2%','15 000','−8 000','Дефицит без компенсирующих мер'],
+  ['🟤 Бронза','21 000','13,8%','◻️','47,6%','10 000','−11 000','Дефицит без компенсирующих мер'],
+  {cells:['<b>Итого</b>','<b>152 000</b>','<b>100%</b>','—','<b>87,5%</b>','<b>133 000</b>','<b>−19 000</b>','<b>8 000 + 11 000 = 19 000 т</b>'],cls:'row-sum'}]};
+
 export const HEATMAP={
   products:['Масла моторные','Масла гидравлические','Индустриальные масла','Пластичные смазки','СОЖ','Охлаждающие жидкости','Технические жидкости','Трансмиссионные масла'],
   clients:HM_CLIENT_KEYS.map(c=>[c.name,segEmoji[c.seg]]),
@@ -758,6 +788,89 @@ const salesByMonthCat=mi=>{
   const c=aggCat(mi),v=sales[mi];
   return {pc:Math.round(v*c.pc),mkm:Math.round(v*c.mkm),ind:Math.round(v*c.ind),lube:Math.round(v*c.lube),oth:Math.round(v*c.oth)};
 };
+
+/* Варианты детализации графиков планов. Все разложения используют те же помесячные
+   итоги, что сводные графики: меняется только аналитический срез, контрольные суммы
+   не расходятся с KPI и детальными таблицами. */
+const PLAN_VIEW_META={
+  sales:[['summary','Сводный'],['channels','По каналам'],['categories','По категориям']],
+  production:[['summary','Сводный'],['plants','По заводам'],['lines','По производственным линиям']],
+  movements:[['summary','По виду транспорта'],['corridors','По направлениям'],['cost','Стоимость перевозки']],
+  purchases:[['summary','По группам сырья'],['suppliers','По поставщикам'],['tons','Физический объём сырья']],
+  cost:[['summary','По статьям'],['plants','По заводам'],['unit','Себестоимость на тонну']],
+  revenue:[['summary','Выручка и ВП'],['channels','По каналам'],['categories','По категориям']],
+};
+const PLAN_ANOMALY_TEXT={
+  sales:'Дек 2026: пик зимнего спроса; онлайн растёт быстрее базового плана.',
+  production:'Дек 2026: загрузка 97%; линия №2 Волгограда — 100%, требуется +2 смены в неделю.',
+  movements:'Дек 2026: спот-фрахт перед зимним пиком; восточное ЖД-плечо — 12 суток.',
+  purchases:'Окт 2026: задержка VHVI-4 ННОС; Июн 2027: спот-закупка перед ремонтом Волгограда.',
+  cost:'Логистика — Дек 2026; закупка — Июн 2027; хранение — Янв 2028. Доля выше среднегодовой.',
+  revenue:'4 кв. 2026: сценарий В сокращает низкомаржинальный объём, но повышает маржу до 27,4%.',
+};
+const riskAt=(mi,list,on)=>on&&list.includes(mi)?{type:'over',pct:10}:null;
+const proportional=(total,weights)=>{
+  const vals=weights.map(w=>Math.round(total*w)),d=total-sum(vals);if(vals.length)vals[0]+=d;return vals;
+};
+const seriesFromShares=(base,a,b,names,weights,colors,risks=[],show=false)=>{
+  const norm=sum(weights)||1;
+  const matrix=base.slice(a,b).map(v=>proportional(Math.round(v),weights.map(w=>w/norm)));
+  return names.map((name,j)=>({
+    data:matrix.map(row=>row[j]),color:colors[j%colors.length],
+    risks:base.slice(a,b).map((_,i)=>j===0?riskAt(a+i,risks,show):null),name
+  }));
+};
+function planChart(pl,a,b,variant='summary',showAnomalies=false){
+  const labels=SL(PLAN_MONTHS,a,b),pal=['#20A7C9','#7c3aed','#4CAF50','#FF9800','#D93025','#8c9bae','#00897B'];
+  if(variant==='summary')return null; // вызывающая сторона использует исходный сводный график
+  if(pl==='sales'){
+    if(variant==='channels'){
+      const names=['Ключевые B2B','Производители оборудования','Ключевые B2C','Дилеры','Макродистрибьюторы','Онлайн','КК СФО/ДФО'];
+      const ss=seriesFromShares(sales,a,b,names,Object.values(chW),pal,[2],showAnomalies);
+      return {type:'stacked',labels,series:ss,opts:{height:360,legend:names,yTitle:'Объём продаж, т'}};
+    }
+    const names=catShareAgg.map(x=>x[0]),weights=catShareAgg.map(x=>x[1]);
+    return {type:'stacked',labels,series:seriesFromShares(sales,a,b,names,weights,pal,[2],showAnomalies),opts:{height:360,legend:names,yTitle:'Объём продаж, т'}};
+  }
+  if(pl==='production'){
+    const plantWeights=FACTORIES.map((_,fi)=>sum(Object.values(FSPLIT).map(x=>x[fi]))/44000);
+    if(variant==='plants')return {type:'stacked',labels,series:seriesFromShares(production,a,b,FACTORIES,plantWeights,pal,[2,8],showAnomalies),opts:{height:360,legend:FACTORIES,yTitle:'Выпуск, т'}};
+    const periodTotal=sr(production,a,b),plantTotals=proportional(periodTotal,plantWeights);
+    const lineShares=[[.45,.55,0],[.37,.50,.13],[.58,.42,0],[.34,.41,.25],[.62,.38,0]];
+    const lineSeries=[0,1,2].map(li=>({data:plantTotals.map((v,fi)=>Math.round(v*lineShares[fi][li])),color:pal[li],risks:FACTORIES.map((_,fi)=>showAnomalies&&fi===1&&li===1?{type:'over',pct:100}:null)}));
+    return {type:'stacked',labels:FACTORIES,series:lineSeries,opts:{height:360,legend:['Линия №1','Линия №2','Линия №3'],yTitle:'Выпуск за период, т'}};
+  }
+  if(pl==='movements'){
+    if(variant==='corridors'){
+      const total=movementAuto.map((v,i)=>v+movementRail[i]),names=['Центр/СЗ','Юг','Сибирь','Дальний Восток'],weights=[.34,.22,.28,.16];
+      return {type:'stacked',labels,series:seriesFromShares(total,a,b,names,weights,pal,[2],showAnomalies),opts:{height:360,legend:names,yTitle:'Перемещения, т'}};
+    }
+    return {type:'combo',labels,series:[{data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#FF9800',risks:labels.map((_,i)=>riskAt(a+i,[2],showAnomalies))},{data:SL(movementRail,a,b).map(x=>+(x*.0036).toFixed(1)),kind:'bar',color:'#20A7C9'}],opts:{height:360,legend:['Авто, млн руб.','ЖД, млн руб.'],yTitle:'Стоимость, млн руб.'}};
+  }
+  if(pl==='purchases'){
+    if(variant==='suppliers'){
+      const total=purchG3.map((x,i)=>x+purchBase[i]+purchAdd[i]),names=['ЛУКОЙЛ-ННОС','Татнефть','ЛУКОЙЛ-ПНОС','Сибур','Пакеты присадок'],weights=[.32,.16,.20,.13,.19];
+      return {type:'stacked',labels,series:seriesFromShares(total,a,b,names,weights,pal,[0,8],showAnomalies),opts:{height:360,legend:names,yTitle:'Закупки, млн руб.'}};
+    }
+    const total=purchG3.map((x,i)=>x+purchBase[i]+purchAdd[i]);
+    return {type:'stacked',labels,series:seriesFromShares(total.map(x=>Math.round(x/.075)),a,b,['Базовые масла','Спецжидкости','Присадки'],[.68,.20,.12],pal,[0,8],showAnomalies),opts:{height:360,legend:['Базовые масла','Спецжидкости','Присадки'],yTitle:'Сырьё, т'}};
+  }
+  if(pl==='cost'){
+    if(variant==='plants'){
+      const total=revenue.map((rv,mi)=>costItems.reduce((z,[n,w])=>z+rv*costWeightA(n,w,mi),0));
+      return {type:'stacked',labels,series:seriesFromShares(total,a,b,FACTORIES,[.23,.25,.10,.27,.15],pal,[2,8,15],showAnomalies),opts:{height:360,legend:FACTORIES,yTitle:'Себестоимость, млн руб.'}};
+    }
+    const unit=costItems.map(([n,w,c])=>({data:labels.map((_,i)=>Math.round(141500*costWeightA(n,w,a+i))),color:c,risks:labels.map((_,i)=>riskAt(a+i,COST_ANOMS.filter(x=>x.item===n).map(x=>x.mi),showAnomalies))}));
+    return {type:'stacked',labels,series:unit,opts:{height:360,legend:costItems.map(x=>x[0]),yTitle:'руб./т'}};
+  }
+  // revenue
+  if(variant==='channels'){
+    const names=['Ключевые B2B','Производители оборудования','Ключевые B2C','Дилеры','Макродистрибьюторы','Онлайн','КК СФО/ДФО'];
+    return {type:'stacked',labels,series:seriesFromShares(revenue,a,b,names,Object.values(chW),pal,[0,1,2],showAnomalies),opts:{height:360,legend:names,yTitle:'Выручка, млн руб.'}};
+  }
+  const names=catShareAgg.map(x=>x[0]),weights=catShareAgg.map(x=>x[1]);
+  return {type:'stacked',labels,series:seriesFromShares(revenue,a,b,names,weights,pal,[0,1,2],showAnomalies),opts:{height:360,legend:names,yTitle:'Выручка, млн руб.'}};
+}
 export const PLANS={
   sales:{tab:'План продаж',insight:'<b>📌 План продаж</b> (сценарий В): 4 кв. 2026 — <b>129 000 т / 18 255 млн руб.</b>, валовая прибыль 5 002 млн (27,4%). Год 2026 — <b>519 000 т / 73 440 млн руб.</b> (95,1% / 93,4% плана), ВП 17 663 млн (92,7%). 2027 — ~545 000 т / ~78,0 млрд руб.',
     chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(sales,a,b),kind:'bar',color:'#20A7C9'},{data:SL(revenue,a,b),kind:'line',axis:1,color:'#4CAF50'}],opts:{height:340,legend:['План объема (т)','План выручки (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'}}),
@@ -1433,14 +1546,15 @@ export const PLANS={
       }).join('<br>');
       return base+'<br><b>⚠️ Аномалии периода (доля выше среднегодовой, значок «!» на столбце):</b><br>'+lines;
     },
-    chart:(a,b)=>{
-      const inRange=COST_ANOMS.some(x=>x.mi>=a&&x.mi<b);
+    chart:(a,b,opts={})=>{
+      const show=!!opts.showAnomalies;
+      const inRange=show&&COST_ANOMS.some(x=>x.mi>=a&&x.mi<b);
       const series=costItems.map(([n,w,c])=>{
         const data=[],risks=[];
         for(let mi=a;mi<b;mi++){
           data.push(+(revenue[mi]*costWeightA(n,w,mi)).toFixed(1));
           const an=costAnomAt(n,mi);
-          if(an){const sh=costWeightA(n,w,mi)*100,avg=COST_AVG_SHARE[n];
+          if(an&&show){const sh=costWeightA(n,w,mi)*100,avg=COST_AVG_SHARE[n];
             risks.push({type:'over',pct:+((sh/avg-1)*100).toFixed(0)});}
           else risks.push(null);
         }
@@ -1503,6 +1617,12 @@ const sr=(arr,a,b)=>arr.slice(a,b).reduce((x,y)=>x+y,0);
 const avg=(arr,a,b)=>{const s=arr.slice(a,b);return s.length?s.reduce((x,y)=>x+y,0)/s.length:0;};
 const K=(label,value,sub)=>({label,value,sub});
 const totalRow=cells=>({cells,cls:'row-total'});
+Object.entries(PLAN_VIEW_META).forEach(([id,views])=>{
+  PLANS[id].chartViews=views;
+  PLANS[id].chartFor=(a,b,variant='summary',show=false)=>planChart(id,a,b,variant,show)||PLANS[id].chart(a,b,{showAnomalies:show});
+  PLANS[id].anomalyText=PLAN_ANOMALY_TEXT[id];
+});
+
 export function planView(pl,a,b,qlabel,opts={}){
   const L=MONTHS18,span=b-a;
   const impliedLabel=i=>{
