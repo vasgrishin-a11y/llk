@@ -96,6 +96,12 @@ test('приложение рендерит все рабочие вкладки
   assert.ok(!$('.gap-chart').textContent.includes('Не покрыто (разрыв)'),'отдельная строка разрыва удалена');
   assert.match($('#content').textContent,/Серебро −8 000 т \+ Бронза −11 000 т = −19 000 т/);
   assert.ok(!$('#content').textContent.includes('S&OP пред. цикла ·'),'S&OP пред. цикла убран из анализа сценариев');
+  // порядок карточек: «Детализация ограничений» идёт перед «Покрытием спроса»
+  const supplyHtml=$('#content').innerHTML;
+  const iConstr=supplyHtml.indexOf('📊 Детализация ограничений'),iGap=supplyHtml.indexOf('📊 Покрытие спроса');
+  assert.ok(iConstr>=0&&iGap>=0,'обе карточки присутствуют в разделе «Поставки»');
+  assert.ok(iConstr<iGap,`«Детализация ограничений» (${iConstr}) стоит перед «Покрытием спроса» (${iGap})`);
+  assert.ok(iConstr>supplyHtml.indexOf('🏭 Карта цепочки поставок'),'детализация ограничений идёт после карты цепочки');
 
   click('[data-tab="supply"]');
   click('[data-sw="hmscen"][data-val="C"]');
@@ -293,4 +299,39 @@ test('геометрия окна увеличения: ≈70% экрана, п�
   const small=zoomGeom(420,320,1280,720);
   assert.ok(small.winW<=1280*0.7+1e-6&&small.winH<=720*0.7+1e-6,'на 1280×720 окно ≤ 70% экрана');
   assert.ok(small.k>1,'на небольшом экране контент всё равно увеличивается');
+});
+
+test('раздел «Планы»: таблица «Данные» перестраивается под выбранный срез графика',async()=>{
+  await import('../src/app.js');
+  click('[data-tab="plans"]');
+  click('[data-sw="plan"][data-val="sales"]');
+  click('[data-sw="pq"][data-val="q4-2026"]');
+  /* сводный срез: месячные итоги графика «План объёма + выручка» */
+  assert.match($('#tbl-plan-sales').textContent,/План объёма \(т\)/, 'сводная таблица продаж');
+  assert.match($('#content').textContent,/тот же срез, что и на графике/, 'подпись к таблице есть');
+  /* каналы и категории — свои срезы */
+  click('[data-sw="planview"][data-val="channels"]');
+  assert.match($('#tbl-plan-sales').textContent,/Канал продаж/);
+  assert.match($('#tbl-plan-sales').textContent,/Ключевые B2B/);
+  click('[data-sw="planview"][data-val="categories"]');
+  assert.match($('#tbl-plan-sales').textContent,/Категория продукта/);
+  /* производство: периодный срез по линиям */
+  click('[data-sw="plan"][data-val="production"]');
+  click('[data-sw="planview"][data-val="lines"]');
+  assert.match($('#tbl-plan-production').textContent,/Линия №1 \(т\)/);
+  assert.match($('#tbl-plan-production').textContent,/Итого по линиям/);
+  /* перемещения: стоимость перевозки авто/ЖД */
+  click('[data-sw="plan"][data-val="movements"]');
+  click('[data-sw="planview"][data-val="cost"]');
+  assert.match($('#tbl-plan-movements').textContent,/Авто \(млн руб\.\)/);
+  /* аномалии: в таблице появляется колонка «Отклонение» */
+  click('[data-sw="plan"][data-val="cost"]');
+  click('[data-sw="plananom"][data-val="1"]');
+  click('[data-sw="planview"][data-val="unit"]');
+  assert.match($('#tbl-plan-cost').textContent,/Отклонение/);
+  click('[data-sw="plananom"][data-val="0"]');
+  /* возврат к сводному срезу */
+  click('[data-sw="plan"][data-val="sales"]');
+  click('[data-sw="planview"][data-val="summary"]');
+  assert.match($('#tbl-plan-sales').textContent,/Итого за период/);
 });

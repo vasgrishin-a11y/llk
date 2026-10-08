@@ -592,16 +592,23 @@ export const SUPPLY={
       insight:'Спрос всех сегментов покрыт полностью. Цена 100% покрытия — рост логистики на 41% и снижение маржинальности до 21,5%.',
       tableRows:[['💎 Бриллиант','46 000','100%','46 000','0'],['⬣ Платина','35 000','100%','35 000','0'],['● Золото','27 000','100%','27 000','0'],['⚪ Серебро','23 000','100%','23 000','0'],['🟤 Бронза','21 000','100%','21 000','0']]},
     C:{id:'C',name:'В «Фокус на валовой прибыли»',available:129000,demand:152000,gap:23000,
+      /* ── Перераспределение объёма внутри квартала (обновление цикла) ──
+         5 000 т, не подтверждённые клиентами Платины (−2 000 т) и Золота (−3 000 т),
+         перенесены на маржинальные контракты Серебра (+3 000 т) и Бронзы (+2 000 т):
+         там маржа на тонну выше (НЛМК 25%, ЕВРАЗ КГОК 27%, MTO-премиум), тогда как
+         неподтверждённые хвостовые заказы шли по 18–21%. Итог квартала неизменен:
+         46 000 + 33 000 + 24 000 + 18 000 + 8 000 = 129 000 т. */
+      redist:{total:5000,from:[['platinum',2000],['gold',3000]],to:[['silver',3000],['bronze',2000]]},
       rows:[{label:'Неограниченный спрос',value:'152 000 т',w:100,c:'#20A7C9',main:true},{div:true},
         {label:'💎 Бриллиант · спрос 46 000 т',value:'46 000 т',w:100,c:'#0082a9'},
-        {label:'⬣ Платина · спрос 35 000 т',value:'35 000 т',w:100,c:'#7c3aed'},
-        {label:'● Золото · спрос 27 000 т',value:'27 000 т',w:100,c:'#e8930c'},
-        {label:'⚪ Серебро · спрос 23 000 т',value:'15 000 т',w:65.2,c:'#94a3b8',gapW:34.8,gapVal:'8 000 т'},
-        {label:'🟤 Бронза · спрос 21 000 т',value:'6 000 т',w:28.6,c:'#b45309',gapW:71.4,gapVal:'15 000 т'},{div:true},
+        {label:'⬣ Платина · спрос 35 000 т',value:'33 000 т',w:94.3,c:'#7c3aed',gapW:5.7,gapVal:'2 000 т',delta:{v:'−2 000 т',kind:'neg'}},
+        {label:'● Золото · спрос 27 000 т',value:'24 000 т',w:88.9,c:'#e8930c',gapW:11.1,gapVal:'3 000 т',delta:{v:'−3 000 т',kind:'neg'}},
+        {label:'⚪ Серебро · спрос 23 000 т',value:'18 000 т',w:78.3,c:'#94a3b8',gapW:21.7,gapVal:'5 000 т',delta:{v:'+3 000 т',kind:'pos'}},
+        {label:'🟤 Бронза · спрос 21 000 т',value:'8 000 т',w:38.1,c:'#b45309',gapW:61.9,gapVal:'13 000 т',delta:{v:'+2 000 т',kind:'pos'}},{div:true},
         {label:'Доступно к отгрузке',value:'129 000 т',w:84.9,c:'#1a2b4a',main:true}],
-      reasons:'<b>Правило распределения:</b> сохраняем сервис Бриллианта, Платины и Золота; в Серебре оставляем маржинальные контракты, в Бронзе — только прибыльные SKU/MTO. Низкомаржинальные 23 000 т не принимаются в план.',
-      insight:'Покрытие ниже базового по объёму, но продуктово-клиентский микс повышает валовую прибыль до 5 002 млн руб. (+485 млн к А) и маржу до 27,4%.',
-      tableRows:[['💎 Бриллиант','46 000','100%','46 000','0'],['⬣ Платина','35 000','100%','35 000','0'],['● Золото','27 000','100%','27 000','0'],['⚪ Серебро','23 000','65,2%','15 000','−8 000'],['🟤 Бронза','21 000','28,6%','6 000','−15 000']]}
+      reasons:'<b>Правило распределения (перераспределение 5 000 т внутри утверждённого объёма):</b> Бриллиант закрываем на 100%; в Платине (−2 000 т) и Золоте (−3 000 т) часть объёма не подтверждена клиентами; эти 5 000 т выполняем по Серебру (+3 000 т) и Бронзе (+2 000 т) — на маржинальных контрактах MTO-премиум (НЛМК 25%, ЕВРАЗ КГОК 27%, индустриальные и трансмиссионные масла), где маржа на тонну выше, чем в неподтверждённых хвостовых заказах (18–21%). Итог квартала сохраняется: <b>129 000 т</b>. Покрытие: Платина 94,3%, Золото 88,9%, Серебро 78,3%, Бронза 38,1%. Низкомаржинальные 23 000 т в план не принимаются.',
+      insight:'Объём квартала не меняется (129 000 т), но приоритеты сдвинуты в пользу маржи: Бриллиант — 100%, Платина — 94,3%, Золото — 88,9%; недополученные 5 000 т закрыты маржинальными контрактами Серебра (78,3%) и Бронзы (38,1%). Валовая прибыль квартала — 5 002 млн руб. (27,4%), +485 млн к сценарию А.',
+      tableRows:[['💎 Бриллиант','46 000','100%','46 000','0'],['⬣ Платина','35 000','94,3%','33 000','−2 000'],['● Золото','27 000','88,9%','24 000','−3 000'],['⚪ Серебро','23 000','78,3%','18 000','−5 000'],['🟤 Бронза','21 000','38,1%','8 000','−13 000']]}
   },
   /* alias for backwards compatibility and consistency checks */
   gap:null,
@@ -617,7 +624,7 @@ export const SUPPLY={
      desc:'Закрываем весь разрыв +19 000 т компенсирующими мерами: доп. смены в Волгограде, спот-закупка VHVI-4, аренда транспорта и внешний склад. Покрытие спроса 100%. <b>Цена:</b> спот-сырьё на прирост объёма и логистика +41% — маржа падает до 21,5%.',
      metrics:[['Объём:','152 000 т','green'],['Выручка:','21 510 млн руб.','green'],['Валовая маржа:','4 625 млн (21,5%)','red'],['Закупки сырья:','13 020 млн','red'],['Производство:','1 780 млн','red'],['Логистика:','1 320 млн','red'],['Хранение:','765 млн','red']]},
     {id:'C',cls:'c rec',title:'✅ Сценарий В: «Фокус на выполнение валовой прибыли 2026 года»',rank:'🥇 1-е по маржинальности · 🥉 3-е по выручке',
-     desc:'Фокус на маржинальных клиентах и продуктах за счет пересмотра приоритетов в сегментации, запуск новых продуктов в Волгограде перенесён на январь 2027 года для сокращения переналадок, инициирована распродажа Топ-5 неликвидов со скидкой 15%. <b>Итог:</b> 27,4% маржинальности и +485 млн руб. валовой прибыли к А при меньшем объёме.',
+     desc:'Фокус на маржинальных клиентах и продуктах за счет пересмотра приоритетов в сегментации: <b>перераспределение 5 000 т внутри квартала</b> — Платина −2 000 т и Золото −3 000 т (не подтверждены клиентами) → Серебро +3 000 т и Бронза +2 000 т, где выше маржа на тонну (НЛМК 25%, ЕВРАЗ КГОК 27%, MTO-премиум). Также: запуск новых продуктов в Волгограде перенесён на январь 2027 года для сокращения переналадок, инициирована распродажа Топ-5 неликвидов со скидкой 15%. <b>Итог:</b> 27,4% маржинальности и +485 млн руб. валовой прибыли к А при меньшем объёме.',
      metrics:[['Объём:','129 000 т',''],['Выручка:','18 255 млн руб.','orange'],['Валовая маржа:','5 002 млн (27,4%)','green'],['Закупки сырья:','10 599 млн','green'],['Производство:','1 339 млн','green'],['Логистика:','776 млн','green'],['Хранение:','539 млн','green']]},
   ],
   /* ── Как каждый сценарий закрывает годовой бизнес-план 2026 ──
@@ -656,9 +663,9 @@ export const SUPPLY={
     drivers:['Подготовка к зиме','Рост зимнего спроса','Зимний старт','Пик зимнего сезона','Зимний пик','Сезонное снижение','Минимум','Подготовка к лету','Летний пик','Пик тех. жидкостей','Летний пик','Промо B2B','Подготовка к зиме','Рост зимнего спроса','Зимний старт','Зимний пик','Зимний пик','Сезонное снижение'],
     pctW:'−10,5%',pctB:'+5,7%',mw:'19,5%',mb:'24,0%',mbest:'25,8%'},
   heatmapMethodology:{Acov:'Ячейки показывают % покрытия спроса клиента/продукта в сценарии А. Тепловая карта — выборка из 14 приоритетных клиентов (Бриллиант, Платина, Золото) плюс контрольные дистрибьюторы.',Amrg:'Ячейки показывают валовую прибыль (млн руб.) приоритетных клиентов за 4 кв. 2026: годовая валовая прибыль клиента из раздела «Сегментация», умноженная на долю 4 квартала 26,3% (4 517 из 17 178 млн руб.). Итог по 16 клиентам — 3 722 млн руб., это 82,4% валовой прибыли квартала в сценарии А.',Bcov:'Отклонения от сценария А по покрытию спроса, п.п.',Bmrg:'Отклонения от сценария А по марже, млн руб.'},
-  kpiNote:'Сценарии A/Б/В — объёмы и финансы за 4 кв. 2026. Сценарий А — базовый, без компенсирующих мер (ровно то, что показано на карточках и диаграмме покрытия). В тепловой карте дельты сценариев Б/В показаны относительно сценария A.',
+  kpiNote:'Сценарии A/Б/В — объёмы и финансы за 4 кв. 2026. Сценарий А — базовый, без компенсирующих мер (ровно то, что показано на карточках и диаграмме покрытия). В сценарии В объём перераспределён внутри квартала: −5 000 т по Платине и Золоту, +5 000 т по Серебру и Бронзе (итог 129 000 т не меняется). В тепловой карте дельты сценариев Б/В показаны относительно сценария A.',
   heatmapLegends:{cov:'<b>Легенда покрытия:</b><span class="hm-lg" style="background:#137333"></span>100%<span class="hm-lg" style="background:#4CAF50"></span>90–99%<span class="hm-lg" style="background:#8BC34A"></span>80–89%<span class="hm-lg" style="background:#CDDC39"></span>60–79%<span class="hm-lg" style="background:#FF9800"></span>&lt;60%<span class="hm-lg" style="background:#e8ecef;border:1px solid #ccc"></span>Не поставляется',mrg:'<b>Легенда валовой прибыли за 4 кв., млн руб.:</b><span class="hm-lg" style="background:#137333"></span>≥50<span class="hm-lg" style="background:#4CAF50"></span>25–50<span class="hm-lg" style="background:#8BC34A"></span>15–25<span class="hm-lg" style="background:#CDDC39"></span>8–15<span class="hm-lg" style="background:#FFC107"></span>3–8<span class="hm-lg" style="background:#FF9800"></span>0–3<span class="hm-lg" style="background:#D93025"></span>Убыток',delta:'<b>Легенда отклонений к сценарию А:</b><span class="hm-lg" style="background:#4CAF50"></span>Улучшение (+)<span class="hm-lg" style="background:#FFCDD2"></span>Снижение (−)'},
-  heatmapInsights:{cov:'<b>📌 Вывод:</b> Бриллиант и Платина закрыты на 98–100% по всем категориям. Золото — 96–99%, дистрибьюторы — ограничены до 48–52% ходовых категорий.',mrg:'<b>📌 Вывод:</b> валовая прибыль 4 кв. по 16 клиентам выборки — <b>3 722 млн руб.</b> из 4 517 млн квартала (82,4%). Концентрация высокая: 4 клиента Бриллианта дают 43% прибыли выборки, Бриллиант + Платина — 72%. Кандидаты на расширение — Золото.',delta:'<b>📌 Вывод:</b> Б: покрытие 100%, но по приоритетным клиентам маржа <b>−50,3 млн руб.</b> к А (демпинг и спот-затраты) — весь плюс Б даёт объём вне выборки. В: <b>+452 млн руб.</b> по клиентам выборки из общего прироста <b>+485 млн руб.</b> к А; прирост концентрируется на приоритетных клиентах, а низкомаржинальные отгрузки Бронзы сокращаются.'},
+  heatmapInsights:{cov:'<b>📌 Вывод:</b> Бриллиант и Платина закрыты на 98–100% по всем категориям. Золото — 96–99%, дистрибьюторы — ограничены до 48–52% ходовых категорий.',mrg:'<b>📌 Вывод:</b> валовая прибыль 4 кв. по 16 клиентам выборки — <b>3 722 млн руб.</b> из 4 517 млн квартала (82,4%). Концентрация высокая: 4 клиента Бриллианта дают 43% прибыли выборки, Бриллиант + Платина — 72%. Кандидаты на расширение — Золото.',delta:'<b>📌 Вывод:</b> Б: покрытие 100%, но по приоритетным клиентам маржа <b>−50,3 млн руб.</b> к А (демпинг и спот-затраты) — весь плюс Б даёт объём вне выборки. В: <b>+452 млн руб.</b> по клиентам выборки из общего прироста <b>+485 млн руб.</b> к А; перераспределение 5 000 т (−2 000 т Платина, −3 000 т Золото → +3 000 т Серебро, +2 000 т Бронза) убирает из плана низкомаржинальные хвостовые заказы (18–21%) и снижает покрытие приоритетных сегментов Платины и Золота (94% и 89%) — маржинальность остаточного микса растёт, а прирост уходит на контракты MTO-премиум Серебра и Бронзы.'},
 };
 
 /* ── Тепловая карта: 14 приоритетных клиентов + 2 контрольных дистрибьютора ──
@@ -696,7 +703,11 @@ export const HEATMAP={
   const H=HEATMAP;
   const covBySeg={diamond:[100,100,100,100,100,98,100,98],platinum:[100,100,100,100,100,98,100,98],gold:[98,98,98,98,98,96,98,96],dist:[52,52,52,52,52,48,0,0]};
   const covBySegB={diamond:[110,110,108,108,105,108,110,108],platinum:[110,110,108,108,105,108,110,108],gold:[108,108,106,106,104,106,108,104],dist:[68,66,68,66,65,60,0,0]};
-  const covBySegC={diamond:[100,100,100,100,100,100,100,100],platinum:[100,100,100,100,100,100,100,100],gold:[98,98,98,98,98,98,98,98],dist:[38,38,38,38,38,32,0,0]};
+  /* Сценарий В: покрытие зеркалит график «Покрытие спроса» — Бриллиант 100%,
+     Платина 94% (94,3% на графике), Золото 89% (88,9%), контрольные дистрибьюторы
+     (Бронза) 38% (38,1%). Перераспределение 5 000 т из Платины/Золота в Серебро/Бронзу
+     вне выборки снижает покрытие приоритетных сегментов на ~5 п.п. к сценарию А. */
+  const covBySegC={diamond:[100,100,100,100,100,100,100,100],platinum:[94,94,94,94,94,94,94,94],gold:[89,89,89,89,89,89,89,89],dist:[38,38,38,38,38,32,0,0]};
   const segKey=c=>['diamond','platinum','gold'].includes(c.seg)?c.seg:'dist';
   const r1=v=>Math.round(v*10)/10;
   const dl=v=>{if(!v)return 0;const r=r1(v);return Math.abs(r)<0.06?0:r;};
@@ -708,7 +719,7 @@ export const HEATMAP={
   H.B.mrg.mt=H.A.mrg.mt.map((v,j)=>dl(sum(H.B.mrg.m.map(r=>un(r[j])))));
   H.B.mrg.ct=H.A.mrg.ct.map((v,i)=>dl(sum(H.B.mrg.m[i].map(un))));
   H.B.mrg.ctAll=+r1(sum(H.B.mrg.ct)).toFixed(1);
-  H.C={cov:{m:HM_CLIENT_KEYS.map((c,i)=>H.A.cov.m[i].map((v,j)=>{if(v==null)return null;const dist=segKey(c)==='dist';const d=dl(covBySegC[segKey(c)][j]-v);return dist?{v:d,good:1}:d;})),mt:H.A.cov.mt.map((v,j)=>dl([100,100,100,100,100,85,95,80][j]-v)),ct:HM_CLIENT_KEYS.map((c,i)=>{const dist=segKey(c)==='dist';const d=dl((dist?38:segKey(c)==='gold'?98:100)-H.A.cov.ct[i]);return dist?{v:d,good:1}:d;}),ctAll:{v:-3,good:1}},
+  H.C={cov:{m:HM_CLIENT_KEYS.map((c,i)=>H.A.cov.m[i].map((v,j)=>{if(v==null)return null;const dist=segKey(c)==='dist';const d=dl(covBySegC[segKey(c)][j]-v);return dist?{v:d,good:1}:d;})),mt:H.A.cov.mt.map((v,j)=>dl([94,94,94,94,94,79,87,78][j]-v)),ct:HM_CLIENT_KEYS.map((c,i)=>{const dist=segKey(c)==='dist';const d=dl((dist?38:segKey(c)==='gold'?89:segKey(c)==='platinum'?94:100)-H.A.cov.ct[i]);return dist?{v:d,good:1}:d;}),ctAll:{v:-3,good:1}},
        mrg:{m:HM_CLIENT_KEYS.map((c,i)=>H.A.mrg.m[i].map((v,j)=>{if(v==null)return null;const dist=segKey(c)==='dist';const d=dl(dist?Math.abs(v)*0.25:v*(0.026/0.23));return dist?{v:d,good:1}:d;}))}};
   H.C.mrg.mt=H.A.mrg.mt.map((v,j)=>dl(sum(H.C.mrg.m.map(r=>un(r[j])))));
   H.C.mrg.ct=H.A.mrg.ct.map((v,i)=>{const dist=segKey(HM_CLIENT_KEYS[i])==='dist';const s=+r1(sum(H.C.mrg.m[i].map(un))).toFixed(2);return dist?{v:s,good:1}:s;});
@@ -888,7 +899,9 @@ const moveMix=mi=>{
   autoIdx.forEach((i,k)=>cost10[i]=autoC10[k]);
   railIdx.forEach((i,k)=>cost10[i]=railC10[k]);
   const corr=MOV_CORRIDORS.map(c=>MOV_ROUTES.reduce((x,r,i)=>r[5]===c?x+vols[i]:x,0));
-  m={vols,cost10,autoCost,railCost,corr,tot:movementAuto[mi]+movementRail[mi]};
+  /* стоимость по направлениям — сумма стоимостей маршрутов направления (десятые млн руб.) */
+  const corrCost10=MOV_CORRIDORS.map(c=>MOV_ROUTES.reduce((x,r,i)=>r[5]===c?x+cost10[i]:x,0));
+  m={vols,cost10,autoCost,railCost,corr,corrCost10,tot:movementAuto[mi]+movementRail[mi]};
   MIX_M.set(mi,m);return m;
 };
 /* ── Закупки: поставщики с точными итогами по группам сырья и тоннажу ── */
@@ -926,7 +939,7 @@ const PLAN_ANOMALY_TEXT={
   movements:'Дек 2026: спот-фрахт перед зимним пиком; восточное ЖД-плечо — 12 суток.',
   purchases:'Окт 2026: задержка VHVI-4 ННОС; Июн 2027: спот-закупка перед ремонтом Волгограда.',
   cost:'Логистика — Дек 2026; закупка — Июн 2027; хранение — Янв 2028. Доля выше среднегодовой.',
-  revenue:'4 кв. 2026: сценарий В сокращает низкомаржинальный объём, но повышает маржу до 27,4%.',
+  revenue:'4 кв. 2026: сценарий В перераспределяет 5 000 т на маржинальные контракты Серебра и Бронзы и удерживает маржу квартала на 27,4%.',
 };
 const riskAt=(mi,list,on)=>on&&list.includes(mi)?{type:'over',pct:10}:null;
 const proportional=(total,weights)=>{
@@ -940,6 +953,41 @@ const seriesFromShares=(base,a,b,names,weights,colors,risks=[],show=false)=>{
     risks:base.slice(a,b).map((_,i)=>j===0?riskAt(a+i,risks,show):null),name
   }));
 };
+/* ── Единый срез «производственные линии»: периодный выпуск завода делится между
+   линиями (метод наибольших остатков), поэтому сумма ячеек = выпуску завода.
+   Используется и графиком «По производственным линиям», и таблицей данных. */
+const LINE_NAMES=['Линия №1','Линия №2','Линия №3'];
+const LINE_SHARES=[[.45,.55,0],[.37,.50,.13],[.58,.42,0],[.34,.41,.25],[.62,.38,0]];
+const prodLinesData=(a,b)=>{
+  const plantPeriod=FACTORIES.map((_,fi)=>{let s=0;for(let mi=a;mi<b;mi++)s+=prodMix(mi).plantV[fi];return s;});
+  const lines=plantPeriod.map((v,fi)=>splitInt(v,LINE_SHARES[fi]));
+  return {plantPeriod,lines,total:sum(plantPeriod),lineTotals:LINE_NAMES.map((_,li)=>sum(lines.map(r=>r[li])))};
+};
+/* ── Единый срез «себестоимость по заводам»: тот же делёж, что рисует график. */
+const COST_PLANT_W=[.23,.25,.10,.27,.15];
+const costPlantMatrix=(a,b)=>{
+  const norm=sum(COST_PLANT_W);
+  return revenue.slice(a,b).map((rv,i)=>{const mi=a+i;
+    const total=costItems.reduce((z,[n,w])=>z+rv*costWeightA(n,w,mi),0);
+    return proportional(Math.round(total),COST_PLANT_W.map(w=>w/norm));});
+};
+/* ── Месяцы с аномалиями на графиках планов: те же флаги, что рисует
+   переключатель «Показать аномалии» — таблица помечает те же строки. */
+const PLAN_ANOM_MONTHS={sales:[2],production:[2,8],movements:[2],purchases:[0,8],cost:[2,8,15],revenue:[0,1,2]};
+const PLAN_ANOM_SHORT={
+  sales:'пик зимнего спроса; онлайн растёт быстрее плана',
+  production:'загрузка 97%; линия №2 Волгограда — 100%',
+  movements:'спот-фрахт перед зимним пиком; восточное ЖД-плечо 12 суток',
+  purchases:'задержка VHVI-4 (ННОС) в окт. 2026; спот перед ремонтом в июн. 2027',
+  cost:'доля статьи выше среднегодовой',
+  revenue:'сценарий В: 5 000 т перераспределены на маржинальные контракты',
+};
+/* Флаг аномалии месяца/месяцев для таблиц (включается переключателем «Показать аномалии») */
+const anomCell=(pl,show,mi,note)=>{
+  if(!show)return null;
+  const months=PLAN_ANOM_MONTHS[pl]||[];
+  return months.includes(mi)?'⚠️ '+(note||PLAN_ANOM_SHORT[pl]||'отклонение'):'—';
+};
 function planChart(pl,a,b,variant='summary',showAnomalies=false){
   const labels=SL(PLAN_MONTHS,a,b),pal=['#20A7C9','#7c3aed','#4CAF50','#FF9800','#D93025','#8c9bae','#00897B'];
   if(variant==='summary')return null; // вызывающая сторона использует исходный сводный график
@@ -951,126 +999,230 @@ function planChart(pl,a,b,variant='summary',showAnomalies=false){
       risks:j===0?risksAt(riskList):labels.map(()=>null),name})),
     opts:{height:360,legend:names,yTitle}});
   if(pl==='sales'){
-    if(variant==='channels')return stackedFrom(CH_NAMES,(mi,j)=>salesMix(mi).chV[j],'Объём продаж, т',[2]);
-    return stackedFrom(CAT_NAMES,(mi,j)=>salesMix(mi).catV[j],'Объём продаж, т',[2]);
+    if(variant==='channels')return stackedFrom(CH_NAMES,(mi,j)=>salesMix(mi).chV[j],'Объём продаж, т',PLAN_ANOM_MONTHS.sales);
+    return stackedFrom(CAT_NAMES,(mi,j)=>salesMix(mi).catV[j],'Объём продаж, т',PLAN_ANOM_MONTHS.sales);
   }
   if(pl==='production'){
-    if(variant==='plants')return stackedFrom(FACTORIES,(mi,j)=>prodMix(mi).plantV[j],'Выпуск, т',[2,8]);
-    const lineShares=[[.45,.55,0],[.37,.50,.13],[.58,.42,0],[.34,.41,.25],[.62,.38,0]];
-    const lineNames=['Линия №1','Линия №2','Линия №3'];
-    /* периодный выпуск завода = сумма его подытогов в таблице за период */
-    const plantPeriod=FACTORIES.map((_,fi)=>{let s=0;for(let mi=a;mi<b;mi++)s+=prodMix(mi).plantV[fi];return s;});
+    if(variant==='plants')return stackedFrom(FACTORIES,(mi,j)=>prodMix(mi).plantV[j],'Выпуск, т',PLAN_ANOM_MONTHS.production);
+    /* линия: периодный выпуск завода из того же среза, что и таблица «По производственным линиям» */
+    const L=prodLinesData(a,b);
     return {type:'stacked',labels:FACTORIES,
-      series:lineNames.map((name,li)=>({data:plantPeriod.map((v,fi)=>splitInt(v,lineShares[fi])[li]),color:pal[li],
+      series:LINE_NAMES.map((name,li)=>({data:L.lines.map(row=>row[li]),color:pal[li],
         risks:FACTORIES.map((_,fi)=>showAnomalies&&fi===1&&li===1?{type:'over',pct:100}:null),name})),
-      opts:{height:360,legend:lineNames,yTitle:'Выпуск за период, т'}};
+      opts:{height:360,legend:LINE_NAMES,yTitle:'Выпуск за период, т'}};
   }
   if(pl==='movements'){
-    if(variant==='corridors')return stackedFrom(MOV_CORRIDORS,(mi,j)=>moveMix(mi).corr[j],'Перемещения, т',[2]);
+    if(variant==='corridors')return stackedFrom(MOV_CORRIDORS,(mi,j)=>moveMix(mi).corr[j],'Перемещения, т',PLAN_ANOM_MONTHS.movements);
     return {type:'combo',labels,series:[
-      {data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#FF9800',risks:risksAt([2])},
+      {data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#FF9800',risks:risksAt(PLAN_ANOM_MONTHS.movements)},
       {data:SL(movementRail,a,b).map(x=>+(x*.0036).toFixed(1)),kind:'bar',color:'#20A7C9'}],
       opts:{height:360,legend:['Авто, млн руб.','ЖД, млн руб.'],yTitle:'Стоимость, млн руб.'}};
   }
   if(pl==='purchases'){
-    if(variant==='suppliers')return stackedFrom(PURCH_SUP.map(s=>s.name),(mi,j)=>purchMix(mi).cost[j],'Закупки, млн руб.',[0,8]);
+    if(variant==='suppliers')return stackedFrom(PURCH_SUP.map(s=>s.name),(mi,j)=>purchMix(mi).cost[j],'Закупки, млн руб.',PLAN_ANOM_MONTHS.purchases);
     return stackedFrom(['Базовые масла','Спецжидкости','Присадки'],(mi,j)=>{
       const t=purchMix(mi).tons;return j===0?t[0]+t[1]+t[2]:j===1?t[3]:t[4];
-    },'Сырьё, т',[0,8]);
+    },'Сырьё, т',PLAN_ANOM_MONTHS.purchases);
   }
   if(pl==='cost'){
     if(variant==='plants'){
-      const total=revenue.map((rv,mi)=>costItems.reduce((z,[n,w])=>z+rv*costWeightA(n,w,mi),0));
-      return {type:'stacked',labels,series:seriesFromShares(total,a,b,FACTORIES,[.23,.25,.10,.27,.15],pal,[2,8,15],showAnomalies),opts:{height:360,legend:FACTORIES,yTitle:'Себестоимость, млн руб.'}};
+      const M=costPlantMatrix(a,b);
+      return {type:'stacked',labels,series:FACTORIES.map((f,fi)=>({data:M.map(row=>row[fi]),color:pal[fi%pal.length],
+        risks:labels.map((_,i)=>fi===0?riskAt(a+i,PLAN_ANOM_MONTHS.cost,showAnomalies):null),name:f})),
+        opts:{height:360,legend:FACTORIES,yTitle:'Себестоимость, млн руб.'}};
     }
     const unit=costItems.map(([n,w,c])=>({data:labels.map((_,i)=>Math.round(141500*costWeightA(n,w,a+i))),color:c,risks:labels.map((_,i)=>riskAt(a+i,COST_ANOMS.filter(x=>x.item===n).map(x=>x.mi),showAnomalies))}));
     return {type:'stacked',labels,series:unit,opts:{height:360,legend:costItems.map(x=>x[0]),yTitle:'руб./т'}};
   }
   // revenue
-  if(variant==='channels')return stackedFrom(CH_NAMES,(mi,j)=>salesMix(mi).chRev[j]/100,'Выручка, млн руб.',[0,1,2]);
-  return stackedFrom(CAT_NAMES,(mi,j)=>salesMix(mi).catRev[j]/100,'Выручка, млн руб.',[0,1,2]);
+  if(variant==='channels')return stackedFrom(CH_NAMES,(mi,j)=>salesMix(mi).chRev[j]/100,'Выручка, млн руб.',PLAN_ANOM_MONTHS.revenue);
+  return stackedFrom(CAT_NAMES,(mi,j)=>salesMix(mi).catRev[j]/100,'Выручка, млн руб.',PLAN_ANOM_MONTHS.revenue);
 }
 export const PLANS={
   sales:{tab:'План продаж',insight:'<b>📌 План продаж</b> (сценарий В): 4 кв. 2026 — <b>129 000 т / 18 255 млн руб.</b>, валовая прибыль 5 002 млн (27,4%). Год 2026 — <b>519 000 т / 73 440 млн руб.</b> (95,1% / 93,4% плана), ВП 17 663 млн (92,7%). 2027 — ~545 000 т / ~78,0 млрд руб.',
     chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(sales,a,b),kind:'bar',color:'#20A7C9'},{data:SL(revenue,a,b),kind:'line',axis:1,color:'#4CAF50'}],opts:{height:340,legend:['План объема (т)','План выручки (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'}}),
-    build:(a,b)=>{
-      const heads=['Месяц','Канал продаж','Категория продукта','Объём (т)','Выручка (млн руб.)','Маржа %','Валовая прибыль (млн руб.)'];
+    /* Таблица «Данные» повторяет выбранный срез графика (variant):
+       summary — месячные итоги, channels — по каналам, categories — по категориям.
+       Все значения графика присутствуют в таблице; подытоги среза равны сериям
+       графика, итог месяца — столбцу/линии сводного графика. */
+    build:(a,b,variant='summary',show=false)=>{
       const rows=[];
-      /* Строки — из тех же mix-матриц, что и график: подытоги каналов равны
-         сериям «По каналам», категории — сериям «По категориям», итог месяца —
-         столбцу/линии сводного графика. */
-      for(let mi=a;mi<b;mi++){
-        const m=salesMix(mi);
-        CH_NAMES.forEach((ch,ci)=>{
-          CAT_NAMES.forEach((cat,kj)=>{
-            const v=m.volM[ci][kj],rv=m.revM[ci][kj]/100,gp=m.gpM[ci][kj]/100;
-            rows.push([PLAN_MONTHS[mi],ch,cat,F(v),F(rv,2),F(rv?gp/rv*100:0,1)+'%',F(gp,2)]);
+      if(variant==='channels'||variant==='categories'){
+        const isCh=variant==='channels';
+        const dim=isCh?CH_NAMES:CAT_NAMES;
+        const heads=['Месяц',isCh?'Канал продаж':'Категория продукта','Объём (т)','Доля объёма %','Выручка (млн руб.)','Валовая прибыль (млн руб.)','Маржа %']
+          .concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=salesMix(mi);
+          const vols=isCh?m.chV:m.catV,revs=isCh?m.chRev:m.catRev,gps=isCh?m.chGp:m.catGp;
+          dim.forEach((name,j)=>{
+            const rv=revs[j]/100,gp=gps[j]/100;
+            rows.push([PLAN_MONTHS[mi],name,F(vols[j]),F(m.tot?vols[j]/m.tot*100:0,1)+'%',F(rv,2),F(gp,2),F(rv?gp/rv*100:0,1)+'%']
+              .concat(show?[anomCell('sales',true,mi)]:[]));
           });
-          const cv=m.chV[ci],crv=m.chRev[ci]/100,cgp=m.chGp[ci]/100;
-          rows.push({cells:[PLAN_MONTHS[mi],ch,'Итого по каналу',F(cv),F(crv,2),F(crv?cgp/crv*100:0,1)+'%',F(cgp,2)],cls:'row-fc'});
-        });
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(sales[mi]),F(revenue[mi],2),F(marginRate(mi)*100,1)+'%',F(grossProfit[mi],2)],cls:'row-sum'});
+          const rtot=revenue[mi],gtot=grossProfit[mi];
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(m.tot),'100%',F(rtot,2),F(gtot,2),F(marginRate(mi)*100,1)+'%']
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «'+(isCh?'По каналам':'По категориям')+'» — подытоги среза равны сериям графика'};
       }
-      return {heads,rows};
+      const heads=['Месяц','План объёма (т)','План выручки (млн руб.)','Средняя цена (руб/т)','Валовая прибыль (млн руб.)','Маржа %','Доля от периода, %']
+        .concat(show?['Отклонение']:[]);
+      const totV=sr(sales,a,b),totR=sr(revenue,a,b),totG=sr(grossProfit,a,b);
+      for(let mi=a;mi<b;mi++){
+        rows.push([PLAN_MONTHS[mi],F(sales[mi]),F(revenue[mi],2),F(141500),F(grossProfit[mi],2),F(marginRate(mi)*100,1)+'%',F(totV?sales[mi]/totV*100:0,1)+'%']
+          .concat(show?[anomCell('sales',true,mi)]:[]));
+      }
+      rows.push({cells:['<b>Итого за период</b>','<b>'+F(totV)+'</b>','<b>'+F(totR,2)+'</b>','<b>'+F(totV?totR/totV*1e6:0)+'</b>','<b>'+F(totG,2)+'</b>','<b>'+F(totR?totG/totR*100:0,1)+'%</b>','<b>100%</b>']
+        .concat(show?['—']:[]),cls:'row-total'});
+      return {heads,rows,note:'месячные итоги сводного графика (объём — столбцы, выручка — линия)'};
     }},
   production:{tab:'План производства',insight:'<b>📌 План производства:</b> за 18 месяцев 776 600 т  (себестоимость выпуска ~84,7 млрд руб.) — на 2 600 т выше продаж: идёт восстановление буфера перед зимой. Средняя загрузка 93%, пик 97% в декабре 2026.',
     chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(production,a,b),kind:'bar',color:'#20A7C9'},{data:SL(capacity,a,b),kind:'line',axis:1,color:'#FF9800'}],opts:{height:340,legend:['План производства (т)','Загрузка мощностей %'],yTitle:'Объем (т)',y1Title:'Загрузка %',max1:112,min1:80}}),
-    build:(a,b)=>{
-      const heads=['Месяц','Завод','Категория продукта','Объём (т)','Загрузка %','Себестоимость (млн руб.)','OEE %','Маржинальность %'];
+    build:(a,b,variant='summary',show=false)=>{
       const rows=[];
       const oeeAdj=[1,2,0,1,-1];
+      const OEE=FACTORIES.map((_,fi)=>88+oeeAdj[fi]);
       const plantLoad={Пермь:96,Волгоград:100,Тюмень:88,Торжок:93,Ворсино:90};
-      /* Объёмы — из prodMix (веса FSPLIT нормированы): сумма ячеек = выпуск месяца
-         на графике, подытоги заводов = сериям «По заводам», себестоимость
-         распределена без потерь (десятые млн руб.). */
-      for(let mi=a;mi<b;mi++){
-        const m=prodMix(mi);
+      const mgnOf=f=>SITE_MGN[f];
+      const wOEE=m=>{const v=prodMix(m).plantV,tot=sum(v)||1;return sum(v.map((x,i)=>x*OEE[i]))/tot;};
+      const wMgn=m=>{const v=prodMix(m).plantV,tot=sum(v)||1;return sum(v.map((x,i)=>x*mgnOf(FACTORIES[i])))/tot;};
+      /* ── «По производственным линиям»: периодный срез (график по заводам, а не по месяцам) ── */
+      if(variant==='lines'){
+        const L=prodLinesData(a,b);
+        const heads=['Завод','Линия №1 (т)','Линия №2 (т)','Линия №3 (т)','Итого выпуск за период (т)','Доля завода %','Загрузка завода %'].concat(show?['Отклонение']:[]);
         FACTORIES.forEach((f,fi)=>{
-          PROD_CATS.forEach((c,kj)=>{
-            const v=m.cells[fi][kj];
-            rows.push([PLAN_MONTHS[mi],f,c.name,F(v),plantLoad[f]+'%',F(m.costCells[fi][kj]/10,1),(88+oeeAdj[fi])+'%',SITE_MGN[f]+'%']);
-          });
-          rows.push({cells:[PLAN_MONTHS[mi],f,'Итого по заводу',F(m.plantV[fi]),plantLoad[f]+'%',F(m.plantCost[fi]/10,1),(88+oeeAdj[fi])+'%',SITE_MGN[f]+'%'],cls:'row-fc'});
+          rows.push([f,F(L.lines[fi][0]),F(L.lines[fi][1]),F(L.lines[fi][2]),F(L.plantPeriod[fi]),F(L.total?L.plantPeriod[fi]/L.total*100:0,1)+'%',plantLoad[f]+'%']
+            .concat(show?[fi===1?'⚠️ Линия №2 — 100%, дефицит слотов':'—']:[]));
         });
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(production[mi]),capacity[mi]+'%',F(m.costTotal/10,1),'88%','22,9%'],cls:'row-sum'});
+        rows.push({cells:['<b>Итого по линиям (сумма = сериям графика)</b>','<b>'+F(L.lineTotals[0])+'</b>','<b>'+F(L.lineTotals[1])+'</b>','<b>'+F(L.lineTotals[2])+'</b>','<b>'+F(L.total)+'</b>','<b>100%</b>','<b>93%</b>']
+          .concat(show?['—']:[]),cls:'row-total'});
+        return {heads,rows,note:'срез «По производственным линиям» — периодные итоги; строка «Итого по линиям» равна сериям графика'};
       }
-      return {heads,rows};
+      /* ── «По заводам»: выпуск, себестоимость и загрузка по каждому заводу месяца ── */
+      if(variant==='plants'){
+        const heads=['Месяц','Завод','Выпуск (т)','Доля выпуска %','Загрузка завода %','Себестоимость (млн руб.)','Себестоимость на тонну (руб/т)','OEE %','Маржинальность %'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=prodMix(mi);
+          FACTORIES.forEach((f,fi)=>{
+            const v=m.plantV[fi],c=m.plantCost[fi]/10;
+            rows.push([PLAN_MONTHS[mi],f,F(v),F(m.tot?v/m.tot*100:0,1)+'%',plantLoad[f]+'%',F(c,1),F(v?c*1e6/v:0,0),OEE[fi]+'%',mgnOf(f)+'%']
+              .concat(show?[anomCell('production',true,mi)]:[]));
+          });
+          const c=m.costTotal/10;
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(m.tot),'100%',capacity[mi]+'%',F(c,1),F(production[mi]?c*1e6/production[mi]:0,0),F(wOEE(mi),1)+'%',F(wMgn(mi),1)+'%']
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «По заводам» — подытоги заводов равны сериям графика'};
+      }
+      /* ── Сводный: месячные итоги (столбцы графика + линия загрузки мощностей) ── */
+      const heads=['Месяц','План производства (т)','Загрузка мощностей %','Продажи (т)','Δ к продажам (т)','Себестоимость выпуска (млн руб.)','Себестоимость на тонну (руб/т)','OEE %'].concat(show?['Отклонение']:[]);
+      for(let mi=a;mi<b;mi++){
+        const c=prodMix(mi).costTotal/10;
+        rows.push([PLAN_MONTHS[mi],F(production[mi]),capacity[mi]+'%',F(sales[mi]),(production[mi]-sales[mi]>=0?'+':'')+F(production[mi]-sales[mi]),F(c,1),F(production[mi]?c*1e6/production[mi]:0,0),F(wOEE(mi),1)+'%']
+          .concat(show?[anomCell('production',true,mi)]:[]));
+      }
+      const tp=sr(production,a,b),ts=sr(sales,a,b);
+      const costP=Array.from({length:b-a},(_,i)=>prodMix(a+i).costTotal/10).reduce((x,y)=>x+y,0);
+      rows.push({cells:['<b>Итого за период</b>','<b>'+F(tp)+'</b>','<b>'+F(avg(capacity,a,b),1)+'%</b>','<b>'+F(ts)+'</b>','<b>'+(tp-ts>=0?'+':'')+F(tp-ts)+'</b>','<b>'+F(costP,1)+'</b>','<b>'+F(tp?costP*1e6/tp:0,0)+'</b>','<b>'+F(avg(Array.from({length:b-a},(_,i)=>wOEE(a+i)),0,b-a),1)+'%</b>']
+        .concat(show?['—']:[]),cls:'row-total'});
+      return {heads,rows,note:'месячные итоги сводного графика (выпуск — столбцы, загрузка — линия)'};
     }},
   movements:{tab:'План перемещений',insight:'<b>📌 План перемещений:</b> за 18 месяцев — 328 636 т; логистический бюджет ~1 050 млн руб.: авто 65%, железная дорога 35%. Основной поток — отгрузка заводских складов в 7 опорных 3PL и опорные концентраторы Сибири/Дальнего Востока.',
     chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(movementAuto,a,b),color:'#FF9800'},{data:SL(movementRail,a,b),color:'#20A7C9'}],opts:{height:340,legend:['Авто (т)','ЖД (т)'],yTitle:'т'}}),
-    build:(a,b)=>{
-      const heads=['Месяц','Откуда','Куда (3PL)','Транспорт','Объём (т)','Стоимость (млн руб.)'];
+    build:(a,b,variant='summary',show=false)=>{
       const rows=[];
-      /* Маршруты из moveMix: сумма строк = авто + ЖД со сводного графика,
-         транспортный разрез = график «По виду транспорта», направления —
-         «По направлениям», стоимость — «Стоимость перевозки». */
-      for(let mi=a;mi<b;mi++){
-        const m=moveMix(mi);
-        MOV_ROUTES.forEach((r,i)=>{
-          rows.push([PLAN_MONTHS[mi],r[0],r[1],r[4]==='rail'?'🚂 ЖД':'🚛 Авто',F(m.vols[i]),F(m.cost10[i]/10,1)]);
-        });
-        const autoPct=Math.round(movementAuto[mi]/m.tot*100);
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',`Авто ${autoPct}% · ЖД ${100-autoPct}%`,F(m.tot),F(m.autoCost+m.railCost,1)],cls:'row-sum'});
+      const rut=(c,v)=>F(v?c*1e6/v:0,0); /* руб/т */
+      /* ── «По направлениям»: объём и стоимость каждого коридора ── */
+      if(variant==='corridors'){
+        const heads=['Месяц','Направление','Объём (т)','Доля объёма %','Стоимость (млн руб.)','Стоимость, руб/т','Доля стоимости %'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=moveMix(mi),costCorr=m.corrCost10.map(v=>v/10),costTot=sum(costCorr);
+          MOV_CORRIDORS.forEach((c,j)=>{
+            rows.push([PLAN_MONTHS[mi],c,F(m.corr[j]),F(m.tot?m.corr[j]/m.tot*100:0,1)+'%',F(costCorr[j],1),rut(costCorr[j],m.corr[j]),F(costTot?costCorr[j]/costTot*100:0,1)+'%']
+              .concat(show?[anomCell('movements',true,mi)]:[]));
+          });
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(m.tot),'100%',F(costTot,1),rut(costTot,m.tot),'100%']
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «По направлениям» — подытоги направлений равны сериям графика'};
       }
-      return {heads,rows};
+      /* ── «Стоимость перевозки»: авто и ЖД в млн руб. (серии графика) ── */
+      if(variant==='cost'){
+        const heads=['Месяц','Авто (млн руб.)','ЖД (млн руб.)','Итого (млн руб.)','Авто, руб/т','ЖД, руб/т','Итого, руб/т','Доля ЖД в стоимости %'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=moveMix(mi),tot=m.autoCost+m.railCost,v=m.tot;
+          rows.push([PLAN_MONTHS[mi],F(m.autoCost,1),F(m.railCost,1),F(tot,1),rut(m.autoCost,movementAuto[mi]),rut(m.railCost,movementRail[mi]),rut(tot,v),F(tot?m.railCost/tot*100:0,1)+'%']
+            .concat(show?[anomCell('movements',true,mi)]:[]));
+        }
+        const au=sr(movementAuto,a,b),ra=sr(movementRail,a,b);
+        const ac=sum(Array.from({length:b-a},(_,i)=>moveMix(a+i).autoCost)),rc=sum(Array.from({length:b-a},(_,i)=>moveMix(a+i).railCost));
+        rows.push({cells:['<b>Итого за период</b>','<b>'+F(ac,1)+'</b>','<b>'+F(rc,1)+'</b>','<b>'+F(ac+rc,1)+'</b>','<b>'+rut(ac,au)+'</b>','<b>'+rut(rc,ra)+'</b>','<b>'+rut(ac+rc,au+ra)+'</b>','<b>'+F(ac+rc?rc/(ac+rc)*100:0,1)+'%</b>']
+          .concat(show?['—']:[]),cls:'row-total'});
+        return {heads,rows,note:'срез «Стоимость перевозки» — столбцы авто и ЖД равны сериям графика'};
+      }
+      /* ── Сводный: авто/ЖД в тоннах и стоимости по месяцам ── */
+      const heads=['Месяц','Авто (т)','ЖД (т)','Итого (т)','Авто %','ЖД %','Стоимость авто (млн руб.)','Стоимость ЖД (млн руб.)','Итого стоимость (млн руб.)','Стоимость, руб/т'].concat(show?['Отклонение']:[]);
+      for(let mi=a;mi<b;mi++){
+        const m=moveMix(mi),tot=m.autoCost+m.railCost;
+        rows.push([PLAN_MONTHS[mi],F(movementAuto[mi]),F(movementRail[mi]),F(m.tot),F(movementAuto[mi]/m.tot*100,0)+'%',F(movementRail[mi]/m.tot*100,0)+'%',F(m.autoCost,1),F(m.railCost,1),F(tot,1),rut(tot,m.tot)]
+          .concat(show?[anomCell('movements',true,mi)]:[]));
+      }
+      const au=sr(movementAuto,a,b),ra=sr(movementRail,a,b);
+      const ac=sum(Array.from({length:b-a},(_,i)=>moveMix(a+i).autoCost)),rc=sum(Array.from({length:b-a},(_,i)=>moveMix(a+i).railCost));
+      rows.push({cells:['<b>Итого за период</b>','<b>'+F(au)+'</b>','<b>'+F(ra)+'</b>','<b>'+F(au+ra)+'</b>','<b>'+F(au+ra?au/(au+ra)*100:0,0)+'%</b>','<b>'+F(au+ra?ra/(au+ra)*100:0,0)+'%</b>','<b>'+F(ac,1)+'</b>','<b>'+F(rc,1)+'</b>','<b>'+F(ac+rc,1)+'</b>','<b>'+rut(ac+rc,au+ra)+'</b>']
+        .concat(show?['—']:[]),cls:'row-total'});
+      return {heads,rows,note:'месячные итоги сводного графика (авто и ЖД) со стоимостью перевозки'};
     }},
   purchases:{tab:'План закупок',insight:'<b>📌 План закупок:</b> бюджет 18 месяцев — <b>51 000 млн руб.</b> Основной риск — базовое масло VHVI-4 от ЛУКОЙЛ-ННОС (Кстово): поставка 18.10.2026 разблокирует дефицит −8 200 т; дублирующая площадка — ЛУКОЙЛ-ПНОС (Пермь).',
     chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(purchG3,a,b),color:'#D93025'},{data:SL(purchBase,a,b),color:'#FF9800'},{data:SL(purchAdd,a,b),color:'#4CAF50'}],opts:{height:340,legend:['Базовые масла: ННОС + Татнефть','Базовые: ПНОС + Сибур','Пакеты присадок'],yTitle:'млн руб.'}}),
-    build:(a,b)=>{
-      const heads=['Месяц','Поставщик','Сырьё','Объём (т)','Стоимость (млн руб.)','Статус поставки'];
+    build:(a,b,variant='summary',show=false)=>{
       const rows=[];
-      /* Поставщики из purchMix: стоимость сходится со столбцами сводного графика
-         (ННОС + Татнефть / ПНОС + Сибур / присадки), тоннаж — с графиком
-         «Физический объём сырья»; итог месяца = сумма трёх групп графика. */
-      for(let mi=a;mi<b;mi++){
-        const m=purchMix(mi);
-        PURCH_SUP.forEach((s,i)=>{
-          rows.push([PLAN_MONTHS[mi],s.name,s.mat,F(m.tons[i]),F(m.cost[i],0),
-            i===0?(mi===0?'⚠️ поставка 18.10.2026':'🟢 ЖД-график'):'🟢 по графику']);
-        });
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—','—',F(m.tot,0),'—'],cls:'row-sum'});
+      /* ── «По поставщикам»: стоимость и тоннаж каждого поставщика ── */
+      if(variant==='suppliers'){
+        const heads=['Месяц','Поставщик','Сырьё','Объём (т)','Цена (руб/т)','Стоимость (млн руб.)','Доля стоимости %','Статус поставки'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=purchMix(mi),tons=sum(m.tons);
+          PURCH_SUP.forEach((s,i)=>{
+            rows.push([PLAN_MONTHS[mi],s.name,s.mat,F(m.tons[i]),F(s.price*1e6,0),F(m.cost[i],0),F(m.tot?m.cost[i]/m.tot*100:0,1)+'%',
+              i===0?(mi===0?'⚠️ поставка 18.10.2026':'🟢 ЖД-график'):'🟢 по графику']
+              .concat(show?[anomCell('purchases',true,mi)]:[]));
+          });
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(tons),F(tons?m.tot*1e6/tons:0,0),F(m.tot,0),'100%','—']
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «По поставщикам» — стоимости поставщиков равны сериям графика'};
       }
-      return {heads,rows};
+      /* ── «Физический объём сырья»: тоннаж трёх групп ── */
+      if(variant==='tons'){
+        const groups=['Базовые масла (ННОС + Татнефть + ПНОС)','Спецжидкости и растворители (Сибур)','Пакеты присадок (Ворсино)'];
+        const heads=['Месяц','Группа сырья','Объём (т)','Доля объёма %','Стоимость (млн руб.)','Средняя цена (руб/т)','Статус поставки'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=purchMix(mi),t=m.tons;
+          const vols=[t[0]+t[1]+t[2],t[3],t[4]];
+          const costs=[m.cost[0]+m.cost[1]+m.cost[2],m.cost[3],m.cost[4]];
+          const tot=sum(vols);
+          groups.forEach((g,j)=>{
+            rows.push([PLAN_MONTHS[mi],g,F(vols[j]),F(tot?vols[j]/tot*100:0,1)+'%',F(costs[j],0),F(vols[j]?costs[j]*1e6/vols[j]:0,0),j===2?'🟢 по графику':'🟢 ЖД-график']
+              .concat(show?[anomCell('purchases',true,mi)]:[]));
+          });
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot),'100%',F(sum(costs),0),F(tot?sum(costs)*1e6/tot:0,0),'—']
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «Физический объём сырья» — тоннаж групп равен сериям графика'};
+      }
+      /* ── Сводный: три группы затрат (как столбцы графика) + физический объём ── */
+      const heads=['Месяц','Базовые масла: ННОС + Татнефть (млн руб.)','Базовые: ПНОС + Сибур (млн руб.)','Пакеты присадок (млн руб.)','Итого закупки (млн руб.)','Объём сырья (т)','Средняя цена сырья (руб/т)','Статус поставки'].concat(show?['Отклонение']:[]);
+      for(let mi=a;mi<b;mi++){
+        const m=purchMix(mi),tons=sum(m.tons),cost=purchG3[mi]+purchBase[mi]+purchAdd[mi];
+        rows.push([PLAN_MONTHS[mi],F(purchG3[mi],0),F(purchBase[mi],0),F(purchAdd[mi],0),F(cost,0),F(tons),F(tons?cost*1e6/tons:0,0),mi===0?'⚠️ поставка VHVI-4 18.10.2026':'🟢 по графику']
+          .concat(show?[anomCell('purchases',true,mi)]:[]));
+      }
+      const g3=sr(purchG3,a,b),ba=sr(purchBase,a,b),ad=sr(purchAdd,a,b);
+      const tonsAll=sum(Array.from({length:b-a},(_,i)=>sum(purchMix(a+i).tons)));
+      rows.push({cells:['<b>Итого за период</b>','<b>'+F(g3,0)+'</b>','<b>'+F(ba,0)+'</b>','<b>'+F(ad,0)+'</b>','<b>'+F(g3+ba+ad,0)+'</b>','<b>'+F(tonsAll)+'</b>','<b>'+F(tonsAll?(g3+ba+ad)*1e6/tonsAll:0,0)+'</b>','—']
+        .concat(show?['—']:[]),cls:'row-total'});
+      return {heads,rows,note:'месячные итоги сводного графика (три группы сырья) с физическим объёмом'};
     }},
   inventory:(()=>{
     const TOTAL_BASE=55300;
@@ -1554,7 +1706,9 @@ export const PLANS={
          либо «По регионам (10)». Фильтр «Только риски» оставляет лишь проблемные узлы
          (узел показан целиком по всем месяцам, проблемные месяцы помечены иконкой);
          в сводном виде фильтр рисков игнорируется. */
-      const heads=['Месяц','Склад / Регион 3PL','Категория продукта',uLbl,'Дни покрытия','Δ к цели'];
+      /* Таблица повторяет график: план (столбцы), дни покрытия, цель и страховой запас
+         (по ним считается риск-бейдж «!» на столбце) и отметку риска. */
+      const heads=['Месяц','Склад / Регион 3PL','Категория продукта',uLbl,'Дни покрытия',tLbl,sLbl,'Δ к цели','Риск'];
       const rows=[];
       const listGroups=(f.view==='warehouses'&&f.level==='agg')?AGG_GROUPS():whGroups;
       let detGroups=listGroups;
@@ -1569,10 +1723,13 @@ export const PLANS={
             const p=products[ci];
             const v=sumCells(cubeActual,mi,gWh,[ci]);
             const t=sumCells(cubeTarget,mi,gWh,[ci]);
+            const s=sumCells(cubeSafety,mi,gWh,[ci]);
             const sal=sumCells(cubeSales,mi,gWh,[ci]);
             const d=sal>0?+(v/(sal/30)).toFixed(1):invDays[mi];
             const pc=t>0?Math.round((v/t-1)*100):invPct[mi];
-            rows.push([PLAN_MONTHS[mi],g.name,p.name,fmtV(v),F(d,1),(pc>=0?'+':'−')+Math.abs(pc)+'%']);
+            const rk=f.view==='warehouses'?assessRisk(v,t,s):null;
+            const rkLbl=!rk?'—':rk.type==='under'?'🔴 Ниже страхового':'🟠 Выше цели +'+rk.pct+'%';
+            rows.push([PLAN_MONTHS[mi],g.name,p.name,fmtV(v),F(d,1),fmtV(t),fmtV(s),(pc>=0?'+':'−')+Math.abs(pc)+'%',rkLbl]);
           });
           const wv=sumCells(cubeActual,mi,gWh,f.catIdxs);
           const wt=sumCells(cubeTarget,mi,gWh,f.catIdxs);
@@ -1582,16 +1739,18 @@ export const PLANS={
           const wpc=wt>0?Math.round((wv/wt-1)*100):invPct[mi];
           const gr=f.view==='warehouses'?assessRisk(wv,wt,ws):null;
           const mark=!gr?'':gr.type==='under'?' 🔴':' 🟠';
-          rows.push({cells:[PLAN_MONTHS[mi],g.name,'Итого по складу'+mark,fmtV(wv),F(wd,1),(wpc>=0?'+':'−')+Math.abs(wpc)+'%'],cls:'row-fc'});
+          const grLbl=!gr?'—':gr.type==='under'?'🔴 Ниже страхового':'🟠 Выше цели +'+gr.pct+'%';
+          rows.push({cells:[PLAN_MONTHS[mi],g.name,'Итого по складу'+mark,fmtV(wv),F(wd,1),fmtV(wt),fmtV(ws),(wpc>=0?'+':'−')+Math.abs(wpc)+'%',grLbl],cls:'row-fc'});
         });
         const totWh=(f.view==='warehouses'&&f.riskOnly)?detGroups.flatMap(g=>whOfAgg(g)):ALL_WH;
         const tot=sumCells(cubeActual,mi,totWh,f.catIdxs);
         const tgt=sumCells(cubeTarget,mi,totWh,f.catIdxs);
+        const saf=sumCells(cubeSafety,mi,totWh,f.catIdxs);
         const sal=sumCells(cubeSales,mi,totWh,f.catIdxs);
         const d=sal>0?+(tot/(sal/30)).toFixed(1):invDays[mi];
         const pc=tgt>0?Math.round((tot/tgt-1)*100):invPct[mi];
         const totLbl=PLAN_MONTHS[mi]+' — итого'+((f.view==='warehouses'&&f.riskOnly)?' по рисковым узлам':'');
-        rows.push({cells:[totLbl,'—','—',fmtV(tot),F(d,1),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%'],cls:'row-sum'});
+        rows.push({cells:[totLbl,'—','—',fmtV(tot),F(d,1),fmtV(tgt),fmtV(saf),(tot>=tgt?'+':'−')+fmtV(Math.abs(tot-tgt))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%','—'],cls:'row-sum'});
       }
       return {heads,rows};
     };
@@ -1684,9 +1843,39 @@ export const PLANS={
         opts:{height:340,legend:costItems.map(x=>x[0]),yTitle:'млн руб.',
           legendExtra:inRange?[{t:'! Аномалия: доля выше среднегодовой',color:'#E8930C'}]:null}};
     },
-    build:(a,b)=>{
-      const heads=['Месяц','Статья затрат','Сумма (млн руб.)','% выручки','Среднегодовая %','Δ к предыдущему мес., п.п.'];
+    build:(a,b,variant='summary',show=false)=>{
       const rows=[];
+      /* ── «По заводам»: тот же делёж себестоимости, что рисует график ── */
+      if(variant==='plants'){
+        const M=costPlantMatrix(a,b);
+        const heads=['Месяц','Завод','Себестоимость (млн руб.)','Доля %','Себестоимость на тонну (руб/т)'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const row=M[mi-a],tot=sum(row);
+          FACTORIES.forEach((f,fi)=>{
+            rows.push([PLAN_MONTHS[mi],f,F(row[fi],1),F(tot?row[fi]/tot*100:0,1)+'%',F(production[mi]?row[fi]*1e6/production[mi]:0,0)]
+              .concat(show?[anomCell('cost',true,mi)]:[]));
+          });
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot,1),'100%',F(production[mi]?tot*1e6/production[mi]:0,0)]
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «По заводам» — суммы заводов равны столбцам графика'};
+      }
+      /* ── «Себестоимость на тонну»: руб/т по статьям (серии графика) ── */
+      if(variant==='unit'){
+        const heads=['Месяц','Статья затрат','Себестоимость (руб/т)','Доля %','Итого себестоимость (руб/т)'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const vals=costItems.map(([n,w])=>Math.round(141500*costWeightA(n,w,mi)));
+          const tot=sum(vals);
+          costItems.forEach(([n,w],k)=>{
+            const an=costAnomAt(n,mi);
+            rows.push([PLAN_MONTHS[mi],an?'⚠️ '+n+' — выше среднегодовой':n,F(vals[k]),F(tot?vals[k]/tot*100:0,1)+'%',F(tot)]
+              .concat(show?[anomCell('cost',true,mi)]:[]));
+          });
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot),'100%',F(tot)].concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «Себестоимость на тонну» — руб/т по статьям равны сериям графика'};
+      }
+      const heads=['Месяц','Статья затрат','Сумма (млн руб.)','% выручки','Среднегодовая %','Δ к предыдущему мес., п.п.'];
       /* Значения статей — те же, что сегменты столбцов графика; итог месяца —
          сумма отображённых статей, поэтому столбцы складываются в высоту стека. */
       for(let mi=a;mi<b;mi++){
@@ -1701,28 +1890,41 @@ export const PLANS={
         const tot=+vals.reduce((x,y)=>x+y,0).toFixed(1);
         rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot,1),F(tot/revenue[mi]*100,1)+'%','—','—'],cls:'row-sum'});
       }
-      return {heads,rows};
+      return {heads,rows,note:'срез «По статьям» — суммы статей равны сегментам столбцов графика'};
     }},
   revenue:{tab:'Выручка',insight:'<b>📌 Выручка:</b> 18 месяцев — <b>109 523 млн руб.</b> Средняя цена 141 500 руб/т. Рост выручки в 2027 — за счёт возврата доли масел моторных (24,5% → 25,5%) и онлайн-канала.',
     chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(revenue,a,b),kind:'bar',color:'#4CAF50'},{data:SL(grossProfit,a,b),kind:'line',axis:1,color:'#9000ff'}],opts:{height:340,legend:['Выручка (млн руб.)','Валовая прибыль (млн руб.)'],yTitle:'млн руб.'}}),
-    build:(a,b)=>{
-      const heads=['Месяц','Канал продаж','Категория продукта','Выручка (млн руб.)','Валовая прибыль (млн руб.)','Маржа %'];
+    build:(a,b,variant='summary',show=false)=>{
       const rows=[];
       /* Те же mix-матрицы, что и в «Плане продаж» и на графиках «По каналам» /
          «По категориям»: строки сходятся с сегментами графиков до копейки. */
-      for(let mi=a;mi<b;mi++){
-        const m=salesMix(mi);
-        CH_NAMES.forEach((ch,ci)=>{
-          CAT_NAMES.forEach((cat,kj)=>{
-            const rv=m.revM[ci][kj]/100,gp=m.gpM[ci][kj]/100;
-            rows.push([PLAN_MONTHS[mi],ch,cat,F(rv,2),F(gp,2),F(rv?gp/rv*100:0,1)+'%']);
+      if(variant==='channels'||variant==='categories'){
+        const isCh=variant==='channels';
+        const dim=isCh?CH_NAMES:CAT_NAMES;
+        const heads=['Месяц',isCh?'Канал продаж':'Категория продукта','Выручка (млн руб.)','Доля выручки %','Валовая прибыль (млн руб.)','Маржа %','Объём (т)'].concat(show?['Отклонение']:[]);
+        for(let mi=a;mi<b;mi++){
+          const m=salesMix(mi);
+          const revs=isCh?m.chRev:m.catRev,gps=isCh?m.chGp:m.catGp,vols=isCh?m.chV:m.catV;
+          dim.forEach((name,j)=>{
+            const rv=revs[j]/100,gp=gps[j]/100,share=isCh?m.chRev[j]:m.catRev[j];
+            rows.push([PLAN_MONTHS[mi],name,F(rv,2),F(m.rev100?share/m.rev100*100:0,1)+'%',F(gp,2),F(rv?gp/rv*100:0,1)+'%',F(vols[j])]
+              .concat(show?[anomCell('revenue',true,mi)]:[]));
           });
-          const crv=m.chRev[ci]/100,cgp=m.chGp[ci]/100;
-          rows.push({cells:[PLAN_MONTHS[mi],ch,'Итого по каналу',F(crv,2),F(cgp,2),F(crv?cgp/crv*100:0,1)+'%'],cls:'row-fc'});
-        });
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(revenue[mi],2),F(grossProfit[mi],2),F(marginRate(mi)*100,1)+'%'],cls:'row-sum'});
+          rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(revenue[mi],2),'100%',F(grossProfit[mi],2),F(marginRate(mi)*100,1)+'%',F(m.tot)]
+            .concat(show?['—']:[]),cls:'row-sum'});
+        }
+        return {heads,rows,note:'срез «'+(isCh?'По каналам':'По категориям')+'» — подытоги равны сериям графика'};
       }
-      return {heads,rows};
+      const heads=['Месяц','Выручка (млн руб.)','Валовая прибыль (млн руб.)','Маржа %','Объём (т)','Средняя цена (руб/т)','Доля от периода, %'].concat(show?['Отклонение']:[]);
+      const totR=sr(revenue,a,b);
+      for(let mi=a;mi<b;mi++){
+        rows.push([PLAN_MONTHS[mi],F(revenue[mi],2),F(grossProfit[mi],2),F(marginRate(mi)*100,1)+'%',F(sales[mi]),F(141500),F(totR?revenue[mi]/totR*100:0,1)+'%']
+          .concat(show?[anomCell('revenue',true,mi)]:[]));
+      }
+      const totG=sr(grossProfit,a,b),totV=sr(sales,a,b);
+      rows.push({cells:['<b>Итого за период</b>','<b>'+F(totR,2)+'</b>','<b>'+F(totG,2)+'</b>','<b>'+F(totR?totG/totR*100:0,1)+'%</b>','<b>'+F(totV)+'</b>','<b>'+F(totV?totR/totV*1e6:0)+'</b>','<b>100%</b>']
+        .concat(show?['—']:[]),cls:'row-total'});
+      return {heads,rows,note:'месячные итоги сводного графика (выручка — столбцы, валовая прибыль — линия)'};
     }},
 };
 
@@ -1745,6 +1947,9 @@ Object.entries(PLAN_VIEW_META).forEach(([id,views])=>{
 
 export function planView(pl,a,b,qlabel,opts={}){
   const L=MONTHS18,span=b-a;
+  /* Таблица «Данные» следует выбранному срезу графика (opts.variant)
+     и переключателю «Показать аномалии» (opts.showAnomalies). */
+  const variant=opts.variant||'summary',showAnom=!!opts.showAnomalies;
   const impliedLabel=i=>{
     if(span===3&&a===0&&(qlabel==='q4-2026'||qlabel==null))return '4 кв. 2026 в среднем';
     if(span===12&&a===3&&qlabel==='y2027')return L[a]+' – '+L[b-1]+' в среднем';
@@ -1755,14 +1960,14 @@ export function planView(pl,a,b,qlabel,opts={}){
     return{kpis:[K('План продаж',F(vol)+' т',F(rev,1)+' млн руб.'),K('Валовая маржа',F(gm,1)+' млн',F(rev?gm/rev*100:0,1)+'% от выручки'),K('Выполнение периода',F(vol)+' т',F(rev,1)+' млн руб.'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
       table:{heads:['Месяц','План объёма (т)','План выручки (млн руб.)','Средняя цена (руб/т)','Валовая маржа (млн руб.)','Маржа %'],
         rows:[...L.slice(a,b).map((m,i)=>[m,F(sales[a+i]),F(revenue[a+i],1),F(141500),F(grossProfit[a+i],1),F(marginRate(a+i)*100,1)+'%']),totalRow(['<b>Итого</b>','<b>'+F(vol)+'</b>','<b>'+F(rev,1)+'</b>','<b>'+F(vol?rev/vol*1e6:0)+'</b>','<b>'+F(gm,1)+'</b>','<b>'+F(rev?gm/rev*100:0,1)+'%</b>'])]},
-      detail:PLANS.sales.build(a,b)};
+      detail:PLANS.sales.build(a,b,variant,showAnom)};
   }
   if(pl==='production'){
     const prod=sr(production,a,b),vol=sr(sales,a,b),load=avg(capacity,a,b);
     return{kpis:[K('План производства',F(prod)+' т','загрузка '+F(load,0)+'%'),K('Δ к продажам','+'+F(prod-vol)+' т','восстановление запаса'),K('Средняя загрузка',F(load,0)+'%','цель 90%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
       table:{heads:['Месяц','Производство (т)','Загрузка %','Продажи (т)','Δ к продажам (т)'],
         rows:[...L.slice(a,b).map((m,i)=>[m,F(production[a+i]),capacity[a+i]+'%',F(sales[a+i]),(production[a+i]-sales[a+i]>=0?'+':'')+F(production[a+i]-sales[a+i])]),totalRow(['<b>Итого</b>','<b>'+F(prod)+'</b>','<b>'+F(load,0)+'%</b>','<b>'+F(vol)+'</b>','<b>+'+F(prod-vol)+'</b>'])]},
-      detail:PLANS.production.build(a,b)};
+      detail:PLANS.production.build(a,b,variant,showAnom)};
   }
   if(pl==='movements'){
     const au=sr(movementAuto,a,b),ra=sr(movementRail,a,b),tot=au+ra;
@@ -1772,7 +1977,7 @@ export function planView(pl,a,b,qlabel,opts={}){
     return{kpis:[K('План перемещений',F(tot)+' т',F(costTot,0)+' млн руб.'),K('Авто',F(au)+' т',F(tot?au/tot*100:0,0)+'%'),K('ЖД',F(ra)+' т',F(tot?ra/tot*100:0,0)+'%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
       table:{heads:['Месяц','Авто (т)','ЖД (т)','Итого (т)','Стоимость (млн)'],
         rows:[...L.slice(a,b).map((m,i)=>[m,F(movementAuto[a+i]),F(movementRail[a+i]),F(movementAuto[a+i]+movementRail[a+i]),F(costOf(i),1)]),totalRow(['<b>Итого</b>','<b>'+F(au)+'</b>','<b>'+F(ra)+'</b>','<b>'+F(tot)+'</b>','<b>'+F(costTot,1)+'</b>'])]},
-      detail:PLANS.movements.build(a,b)};
+      detail:PLANS.movements.build(a,b,variant,showAnom)};
   }
   if(pl==='purchases'){
     const g3=sr(purchG3,a,b),ba=sr(purchBase,a,b),ad=sr(purchAdd,a,b);
@@ -1783,7 +1988,7 @@ export function planView(pl,a,b,qlabel,opts={}){
           const t=purchG3[a+i]+purchBase[a+i]+purchAdd[a+i];
           return [m,F(purchG3[a+i],0),F(purchBase[a+i],0),F(purchAdd[a+i],0),F(t,0)];}),
           totalRow(['<b>Итого</b>','<b>'+F(g3,0)+'</b>','<b>'+F(ba,0)+'</b>','<b>'+F(ad,0)+'</b>','<b>'+F(tot,0)+'</b>'])]},
-      detail:PLANS.purchases.build(a,b)};
+      detail:PLANS.purchases.build(a,b,variant,showAnom)};
   }
   if(pl==='inventory'){
     const sm=PLANS.inventory.summaryFor(a,b,opts);
@@ -1795,12 +2000,14 @@ export function planView(pl,a,b,qlabel,opts={}){
     else if(sm.f.isNodeFiltered)fltSub=`фильтр: ${sm.f.grpIdxs.length} из 10 узлов`;
     else if(sm.f.isWhFiltered)fltSub=`выборка: ${sm.f.detWhIdxs.length} из 17 складов`;
     return{kpis:[K('Средний запас',F(mean,0)+' т',F(md,1)+' дней покрытия'),K('Стоимость запасов',F(meanCost,0)+' млн','вблизи целевой '+F(meanCostTgt,0)+' млн'),K('Δ к цели',(meanPct>=0?'+':'−')+F(Math.abs(meanPct),0)+'%',fltSub),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
-      table:{heads:['Месяц','План запасов (т)','Дней покрытия','Стоимость (млн)','Цель (т)','Δ к цели','Статус'],
-        rows:[...L.slice(a,b).map((m,i)=>{const v=sm.mAct[i],t=sm.mTgt[i],pc=sm.mPct[i];
+      /* Таблица = линии сводного графика: план IBP, целевой и страховой запас (+ дни покрытия,
+         стоимость в млн руб. и статус зоны: превышение цели / дефицит ниже страхового). */
+      table:{heads:['Месяц','План запасов (т)','Дней покрытия','Стоимость (млн руб.)','Цель (т)','Стоимость цели (млн руб.)','Страховой (т)','Δ к цели','Статус'],
+        rows:[...L.slice(a,b).map((m,i)=>{const v=sm.mAct[i],t=sm.mTgt[i],pc=sm.mPct[i],sf=sm.mSaf[i];
           const mi=a+i,nearStop=INV_STOPS.some(s=>Math.abs(s.i-mi)<=1);
           const st=Math.abs(pc)<=3?'🟢 У цели':pc>3?(nearStop?'🟠 Буфер остановки':'🟠 Выше цели'):(nearStop?'🔵 Период остановки':'🔵 Ниже цели');
-          return[m,F(v),F(sm.mDays[i],1),F(sm.mCost[i]),F(t),(v>=t?'+':'−')+F(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%',st];}),
-          totalRow(['<b>'+impliedLabel()+'</b>','<b>'+F(mean,0)+'</b>','<b>'+F(md,1)+'</b>','<b>'+F(meanCost,0)+'</b>','<b>'+F(meanTgt,0)+'</b>','<b>'+(meanPct>=0?'+':'−')+F(Math.abs(meanPct),0)+'%</b>','—'])]},
+          return[m,F(v),F(sm.mDays[i],1),F(sm.mCost[i]),F(t),F(sm.mCostTgt[i]),F(sf),(v>=t?'+':'−')+F(Math.abs(v-t))+' / '+(pc>=0?'+':'−')+Math.abs(pc)+'%',st];}),
+          totalRow(['<b>'+impliedLabel()+'</b>','<b>'+F(mean,0)+'</b>','<b>'+F(md,1)+'</b>','<b>'+F(meanCost,0)+'</b>','<b>'+F(meanTgt,0)+'</b>','<b>'+F(meanCostTgt,0)+'</b>','<b>'+F(avg(sm.mSaf,0,span),0)+'</b>','<b>'+(meanPct>=0?'+':'−')+F(Math.abs(meanPct),0)+'%</b>','—'])]},
       detail:PLANS.inventory.build(a,b,opts)};
   }
   if(pl==='cost'){
@@ -1816,14 +2023,14 @@ export function planView(pl,a,b,qlabel,opts={}){
           const t=+vals.reduce((x,y)=>x+y,0).toFixed(1);
           return [m,...rs,F(t,1),F(t/revenue[mi]*100,1)+'%'];}),
           totalRow(['<b>Итого</b>',...items.map(([n,v])=>'<b>'+F(v,1)+'</b>'),'<b>'+F(tot,1)+'</b>','<b>'+F(rev?tot/rev*100:0,1)+'%</b>'])]},
-      detail:PLANS.cost.build(a,b)};
+      detail:PLANS.cost.build(a,b,variant,showAnom)};
   }
   // revenue
   const rev=sr(revenue,a,b),gm=sr(grossProfit,a,b);
   return{kpis:[K('План выручки',F(rev,1)+' млн','валовая прибыль '+F(gm,1)+' млн'),K('Валовая прибыль',F(gm,1)+' млн',F(rev?gm/rev*100:0,1)+'% выручки'),K('Маржа',F(rev?gm/rev*100:0,1)+'%','моторные масла / MTO-премиум до 26%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
     table:{heads:['Месяц','Выручка (млн руб.)','Валовая прибыль (млн руб.)','Объём (т)','Средняя цена (руб/т)'],
       rows:[...L.slice(a,b).map((m,i)=>[m,F(revenue[a+i],1),F(grossProfit[a+i],1),F(sales[a+i]),F(141500)]),totalRow(['<b>Итого</b>','<b>'+F(rev,1)+'</b>','<b>'+F(gm,1)+'</b>','<b>'+F(sr(sales,a,b))+'</b>','<b>141 500</b>'])]},
-    detail:PLANS.revenue.build(a,b)};
+    detail:PLANS.revenue.build(a,b,variant,showAnom)};
 }
 
 /* ═══════════ 6. ДЕЙСТВИЯ ═══════════ */
