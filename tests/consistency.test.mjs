@@ -224,3 +224,112 @@ test('сценарий В: 27,4% маржинальности и +485 млн р�
   const c=SUP.scenarios.find(x=>x.id==='C');
   assert.ok(/27,4%/.test(c.desc)&&/485/.test(c.desc),c.desc.slice(0,120));
 });
+
+/* ── 24. Раздел «Планы»: данные таблиц бьются с графиками ── */
+const n2=s=>Number(String(s).replace(/<[^>]+>/g,'').replace(/[\s\u00A0]/g,'').replace(',','.').replace('−','-'));
+const sumCol=(rows,col)=>rows.reduce((x,r)=>x+n2(r[col]),0);
+const detByMonth=pl=>{
+  const out=Array.from({length:18},()=>({detail:[],sub:[],total:null}));
+  for(const r of D.planView(pl,0,18,'all').detail.rows){
+    const c=Array.isArray(r)?r:r.cells,k=Array.isArray(r)?'':(r.cls||'');
+    const mi=D.MONTHS18.indexOf(String(c[0]).replace(/<[^>]+>/g,'').replace(' — итого','').trim());
+    if(mi<0)continue;
+    if(k==='row-sum')out[mi].total=c;
+    else if(k==='row-fc')out[mi].sub.push(c);
+    else out[mi].detail.push(c);
+  }
+  return out;
+};
+
+test('Планы: итог месяца в таблице = сводному графику, а сумма строк = итогу',()=>{
+  /* колонки итоговой строки: [объём/стоимость, 2-я ось (если есть)] */
+  const spec={
+    sales:{cols:[3,4],chartTot:mi=>[PL.sales.chart(0,18).series[0].data[mi],PL.sales.chart(0,18).series[1].data[mi]]},
+    production:{cols:[3],chartTot:mi=>[PL.production.chart(0,18).series[0].data[mi]]},
+    movements:{cols:[4],chartTot:mi=>[PL.movements.chart(0,18).series[0].data[mi]+PL.movements.chart(0,18).series[1].data[mi]]},
+    purchases:{cols:[4],chartTot:mi=>[PL.purchases.chart(0,18).series.reduce((x,s)=>x+s.data[mi],0)]},
+    cost:{cols:[2],chartTot:mi=>[PL.cost.chart(0,18,{showAnomalies:false}).series.reduce((x,s)=>x+s.data[mi],0)]},
+    revenue:{cols:[3,4],chartTot:mi=>[PL.revenue.chart(0,18).series[0].data[mi],PL.revenue.chart(0,18).series[1].data[mi]]},
+  };
+  for(const [pl,s] of Object.entries(spec)){
+    const det=detByMonth(pl);
+    for(let mi=0;mi<18;mi++){
+      const want=s.chartTot(mi);
+      s.cols.forEach((col,k)=>{
+        assert.ok(Math.abs(n2(det[mi].total[col])-want[k])<=0.55,
+          `${pl} ${D.MONTHS18[mi]}: итог ${n2(det[mi].total[col])} ≠ график ${want[k]}`);
+        assert.ok(Math.abs(sumCol(det[mi].detail,col)-n2(det[mi].total[col]))<=0.55,
+          `${pl} ${D.MONTHS18[mi]}: сумма строк ≠ итог (кол. ${col})`);
+        if(det[mi].sub.length)assert.ok(Math.abs(sumCol(det[mi].sub,col)-n2(det[mi].total[col]))<=0.55,
+          `${pl} ${D.MONTHS18[mi]}: сумма подытогов ≠ итог (кол. ${col})`);
+      });
+    }
+  }
+});
+
+test('Планы: срезы графиков (каналы/заводы/маршруты/поставщики/статьи) = таблице',()=>{
+  const subBy=(det,mi,col1,val)=>det[mi].sub.find(r=>String(r[col1])===val);
+  /* продажи/выручка: подытоги каналов = сериим «По каналам», категории = «По категориям» */
+  for(const [pl,col] of [['sales',3],['revenue',3]]){
+    const det=detByMonth(pl),ch=D.PLANS[pl].chartFor(0,18,'channels',false),cat=D.PLANS[pl].chartFor(0,18,'categories',false);
+    for(let mi=0;mi<18;mi++){
+      ch.opts.legend.forEach((name,j)=>{
+        const r=subBy(det,mi,1,name);
+        assert.ok(r,`${pl}: подытог канала «${name}» есть`);
+        assert.ok(Math.abs(n2(r[col])-ch.series[j].data[mi])<=0.55,`${pl} ${name} ${D.MONTHS18[mi]}: ${n2(r[col])} ≠ ${ch.series[j].data[mi]}`);
+      });
+      cat.opts.legend.forEach((name,j)=>{
+        const s=sumCol(det[mi].detail.filter(r=>r[2]===name),col);
+        assert.ok(Math.abs(s-cat.series[j].data[mi])<=0.55,`${pl}/кат ${name} ${D.MONTHS18[mi]}: ${s} ≠ ${cat.series[j].data[mi]}`);
+      });
+    }
+  }
+  /* производство: подытоги заводов = «По заводам», периодный выпуск = «По линиям» */
+  {
+    const det=detByMonth('production'),pl2=D.PLANS.production.chartFor(0,18,'plants',false),ln=D.PLANS.production.chartFor(0,18,'lines',false);
+    for(let mi=0;mi<18;mi++)pl2.opts.legend.forEach((name,j)=>{
+      const r=subBy(det,mi,1,name);
+      assert.ok(r&&Math.abs(n2(r[3])-pl2.series[j].data[mi])<=0.55,`production ${name} ${D.MONTHS18[mi]}`);
+    });
+    ln.labels.forEach((name,fi)=>{
+      const tbl=det.reduce((x,d)=>{const r=d.sub.find(rr=>rr[1]===name);return x+(r?n2(r[3]):0);},0);
+      const chart=ln.series.reduce((x,s)=>x+s.data[fi],0);
+      assert.ok(Math.abs(tbl-chart)<=0.55,`production/линии ${name}: ${tbl} ≠ ${chart}`);
+    });
+  }
+  /* перемещения: авто/ЖД = сводному графику, направления = «По направлениям» */
+  {
+    const det=detByMonth('movements'),sm=D.PLANS.movements.chart(0,18),cr=D.PLANS.movements.chartFor(0,18,'corridors',false);
+    const corrMap={'Центр/СЗ':['Санкт-Петербург','Москва','Нижний Новгород'],'Юг':['Воронеж','Ростов-на-Дону','Краснодар'],'Сибирь':['Тюмень (ОК)','Новосибирск','Красноярск'],'Дальний Восток':['Хабаровск','Владивосток']};
+    for(let mi=0;mi<18;mi++){
+      const rail=det[mi].detail.filter(r=>String(r[3]).includes('ЖД')).reduce((x,r)=>x+n2(r[4]),0);
+      const auto=det[mi].detail.filter(r=>!String(r[3]).includes('ЖД')).reduce((x,r)=>x+n2(r[4]),0);
+      assert.ok(Math.abs(auto-sm.series[0].data[mi])<=0.55&&Math.abs(rail-sm.series[1].data[mi])<=0.55,`movements авто/ЖД ${D.MONTHS18[mi]}`);
+      cr.opts.legend.forEach((name,j)=>{
+        const s=det[mi].detail.filter(r=>corrMap[name].includes(r[2])).reduce((x,r)=>x+n2(r[4]),0);
+        assert.ok(Math.abs(s-cr.series[j].data[mi])<=0.55,`movements ${name} ${D.MONTHS18[mi]}: ${s} ≠ ${cr.series[j].data[mi]}`);
+      });
+    }
+  }
+  /* закупки: поставщики = «По поставщикам», тоннаж = «Физический объём» */
+  {
+    const det=detByMonth('purchases'),sp=D.PLANS.purchases.chartFor(0,18,'suppliers',false),tn=D.PLANS.purchases.chartFor(0,18,'tons',false);
+    for(let mi=0;mi<18;mi++){
+      sp.opts.legend.forEach((name,j)=>{
+        const r=det[mi].detail.find(x=>x[1]===name);
+        assert.ok(r&&Math.abs(n2(r[4])-sp.series[j].data[mi])<=0.55,`purchases ${name} ${D.MONTHS18[mi]}`);
+      });
+      [[0,1,2],[3],[4]].forEach((idx,j)=>{
+        const s=idx.reduce((x,i)=>x+n2(det[mi].detail[i][3]),0);
+        assert.ok(Math.abs(s-tn.series[j].data[mi])<=0.55,`purchases/тоннаж ${D.MONTHS18[mi]} г${j}: ${s} ≠ ${tn.series[j].data[mi]}`);
+      });
+    }
+  }
+  /* себестоимость: статьи = сегментам столбцов */
+  {
+    const det=detByMonth('cost'),c=D.PLANS.cost.chart(0,18,{showAnomalies:false});
+    for(let mi=0;mi<18;mi++)c.series.forEach((s,j)=>{
+      assert.ok(Math.abs(n2(det[mi].detail[j][2])-s.data[mi])<=0.06,`cost ${D.MONTHS18[mi]} ст. ${j}`);
+    });
+  }
+});
