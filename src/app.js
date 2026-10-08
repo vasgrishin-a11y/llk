@@ -22,6 +22,8 @@ const N=(v,d=0)=>Number(v||0).toLocaleString('ru-RU',{minimumFractionDigits:d,ma
 const NF=(v,d=1)=>Number(v||0).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
 const rv=x=>typeof x==='function'?x(summ):x;
 const shortM=p=>String(p).split(' ')[0];
+/* Подписи сегментов для бейджей перераспределения объёма (сценарий В) */
+const SEG_LBL={diamond:'💎 Бриллиант',platinum:'⬣ Платина',gold:'● Золото',silver:'⚪ Серебро',bronze:'🟤 Бронза'};
 
 /* ── HTML-хелперы (тот же паттерн, что у шаблона) ── */
 const insight=t=>`<div class="insight">${t}</div>`;
@@ -499,7 +501,7 @@ function vSupply(){
   /* Полоса сегмента: цветная часть — доступный объём, лёгкая штриховка — разрыв.
      Справа остаются только объёмы: доступный и, при наличии, малый красный объём разрыва. */
   const gs=ui.gapscen??'A',G=S.gaps[gs]||S.gaps.A;
-  const gap=G.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
+  const gap=G.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}${r.delta?` <span class="gap-delta ${r.delta.kind}">${r.delta.v}</span>`:''}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
   const gapRows=[...G.tableRows,{cells:['<b>Итого</b>','<b>'+N(G.demand)+'</b>','<b>'+NF(G.available/G.demand*100,1)+'%</b>','<b>'+N(G.available)+'</b>','<b>'+(G.gap?'−'+N(G.gap):'0')+'</b>'],cls:'row-sum'}];
   J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:280,barValuesIn:true,barValueFont:13});
   J('#c-radar','radar',S.radar.series.map(([n,d,c])=>({data:d,color:c})),S.radar.axes,{height:400,legend:S.radar.series.map(x=>x[0]),max:S.radar.max||120});
@@ -531,6 +533,7 @@ function vSupply(){
     +card('📊 Покрытие спроса (сценарий '+G.name+')',sw('gapscen',[
         ['A','Сценарий А · Базовый'],['B','Сценарий Б · Захват рынка'],['C','Сценарий В · Фокус на прибыли']])
       +`<div class="gap-chart">${gap}</div>`
+      +(G.redist?`<div class="muted" style="font-size:11px;margin-top:6px">🔁 Перераспределение ${N(G.redist.total)} т внутри квартала: ${G.redist.from.map(([k,v])=>SEG_LBL[k]+' −'+N(v)+' т').join(' и ')} → ${G.redist.to.map(([k,v])=>SEG_LBL[k]+' +'+N(v)+' т').join(' и ')}. <b style="color:#137333">Зелёный бейдж</b> — сегмент получил объём, <b style="color:#D93025">красный</b> — отдал (к прежней редакции плана).</div>`:'')
       +info(G.gap?'danger':'success',G.gap
         ?`<b class="gap-break">⚠️ НЕ ПОКРЫТО: ${N(G.gap)} т</b> · доступно ${N(G.available)} из ${N(G.demand)} т · покрытие ${NF(G.available/G.demand*100,1)}%<br>${G.reasons}`
         :`<b>✅ СПРОС ПОКРЫТ ПОЛНОСТЬЮ</b> · доступно ${N(G.available)} из ${N(G.demand)} т<br>${G.reasons}`)
@@ -598,7 +601,9 @@ function vPlans(){
   const showPlanAnomalies=ui.plananom==='1';
   const cdef=pl==='inventory'?P.chart(a,b,invOpts):(P.chartFor?P.chartFor(a,b,planVariant,showPlanAnomalies):P.chart(a,b));
   J('#c-plan',cdef.type,cdef.series,cdef.labels,cdef.opts);
-  const view=planView(pl,a,b,q,invOpts);
+  /* Таблица «Данные» строится под выбранный срез графика (variant) и режим аномалий,
+     поэтому в ней всегда есть все значения, отображённые на графике. */
+  const view=planView(pl,a,b,q,{...invOpts,variant:planVariant,showAnomalies:showPlanAnomalies});
   const kpiStrip=`<section class="kpis">${view.kpis.map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div></article>`).join('')}</section>`;
   // быстрые фильтры + выбор произвольного периода
   const monthOpts=(sel)=>MONTHS18.map((m,i)=>`<option value="${i}"${i===sel?' selected':''}>${m}</option>`).join('');
@@ -684,6 +689,12 @@ function vPlans(){
     invExtra=stopsNote+viewSwitch+quickFilter+riskStripHTML(P,a,b,invOpts);
   }
   const insText=typeof P.insightFor==='function'?(pl==='inventory'?P.insightFor(a,b,invOpts):P.insightFor(a,b)):P.insight;
+  /* Подпись к таблице «Данные»: какой срез графика она повторяет */
+  const INV_VIEW_LBL={summary:'📈 Сводный план (IBP)',warehouses:'🏭 По складам (заводы + 3PL)',wh_detail:'🏬 Динамика по складам (выбор)',products:'🧪 По категориям продуктов (8)'};
+  const viewName=pl==='inventory'
+    ?(INV_VIEW_LBL[invOpts.view]||invOpts.view)
+    :(availableViews.find(x=>x[0]===planVariant)||availableViews[0])[1];
+  const tblNote=`<div class="muted" style="font-size:11px;margin:10px 0 6px">📋 Таблица «Данные» — тот же срез, что и на графике: <b>«${viewName}»</b>. ${view.detail.note||''}</div>`;
   const planChartControls=pl==='inventory'?'':`<div class="plan-chart-controls"><div><div class="muted control-label">Детализация графика</div>${sw('planview',availableViews)}</div><div><div class="muted control-label">Контроль отклонений</div>${sw('plananom',[['0','Обычный вид'],['1','⚠️ Показать аномалии']])}</div></div>`
     +(showPlanAnomalies?info('warning','<b>⚠️ Аномалии выбранного среза:</b> '+esc(P.anomalyText||'Отклонения от плановых нормативов отмечены значком «!».')):'');
   return periodBar
@@ -694,6 +705,7 @@ function vPlans(){
       +planChartControls
       +canvas('c-plan','График: '+P.tab)
       +insight(insText)
+      +tblNote
       +tbl('tbl-plan-'+pl,view.detail.heads,view.detail.rows));
 }
 
