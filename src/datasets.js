@@ -775,7 +775,6 @@ const catShareAgg=[['Масла моторные',.245],['Масла гидра�
 const catShare2027=[['Масла моторные',.255],['Масла гидравлические',.215],['Индустриальные',.17],['Смазки',.10],['Прочие (СОЖ, ОЖ, тех, трансм.)',.255]];
 const CAT27={pc:.255,mkm:.215,ind:.17,lube:.10,oth:.255};
 const aggCat=mi=>mi<3?{pc:cat4[mi].pc,mkm:cat4[mi].mkm,ind:cat4[mi].ind,lube:cat4[mi].lube,oth:cat4[mi].oth}:CAT27;
-const CH_MGN=[23.5,22.5,22,21.5,21,20,19];
 const FACTORIES=['Пермь','Волгоград','Тюмень','Торжок','Ворсино'];
 const FSPLIT={pc:[3500,4000,600,4200,700],mkm:[2000,1500,1900,3500,1000],ind:[1200,2000,800,3000,1000],lube:[1500,1000,500,2800,900],oth:[1800,2200,700,3100,700]};
 const SITE_MGN={Пермь:22,Волгоград:23,Тюмень:21,Торжок:24,Ворсино:25};
@@ -783,10 +782,131 @@ const PL3PL=['Санкт-Петербург','Москва','Нижний Нов
 const OK3PL=['Тюмень (ОК)','Новосибирск','Красноярск','Хабаровск','Владивосток'];
 const RUB=r=>r.toLocaleString('ru-RU');
 const fmtMl=v=>F(v,1);
-const salesM=MONTHS18.map((m,i)=>({vol:sales[i],rev:+(sales[i]*.1415).toFixed(1)}));
-const salesByMonthCat=mi=>{
-  const c=aggCat(mi),v=sales[mi];
-  return {pc:Math.round(v*c.pc),mkm:Math.round(v*c.mkm),ind:Math.round(v*c.ind),lube:Math.round(v*c.lube),oth:Math.round(v*c.oth)};
+
+/* ═══════════ Единый слой разрезов планов (график ≡ таблица) ═══════════
+   Все срезы раздела «Планы» (каналы × категории, заводы, маршруты, поставщики)
+   считаются ОДИН раз и идут и в график, и в детальную таблицу. Деление целых
+   сумм — метод наибольших остатков (splitInt), двумерное — roundMatrix:
+   суммы строк и столбцов матрицы точно равают контрольным итогам, поэтому
+   строки таблицы всегда бьются с сегментами графика без остатка. */
+const splitInt=(tot,weights)=>{
+  const tw=weights.reduce((x,y)=>x+y,0)||1;
+  const raw=weights.map(w=>tot*w/tw);
+  const fl=raw.map(v=>Math.floor(v));
+  let rem=Math.round(tot)-fl.reduce((x,y)=>x+y,0);
+  const order=raw.map((v,i)=>i).sort((x,y)=>(raw[y]-fl[y])-(raw[x]-fl[x]));
+  for(let k=0;rem>0;rem--,k++)fl[order[k%order.length]]+=1;
+  return fl;
+};
+const roundMatrix=(t,rowTot,colTot)=>{
+  const M=rowTot.map(()=>colTot.map(()=>0));
+  const rr=rowTot.slice(),cc=colTot.slice();
+  rowTot.forEach((_,i)=>colTot.forEach((__,j)=>{
+    let v=Math.round(t[i][j]);
+    const lo=Math.max(0,rr[i]-cc.slice(j+1).reduce((x,y)=>x+y,0));
+    const hi=Math.min(rr[i],cc[j]);
+    if(v<lo)v=lo; if(v>hi)v=hi;
+    M[i][j]=v;rr[i]-=v;cc[j]-=v;
+  }));
+  return M;
+};
+/* ── Продажи / выручка: матрица канал × категория с точными итогами ── */
+const CH_DEF=[['b2b','Ключевые B2B',.357],['onm','Производители оборудования',.269],['b2c','Ключевые B2C',.157],
+  ['de','Дилерская сеть',.07],['md','Макродистрибьюторы',.07],['onl','Онлайн продажи',.03],['sfo','КК в СФО и ДФО',.046]];
+const CH_NAMES=CH_DEF.map(x=>x[1]);
+const CH_W=CH_DEF.map(x=>x[2]);
+const CAT_NAMES=catShareAgg.map(x=>x[0]);
+const CAT_KEYS=['pc','mkm','ind','lube','oth'];
+const CH_CAT_MGN=[{pc:22,mkm:21,ind:25,lube:26,oth:19},{pc:23,mkm:22,ind:26,lube:27,oth:20},{pc:25,mkm:23,ind:26,lube:28,oth:20},
+  {pc:20,mkm:19,ind:22,lube:23,oth:17},{pc:16,mkm:15,ind:18,lube:20,oth:14},{pc:18,mkm:17,ind:20,lube:21,oth:15},{pc:21,mkm:19,ind:23,lube:24,oth:17}];
+const catWFor=mi=>{const c=aggCat(mi);return CAT_KEYS.map(k=>c[k]);};
+const MIX_S=new Map();
+const salesMix=mi=>{
+  let m=MIX_S.get(mi);if(m)return m;
+  const tot=sales[mi],rev100=Math.round(revenue[mi]*100),gp100=Math.round(grossProfit[mi]*100);
+  const chV=splitInt(tot,CH_W),catV=splitInt(tot,catWFor(mi));
+  const volM=roundMatrix(chV.map(cv=>catV.map(kv=>cv*kv/tot)),chV,catV);
+  const chRev=splitInt(rev100,chV),catRev=splitInt(rev100,catV);
+  const revM=roundMatrix(chRev.map(r=>catRev.map(c=>r*c/rev100)),chRev,catRev);
+  const adj=mi<3?4.4:0;
+  const gpW=CH_CAT_MGN.map((row,ci)=>CAT_KEYS.map((k,kj)=>revM[ci][kj]*(row[k]+adj)));
+  const chGpW=gpW.map(row=>row.reduce((x,y)=>x+y,0));
+  const catGpW=CAT_KEYS.map((_,kj)=>gpW.reduce((x,row)=>x+row[kj],0));
+  const chGp=splitInt(gp100,chGpW),catGp=splitInt(gp100,catGpW);
+  const gpM=roundMatrix(chGp.map(r=>catGp.map(c=>gp100?r*c/gp100:0)),chGp,catGp);
+  m={tot,rev100,gp100,chV,catV,volM,chRev,catRev,revM,chGp,catGp,gpM};
+  MIX_S.set(mi,m);return m;
+};
+/* ── Производство: матрица завод × категория (веса FSPLIT нормируются) ── */
+const PROD_CATS=Object.entries(FSPLIT).map(([k,arr])=>({key:k,name:CAT_NAMES[CAT_KEYS.indexOf(k)]||k,w:sum(arr)}));
+const PLANT_W=FACTORIES.map((_,fi)=>sum(Object.values(FSPLIT).map(x=>x[fi])));
+const MIX_P=new Map();
+const prodMix=mi=>{
+  let m=MIX_P.get(mi);if(m)return m;
+  const tot=production[mi];
+  const plantV=splitInt(tot,PLANT_W),catV=splitInt(tot,PROD_CATS.map(c=>c.w));
+  const cells=roundMatrix(plantV.map(p=>catV.map(c=>p*c/tot)),plantV,catV); // [завод][категория]
+  const cost10=splitInt(Math.round(tot*COST_TON*10),cells.flat()); // десятые млн руб., по ячейкам
+  const costCells=cells.map((row,fi)=>row.map((_,kj)=>cost10[fi*PROD_CATS.length+kj]));
+  const plantCost=costCells.map(row=>row.reduce((x,y)=>x+y,0));
+  m={tot,plantV,catV,cells,costCells,plantCost,costTotal:cost10.reduce((x,y)=>x+y,0)};
+  MIX_P.set(mi,m);return m;
+};
+/* ── Перемещения: маршруты с точными итогами авто/ЖД и стоимости ── */
+const MOV_ROUTES=[
+  ['ПС Торжок','Санкт-Петербург',900,3500,'auto','Центр/СЗ'],
+  ['ПС Ворсино','Санкт-Петербург',650,4300,'auto','Центр/СЗ'],
+  ['ПС Ворсино','Москва',1200,2400,'auto','Центр/СЗ'],
+  ['ПС Торжок','Москва',850,3100,'auto','Центр/СЗ'],
+  ['ПС Ворсино','Нижний Новгород',650,3000,'auto','Центр/СЗ'],
+  ['ПС Волгоград','Воронеж',700,3600,'auto','Юг'],
+  ['ПС Волгоград','Ростов-на-Дону',900,4200,'auto','Юг'],
+  ['ПС Ворсино','Краснодар',750,4900,'auto','Юг'],
+  ['ПС Пермь','Тюмень (ОК)',700,3900,'auto','Сибирь'],
+  ['ПС Тюмень','Тюмень (ОК)',800,2900,'auto','Сибирь'],
+  ['ПС Тюмень','Новосибирск',1100,2700,'rail','Сибирь'],
+  ['ПС Тюмень','Красноярск',900,3400,'rail','Сибирь'],
+  ['ПС Тюмень','Хабаровск',600,5200,'rail','Дальний Восток'],
+  ['ПС Тюмень','Владивосток',500,6100,'rail','Дальний Восток'],
+];
+const MOV_CORRIDORS=['Центр/СЗ','Юг','Сибирь','Дальний Восток'];
+const MIX_M=new Map();
+const moveMix=mi=>{
+  let m=MIX_M.get(mi);if(m)return m;
+  const autoIdx=MOV_ROUTES.map((r,i)=>r[4]==='auto'?i:-1).filter(i=>i>=0);
+  const railIdx=MOV_ROUTES.map((r,i)=>r[4]==='rail'?i:-1).filter(i=>i>=0);
+  const autoV=splitInt(movementAuto[mi],autoIdx.map(i=>MOV_ROUTES[i][2]));
+  const railV=splitInt(movementRail[mi],railIdx.map(i=>MOV_ROUTES[i][2]));
+  const vols=MOV_ROUTES.map(()=>0);
+  autoIdx.forEach((i,k)=>vols[i]=autoV[k]);
+  railIdx.forEach((i,k)=>vols[i]=railV[k]);
+  /* стоимость — ровно те значения, что рисует график «Стоимость перевозки» */
+  const autoCost=+(movementAuto[mi]*.0030).toFixed(1),railCost=+(movementRail[mi]*.0036).toFixed(1);
+  const autoC10=splitInt(Math.round(autoCost*10),autoIdx.map(i=>vols[i]*MOV_ROUTES[i][3]));
+  const railC10=splitInt(Math.round(railCost*10),railIdx.map(i=>vols[i]*MOV_ROUTES[i][3]));
+  const cost10=MOV_ROUTES.map(()=>0);
+  autoIdx.forEach((i,k)=>cost10[i]=autoC10[k]);
+  railIdx.forEach((i,k)=>cost10[i]=railC10[k]);
+  const corr=MOV_CORRIDORS.map(c=>MOV_ROUTES.reduce((x,r,i)=>r[5]===c?x+vols[i]:x,0));
+  m={vols,cost10,autoCost,railCost,corr,tot:movementAuto[mi]+movementRail[mi]};
+  MIX_M.set(mi,m);return m;
+};
+/* ── Закупки: поставщики с точными итогами по группам сырья и тоннажу ── */
+const PURCH_SUP=[
+  {name:'ЛУКОЙЛ-ННОС (Кстово)',mat:'Базовое масло VHVI-4/VHVI-6',price:.068},
+  {name:'Татнефть (Нижнекамск)',mat:'Базовые масла 180Н/600Н',price:.062},
+  {name:'ЛУКОЙЛ-ПНОС (Пермь)',mat:'Базовое масло SN-150/SN-500',price:.052},
+  {name:'Сибур-Нефтехим (Тобольск)',mat:'Этиленгликоль, растворители',price:.095},
+  {name:'Ворсино — пакеты присадок (Торжок)',mat:'Пакет D-3900, модификаторы, ПМА',price:.34},
+];
+const MIX_B=new Map();
+const purchMix=mi=>{
+  let m=MIX_B.get(mi);if(m)return m;
+  const g3=splitInt(purchG3[mi],[.68,.32]),base=splitInt(purchBase[mi],[.55,.45]);
+  const cost=[g3[0],g3[1],base[0],base[1],purchAdd[mi]];
+  const tons=cost.map((c,i)=>Math.round(c/PURCH_SUP[i].price));
+  m={cost,tons,tot:cost.reduce((x,y)=>x+y,0)};
+  MIX_B.set(mi,m);return m;
 };
 
 /* Варианты детализации графиков планов. Все разложения используют те же помесячные
@@ -823,37 +943,40 @@ const seriesFromShares=(base,a,b,names,weights,colors,risks=[],show=false)=>{
 function planChart(pl,a,b,variant='summary',showAnomalies=false){
   const labels=SL(PLAN_MONTHS,a,b),pal=['#20A7C9','#7c3aed','#4CAF50','#FF9800','#D93025','#8c9bae','#00897B'];
   if(variant==='summary')return null; // вызывающая сторона использует исходный сводный график
+  const risksAt=list=>labels.map((_,i)=>riskAt(a+i,list,showAnomalies));
+  /* Стеки строятся из тех же mix-матриц, что и строки детальной таблицы:
+     сумма серий за месяц = итоговой строке таблицы = столбцу сводного графика. */
+  const stackedFrom=(names,getter,yTitle,riskList)=>({type:'stacked',labels,
+    series:names.map((name,j)=>({data:labels.map((_,i)=>getter(a+i,j)),color:pal[j%pal.length],
+      risks:j===0?risksAt(riskList):labels.map(()=>null),name})),
+    opts:{height:360,legend:names,yTitle}});
   if(pl==='sales'){
-    if(variant==='channels'){
-      const names=['Ключевые B2B','Производители оборудования','Ключевые B2C','Дилеры','Макродистрибьюторы','Онлайн','КК СФО/ДФО'];
-      const ss=seriesFromShares(sales,a,b,names,Object.values(chW),pal,[2],showAnomalies);
-      return {type:'stacked',labels,series:ss,opts:{height:360,legend:names,yTitle:'Объём продаж, т'}};
-    }
-    const names=catShareAgg.map(x=>x[0]),weights=catShareAgg.map(x=>x[1]);
-    return {type:'stacked',labels,series:seriesFromShares(sales,a,b,names,weights,pal,[2],showAnomalies),opts:{height:360,legend:names,yTitle:'Объём продаж, т'}};
+    if(variant==='channels')return stackedFrom(CH_NAMES,(mi,j)=>salesMix(mi).chV[j],'Объём продаж, т',[2]);
+    return stackedFrom(CAT_NAMES,(mi,j)=>salesMix(mi).catV[j],'Объём продаж, т',[2]);
   }
   if(pl==='production'){
-    const plantWeights=FACTORIES.map((_,fi)=>sum(Object.values(FSPLIT).map(x=>x[fi]))/44000);
-    if(variant==='plants')return {type:'stacked',labels,series:seriesFromShares(production,a,b,FACTORIES,plantWeights,pal,[2,8],showAnomalies),opts:{height:360,legend:FACTORIES,yTitle:'Выпуск, т'}};
-    const periodTotal=sr(production,a,b),plantTotals=proportional(periodTotal,plantWeights);
+    if(variant==='plants')return stackedFrom(FACTORIES,(mi,j)=>prodMix(mi).plantV[j],'Выпуск, т',[2,8]);
     const lineShares=[[.45,.55,0],[.37,.50,.13],[.58,.42,0],[.34,.41,.25],[.62,.38,0]];
-    const lineSeries=[0,1,2].map(li=>({data:plantTotals.map((v,fi)=>Math.round(v*lineShares[fi][li])),color:pal[li],risks:FACTORIES.map((_,fi)=>showAnomalies&&fi===1&&li===1?{type:'over',pct:100}:null)}));
-    return {type:'stacked',labels:FACTORIES,series:lineSeries,opts:{height:360,legend:['Линия №1','Линия №2','Линия №3'],yTitle:'Выпуск за период, т'}};
+    const lineNames=['Линия №1','Линия №2','Линия №3'];
+    /* периодный выпуск завода = сумма его подытогов в таблице за период */
+    const plantPeriod=FACTORIES.map((_,fi)=>{let s=0;for(let mi=a;mi<b;mi++)s+=prodMix(mi).plantV[fi];return s;});
+    return {type:'stacked',labels:FACTORIES,
+      series:lineNames.map((name,li)=>({data:plantPeriod.map((v,fi)=>splitInt(v,lineShares[fi])[li]),color:pal[li],
+        risks:FACTORIES.map((_,fi)=>showAnomalies&&fi===1&&li===1?{type:'over',pct:100}:null),name})),
+      opts:{height:360,legend:lineNames,yTitle:'Выпуск за период, т'}};
   }
   if(pl==='movements'){
-    if(variant==='corridors'){
-      const total=movementAuto.map((v,i)=>v+movementRail[i]),names=['Центр/СЗ','Юг','Сибирь','Дальний Восток'],weights=[.34,.22,.28,.16];
-      return {type:'stacked',labels,series:seriesFromShares(total,a,b,names,weights,pal,[2],showAnomalies),opts:{height:360,legend:names,yTitle:'Перемещения, т'}};
-    }
-    return {type:'combo',labels,series:[{data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#FF9800',risks:labels.map((_,i)=>riskAt(a+i,[2],showAnomalies))},{data:SL(movementRail,a,b).map(x=>+(x*.0036).toFixed(1)),kind:'bar',color:'#20A7C9'}],opts:{height:360,legend:['Авто, млн руб.','ЖД, млн руб.'],yTitle:'Стоимость, млн руб.'}};
+    if(variant==='corridors')return stackedFrom(MOV_CORRIDORS,(mi,j)=>moveMix(mi).corr[j],'Перемещения, т',[2]);
+    return {type:'combo',labels,series:[
+      {data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#FF9800',risks:risksAt([2])},
+      {data:SL(movementRail,a,b).map(x=>+(x*.0036).toFixed(1)),kind:'bar',color:'#20A7C9'}],
+      opts:{height:360,legend:['Авто, млн руб.','ЖД, млн руб.'],yTitle:'Стоимость, млн руб.'}};
   }
   if(pl==='purchases'){
-    if(variant==='suppliers'){
-      const total=purchG3.map((x,i)=>x+purchBase[i]+purchAdd[i]),names=['ЛУКОЙЛ-ННОС','Татнефть','ЛУКОЙЛ-ПНОС','Сибур','Пакеты присадок'],weights=[.32,.16,.20,.13,.19];
-      return {type:'stacked',labels,series:seriesFromShares(total,a,b,names,weights,pal,[0,8],showAnomalies),opts:{height:360,legend:names,yTitle:'Закупки, млн руб.'}};
-    }
-    const total=purchG3.map((x,i)=>x+purchBase[i]+purchAdd[i]);
-    return {type:'stacked',labels,series:seriesFromShares(total.map(x=>Math.round(x/.075)),a,b,['Базовые масла','Спецжидкости','Присадки'],[.68,.20,.12],pal,[0,8],showAnomalies),opts:{height:360,legend:['Базовые масла','Спецжидкости','Присадки'],yTitle:'Сырьё, т'}};
+    if(variant==='suppliers')return stackedFrom(PURCH_SUP.map(s=>s.name),(mi,j)=>purchMix(mi).cost[j],'Закупки, млн руб.',[0,8]);
+    return stackedFrom(['Базовые масла','Спецжидкости','Присадки'],(mi,j)=>{
+      const t=purchMix(mi).tons;return j===0?t[0]+t[1]+t[2]:j===1?t[3]:t[4];
+    },'Сырьё, т',[0,8]);
   }
   if(pl==='cost'){
     if(variant==='plants'){
@@ -864,12 +987,8 @@ function planChart(pl,a,b,variant='summary',showAnomalies=false){
     return {type:'stacked',labels,series:unit,opts:{height:360,legend:costItems.map(x=>x[0]),yTitle:'руб./т'}};
   }
   // revenue
-  if(variant==='channels'){
-    const names=['Ключевые B2B','Производители оборудования','Ключевые B2C','Дилеры','Макродистрибьюторы','Онлайн','КК СФО/ДФО'];
-    return {type:'stacked',labels,series:seriesFromShares(revenue,a,b,names,Object.values(chW),pal,[0,1,2],showAnomalies),opts:{height:360,legend:names,yTitle:'Выручка, млн руб.'}};
-  }
-  const names=catShareAgg.map(x=>x[0]),weights=catShareAgg.map(x=>x[1]);
-  return {type:'stacked',labels,series:seriesFromShares(revenue,a,b,names,weights,pal,[0,1,2],showAnomalies),opts:{height:360,legend:names,yTitle:'Выручка, млн руб.'}};
+  if(variant==='channels')return stackedFrom(CH_NAMES,(mi,j)=>salesMix(mi).chRev[j]/100,'Выручка, млн руб.',[0,1,2]);
+  return stackedFrom(CAT_NAMES,(mi,j)=>salesMix(mi).catRev[j]/100,'Выручка, млн руб.',[0,1,2]);
 }
 export const PLANS={
   sales:{tab:'План продаж',insight:'<b>📌 План продаж</b> (сценарий В): 4 кв. 2026 — <b>129 000 т / 18 255 млн руб.</b>, валовая прибыль 5 002 млн (27,4%). Год 2026 — <b>519 000 т / 73 440 млн руб.</b> (95,1% / 93,4% плана), ВП 17 663 млн (92,7%). 2027 — ~545 000 т / ~78,0 млрд руб.',
@@ -877,20 +996,20 @@ export const PLANS={
     build:(a,b)=>{
       const heads=['Месяц','Канал продаж','Категория продукта','Объём (т)','Выручка (млн руб.)','Маржа %','Валовая прибыль (млн руб.)'];
       const rows=[];
+      /* Строки — из тех же mix-матриц, что и график: подытоги каналов равны
+         сериям «По каналам», категории — сериям «По категориям», итог месяца —
+         столбцу/линии сводного графика. */
       for(let mi=a;mi<b;mi++){
-        const cats=salesByMonthCat(mi);
-        Object.entries(chW).forEach(([code,w])=>{
-          const chMap={b2b:'Ключевые B2B',onm:'Производители оборудования',b2c:'Ключевые B2C',de:'Дилерская сеть',md:'Макродистрибьюторы',onl:'Онлайн продажи',sfo:'КК в СФО и ДФО'};
-          const mgn=CH_MGN[{b2b:0,onm:1,b2c:2,de:3,md:4,onl:5,sfo:6}[code]]+(mi<3?4.4:0);
-          const vols=[cats.pc,cats.mkm,cats.ind,cats.lube,cats.oth];
-          const names=['Масла моторные','Масла гидравлические','Индустриальные','Смазки','Прочие'];
-          vols.forEach((cv,k)=>{
-            const v=Math.round(cv*w),rv=+(v*.1415).toFixed(2);
-            rows.push([PLAN_MONTHS[mi],chMap[code],names[k],F(v),F(rv,2),F(mgn,1)+'%',F(rv*mgn/100,2)]);
+        const m=salesMix(mi);
+        CH_NAMES.forEach((ch,ci)=>{
+          CAT_NAMES.forEach((cat,kj)=>{
+            const v=m.volM[ci][kj],rv=m.revM[ci][kj]/100,gp=m.gpM[ci][kj]/100;
+            rows.push([PLAN_MONTHS[mi],ch,cat,F(v),F(rv,2),F(rv?gp/rv*100:0,1)+'%',F(gp,2)]);
           });
-          rows.push({cells:[PLAN_MONTHS[mi],chMap[code],'Итого по каналу',F(Math.round(sales[mi]*w)),F(salesM[mi].rev*w,1),F(mgn,1)+'%',F(salesM[mi].rev*w*mgn/100,1)],cls:'row-fc'});
+          const cv=m.chV[ci],crv=m.chRev[ci]/100,cgp=m.chGp[ci]/100;
+          rows.push({cells:[PLAN_MONTHS[mi],ch,'Итого по каналу',F(cv),F(crv,2),F(crv?cgp/crv*100:0,1)+'%',F(cgp,2)],cls:'row-fc'});
         });
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(sales[mi]),F(salesM[mi].rev,1),'—',F(grossProfit[mi],1)],cls:'row-sum'});
+        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(sales[mi]),F(revenue[mi],2),F(marginRate(mi)*100,1)+'%',F(grossProfit[mi],2)],cls:'row-sum'});
       }
       return {heads,rows};
     }},
@@ -899,20 +1018,21 @@ export const PLANS={
     build:(a,b)=>{
       const heads=['Месяц','Завод','Категория продукта','Объём (т)','Загрузка %','Себестоимость (млн руб.)','OEE %','Маржинальность %'];
       const rows=[];
-      const catName={pc:'Масла моторные',mkm:'Масла гидравлические',ind:'Индустриальные',lube:'Смазки',oth:'Прочие'};
-      const loadAdj=[3,4,-1,1,-2],oeeAdj=[1,2,0,1,-1];
+      const oeeAdj=[1,2,0,1,-1];
       const plantLoad={Пермь:96,Волгоград:100,Тюмень:88,Торжок:93,Ворсино:90};
+      /* Объёмы — из prodMix (веса FSPLIT нормированы): сумма ячеек = выпуск месяца
+         на графике, подытоги заводов = сериям «По заводам», себестоимость
+         распределена без потерь (десятые млн руб.). */
       for(let mi=a;mi<b;mi++){
-        const scale=production[mi]/44000;
-        Object.entries(FSPLIT).forEach(([cat,arr])=>{
-          arr.forEach((v,fi)=>{
-            const vl=Math.round(v*scale),f=FACTORIES[fi];
-            rows.push([PLAN_MONTHS[mi],f,catName[cat],F(vl),plantLoad[f]+'%',F(vl*.1091,1),(88+oeeAdj[fi])+'%',SITE_MGN[f]+'%']);
+        const m=prodMix(mi);
+        FACTORIES.forEach((f,fi)=>{
+          PROD_CATS.forEach((c,kj)=>{
+            const v=m.cells[fi][kj];
+            rows.push([PLAN_MONTHS[mi],f,c.name,F(v),plantLoad[f]+'%',F(m.costCells[fi][kj]/10,1),(88+oeeAdj[fi])+'%',SITE_MGN[f]+'%']);
           });
+          rows.push({cells:[PLAN_MONTHS[mi],f,'Итого по заводу',F(m.plantV[fi]),plantLoad[f]+'%',F(m.plantCost[fi]/10,1),(88+oeeAdj[fi])+'%',SITE_MGN[f]+'%'],cls:'row-fc'});
         });
-        const plantSum=FACTORIES.map((f,fi)=>sum(Object.keys(FSPLIT).map(cat=>Math.round(FSPLIT[cat][fi]*scale))));
-        FACTORIES.forEach((f,fi)=>{rows.push({cells:[PLAN_MONTHS[mi],f,'Итого по заводу',F(plantSum[fi]),plantLoad[f]+'%',F(plantSum[fi]*.1091,1),(88+oeeAdj[fi])+'%',SITE_MGN[f]+'%'],cls:'row-fc'});});
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(production[mi]),capacity[mi]+'%',F(production[mi]*.1091,1),'88%','22,9%'],cls:'row-sum'});
+        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(production[mi]),capacity[mi]+'%',F(m.costTotal/10,1),'88%','22,9%'],cls:'row-sum'});
       }
       return {heads,rows};
     }},
@@ -920,17 +1040,17 @@ export const PLANS={
     chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(movementAuto,a,b),color:'#FF9800'},{data:SL(movementRail,a,b),color:'#20A7C9'}],opts:{height:340,legend:['Авто (т)','ЖД (т)'],yTitle:'т'}}),
     build:(a,b)=>{
       const heads=['Месяц','Откуда','Куда (3PL)','Транспорт','Объём (т)','Стоимость (млн руб.)'];
-      const routes=[['ПС Торжок','Санкт-Петербург',900,3500],['ПС Ворсино','Санкт-Петербург',650,4300],['ПС Ворсино','Москва',1200,2400],['ПС Торжок','Москва',850,3100],['ПС Ворсино','Нижний Новгород',650,3000],['ПС Волгоград','Воронеж',700,3600],['ПС Волгоград','Ростов-на-Дону',900,4200],['ПС Ворсино','Краснодар',750,4900],['ПС Пермь','Тюмень (ОК)',700,3900],['ПС Тюмень','Тюмень (ОК)',800,2900],['ПС Тюмень','Новосибирск',1100,2700],['ПС Тюмень','Красноярск',900,3400],['ПС Тюмень','Хабаровск',600,5200],['ПС Тюмень','Владивосток',500,6100]];
-      const RAIL=new Set(['Новосибирск','Красноярск','Хабаровск','Владивосток']);
       const rows=[];
+      /* Маршруты из moveMix: сумма строк = авто + ЖД со сводного графика,
+         транспортный разрез = график «По виду транспорта», направления —
+         «По направлениям», стоимость — «Стоимость перевозки». */
       for(let mi=a;mi<b;mi++){
-        const sc=(movementAuto[mi]+movementRail[mi])/12350; // масштаб маршрутов к итогу месяца на графике
-        routes.forEach(r=>{
-          const vol=Math.round(r[2]*sc),cost=vol*r[3]/1_000_000;
-          rows.push([PLAN_MONTHS[mi],r[0],r[1],RAIL.has(r[1])?'🚂 ЖД':'🚛 Авто',F(vol),F(cost,1)]);
+        const m=moveMix(mi);
+        MOV_ROUTES.forEach((r,i)=>{
+          rows.push([PLAN_MONTHS[mi],r[0],r[1],r[4]==='rail'?'🚂 ЖД':'🚛 Авто',F(m.vols[i]),F(m.cost10[i]/10,1)]);
         });
-        const tot=routes.reduce((x,r)=>x+Math.round(r[2]*sc),0),tc=routes.reduce((x,r)=>x+Math.round(r[2]*sc)*r[3]/1_000_000,0);
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—','Авто 65% · ЖД 35%',F(tot),F(tc,1)],cls:'row-sum'});
+        const autoPct=Math.round(movementAuto[mi]/m.tot*100);
+        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',`Авто ${autoPct}% · ЖД ${100-autoPct}%`,F(m.tot),F(m.autoCost+m.railCost,1)],cls:'row-sum'});
       }
       return {heads,rows};
     }},
@@ -939,16 +1059,16 @@ export const PLANS={
     build:(a,b)=>{
       const heads=['Месяц','Поставщик','Сырьё','Объём (т)','Стоимость (млн руб.)','Статус поставки'];
       const rows=[];
+      /* Поставщики из purchMix: стоимость сходится со столбцами сводного графика
+         (ННОС + Татнефть / ПНОС + Сибур / присадки), тоннаж — с графиком
+         «Физический объём сырья»; итог месяца = сумма трёх групп графика. */
       for(let mi=a;mi<b;mi++){
-        const omsk=Math.round(purchG3[mi]*.68),tat=Math.round(purchG3[mi]*.32);
-        const nnos=Math.round(purchBase[mi]*.55),sib=Math.round(purchBase[mi]*.45);
-        rows.push([PLAN_MONTHS[mi],'ЛУКОЙЛ-ННОС (Кстово)','Базовое масло VHVI-4/VHVI-6',F(Math.round(omsk/0.068)),F(omsk,0),mi===0?'⚠️ поставка 18.10.2026':'🟢 ЖД-график']);
-        rows.push([PLAN_MONTHS[mi],'Татнефть (Нижнекамск)','Базовые масла 180Н/600Н',F(Math.round(tat/0.062)),F(tat,0),'🟢 по графику']);
-        rows.push([PLAN_MONTHS[mi],'ЛУКОЙЛ-ПНОС (Пермь)','Базовое масло SN-150/SN-500',F(Math.round(nnos/0.052)),F(nnos,0),'🟢 по графику']);
-        rows.push([PLAN_MONTHS[mi],'Сибур-Нефтехим (Тобольск)','Этиленгликоль, растворители',F(Math.round(sib/0.095)),F(sib,0),'🟢 по графику']);
-        rows.push([PLAN_MONTHS[mi],'Ворсино — пакеты присадок (Торжок)','Пакет D-3900, модификаторы, ПМА',F(Math.round(purchAdd[mi]/0.34)),F(purchAdd[mi],0),'🟢 по графику']);
-        const tot=omsk+tat+nnos+sib+purchAdd[mi];
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—','—',F(tot,0),'—'],cls:'row-sum'});
+        const m=purchMix(mi);
+        PURCH_SUP.forEach((s,i)=>{
+          rows.push([PLAN_MONTHS[mi],s.name,s.mat,F(m.tons[i]),F(m.cost[i],0),
+            i===0?(mi===0?'⚠️ поставка 18.10.2026':'🟢 ЖД-график'):'🟢 по графику']);
+        });
+        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—','—',F(m.tot,0),'—'],cls:'row-sum'});
       }
       return {heads,rows};
     }},
@@ -1567,15 +1687,18 @@ export const PLANS={
     build:(a,b)=>{
       const heads=['Месяц','Статья затрат','Сумма (млн руб.)','% выручки','Среднегодовая %','Δ к предыдущему мес., п.п.'];
       const rows=[];
+      /* Значения статей — те же, что сегменты столбцов графика; итог месяца —
+         сумма отображённых статей, поэтому столбцы складываются в высоту стека. */
       for(let mi=a;mi<b;mi++){
+        const vals=costItems.map(([n,w])=>+(revenue[mi]*costWeightA(n,w,mi)).toFixed(1));
         costItems.forEach(([n,w],k)=>{
-          const v=+(revenue[mi]*costWeightA(n,w,mi)).toFixed(1),prev=mi>a?+(revenue[mi-1]*costWeightA(n,w,mi-1)).toFixed(1):null;
+          const v=vals[k],prev=mi>a?+(revenue[mi-1]*costWeightA(n,w,mi-1)).toFixed(1):null;
           const an=costAnomAt(n,mi);
           const avg=COST_AVG_SHARE[n],sh=costWeightA(n,w,mi)*100;
           rows.push([PLAN_MONTHS[mi],an?'⚠️ '+n+' — выше среднегодовой':n,F(v,1),
             F(sh,1)+(an?'% ⚠️':'%'),F(avg,1)+'%',prev==null?'—':(v-prev>=0?'+':'−')+F(Math.abs(v-prev),1)]);
         });
-        let tot=0;costItems.forEach(([n,w])=>{tot+=revenue[mi]*costWeightA(n,w,mi);});tot=+tot.toFixed(1);
+        const tot=+vals.reduce((x,y)=>x+y,0).toFixed(1);
         rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—',F(tot,1),F(tot/revenue[mi]*100,1)+'%','—','—'],cls:'row-sum'});
       }
       return {heads,rows};
@@ -1585,22 +1708,19 @@ export const PLANS={
     build:(a,b)=>{
       const heads=['Месяц','Канал продаж','Категория продукта','Выручка (млн руб.)','Валовая прибыль (млн руб.)','Маржа %'];
       const rows=[];
-      const chMap={b2b:'Ключевые B2B',onm:'Производители оборудования',b2c:'Ключевые B2C',de:'Дилерская сеть',md:'Макродистрибьюторы',onl:'Онлайн продажи',sfo:'КК в СФО и ДФО'};
-      const keyN=['Масла моторные','Масла гидравлические','Индустриальные','Смазки','Прочие'];
-      const keyK=['pc','mkm','ind','lube','oth'];
-      const mgnByCh=[{pc:22,mkm:21,ind:25,lube:26,oth:19},{pc:23,mkm:22,ind:26,lube:27,oth:20},{pc:25,mkm:23,ind:26,lube:28,oth:20},{pc:20,mkm:19,ind:22,lube:23,oth:17},{pc:16,mkm:15,ind:18,lube:20,oth:14},{pc:18,mkm:17,ind:20,lube:21,oth:15},{pc:21,mkm:19,ind:23,lube:24,oth:17}];
+      /* Те же mix-матрицы, что и в «Плане продаж» и на графиках «По каналам» /
+         «По категориям»: строки сходятся с сегментами графиков до копейки. */
       for(let mi=a;mi<b;mi++){
-        const cats=salesByMonthCat(mi);
-        Object.entries(chW).forEach(([code,w],ci)=>{
-          const keyRow=[cats.pc,cats.mkm,cats.ind,cats.lube,cats.oth];
-          keyRow.forEach((cv,k)=>{
-            const v=Math.round(cv*w),rv=+(v*.1415).toFixed(2),m=mgnByCh[ci][keyK[k]]+(mi<3?4.4:0);
-            rows.push([PLAN_MONTHS[mi],chMap[code],keyN[k],F(rv,2),F(rv*m/100,2),m+'%']);
+        const m=salesMix(mi);
+        CH_NAMES.forEach((ch,ci)=>{
+          CAT_NAMES.forEach((cat,kj)=>{
+            const rv=m.revM[ci][kj]/100,gp=m.gpM[ci][kj]/100;
+            rows.push([PLAN_MONTHS[mi],ch,cat,F(rv,2),F(gp,2),F(rv?gp/rv*100:0,1)+'%']);
           });
-          const chRev=+(salesM[mi].rev*w).toFixed(1),chMgn=CH_MGN[ci]+(mi<3?4.4:0);
-          rows.push({cells:[PLAN_MONTHS[mi],chMap[code],'Итого по каналу',F(chRev,1),F(chRev*chMgn/100,1),chMgn+'%'],cls:'row-fc'});
+          const crv=m.chRev[ci]/100,cgp=m.chGp[ci]/100;
+          rows.push({cells:[PLAN_MONTHS[mi],ch,'Итого по каналу',F(crv,2),F(cgp,2),F(crv?cgp/crv*100:0,1)+'%'],cls:'row-fc'});
         });
-        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(salesM[mi].rev,1),F(grossProfit[mi],1),F(marginRate(mi)*100,1)+'%'],cls:'row-sum'});
+        rows.push({cells:[PLAN_MONTHS[mi]+' — итого','—','—',F(revenue[mi],2),F(grossProfit[mi],2),F(marginRate(mi)*100,1)+'%'],cls:'row-sum'});
       }
       return {heads,rows};
     }},
@@ -1646,16 +1766,19 @@ export function planView(pl,a,b,qlabel,opts={}){
   }
   if(pl==='movements'){
     const au=sr(movementAuto,a,b),ra=sr(movementRail,a,b),tot=au+ra;
-    return{kpis:[K('План перемещений',F(tot)+' т',F((au+ra)*.0032,0)+' млн руб.'),K('Авто',F(au)+' т',F(tot?au/tot*100:0,0)+'%'),K('ЖД',F(ra)+' т',F(tot?ra/tot*100:0,0)+'%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
+    /* стоимость — сумма тех же значений, что рисует график «Стоимость перевозки» */
+    const costOf=i=>{const m=moveMix(a+i);return m.autoCost+m.railCost;};
+    const costTot=+L.slice(a,b).reduce((x,_,i)=>x+costOf(i),0).toFixed(1);
+    return{kpis:[K('План перемещений',F(tot)+' т',F(costTot,0)+' млн руб.'),K('Авто',F(au)+' т',F(tot?au/tot*100:0,0)+'%'),K('ЖД',F(ra)+' т',F(tot?ra/tot*100:0,0)+'%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
       table:{heads:['Месяц','Авто (т)','ЖД (т)','Итого (т)','Стоимость (млн)'],
-        rows:[...L.slice(a,b).map((m,i)=>[m,F(movementAuto[a+i]),F(movementRail[a+i]),F(movementAuto[a+i]+movementRail[a+i]),F((movementAuto[a+i]+movementRail[a+i])*.0032,1)]),totalRow(['<b>Итого</b>','<b>'+F(au)+'</b>','<b>'+F(ra)+'</b>','<b>'+F(tot)+'</b>','<b>'+F(tot*.0032,1)+'</b>'])]},
+        rows:[...L.slice(a,b).map((m,i)=>[m,F(movementAuto[a+i]),F(movementRail[a+i]),F(movementAuto[a+i]+movementRail[a+i]),F(costOf(i),1)]),totalRow(['<b>Итого</b>','<b>'+F(au)+'</b>','<b>'+F(ra)+'</b>','<b>'+F(tot)+'</b>','<b>'+F(costTot,1)+'</b>'])]},
       detail:PLANS.movements.build(a,b)};
   }
   if(pl==='purchases'){
     const g3=sr(purchG3,a,b),ba=sr(purchBase,a,b),ad=sr(purchAdd,a,b);
     const tot=g3+ba+ad;
     return{kpis:[K('План закупок',F(tot,0)+' млн','сырьё и присадки'),K('VHVI/базовые масла',F(g3+ba,0)+' млн',F(tot?(g3+ba)/tot*100:0,0)+'% — риск VHVI-4'),K('Присадки',F(ad,0)+' млн',F(tot?ad/tot*100:0,0)+'%'),K('Период',span+' мес.',L[a]+' – '+L[b-1])],
-      table:{heads:['Месяц','VHVI/базовые (млн)','ННОС/спец (млн)','Присадки (млн)','Итого (млн)'],
+      table:{heads:['Месяц','Базовые масла: ННОС + Татнефть','Базовые: ПНОС + Сибур','Пакеты присадок','Итого (млн)'],
         rows:[...L.slice(a,b).map((m,i)=>{
           const t=purchG3[a+i]+purchBase[a+i]+purchAdd[a+i];
           return [m,F(purchG3[a+i],0),F(purchBase[a+i],0),F(purchAdd[a+i],0),F(t,0)];}),
@@ -1688,8 +1811,9 @@ export function planView(pl,a,b,qlabel,opts={}){
       table:{heads:['Месяц',...costItems.map(x=>x[0]),'Итого','% выручки'],
         rows:[...L.slice(a,b).map((m,i)=>{
           const mi=a+i;
-          const rs=costItems.map(([n,w])=>{const an=costAnomAt(n,mi);return F(revenue[mi]*costWeightA(n,w,mi),1)+(an?' ⚠️':'');});
-          const t=costItems.reduce((s,[n,w])=>s+revenue[mi]*costWeightA(n,w,mi),0);
+          const vals=costItems.map(([n,w])=>+(revenue[mi]*costWeightA(n,w,mi)).toFixed(1));
+          const rs=vals.map((v,k)=>F(v,1)+(costAnomAt(costItems[k][0],mi)?' ⚠️':''));
+          const t=+vals.reduce((x,y)=>x+y,0).toFixed(1);
           return [m,...rs,F(t,1),F(t/revenue[mi]*100,1)+'%'];}),
           totalRow(['<b>Итого</b>',...items.map(([n,v])=>'<b>'+F(v,1)+'</b>'),'<b>'+F(tot,1)+'</b>','<b>'+F(rev?tot/rev*100:0,1)+'%</b>'])]},
       detail:PLANS.cost.build(a,b)};
