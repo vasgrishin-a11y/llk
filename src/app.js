@@ -530,6 +530,7 @@ function vSupply(){
       +`<div class="info info-danger"><b>🔴 Разрыв цепочки без компенсирующих мер: −19 000 т</b><div class="constr-grid">${S.mapConstraints.map(([i,t,d])=>`<div>${i} <b>${t}</b> ${d}</div>`).join('')}</div></div>`
       +info('warning','<b>🟡 Узкие места (предупреждения, разрыва не создают):</b> заводы Пермь (98%) и Торжок (94%); заводские склады ПС Пермь (91%), ПС Волгоград (88%) и ПС Торжок (14 из 16 рамп); склады 3PL Юг / Ростов-на-Дону (89%), Центр / Москва (88% комплектации) и Сибирь / Новосибирск (ЖД-плечо 12 суток). Держим на контроле: при росте спроса выше сценария Б они станут следующими ограничениями.')
       +tbl('tbl-supply-map',S.mapTable.heads,S.mapTable.rows),S.mapDesc)
+    +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки (значения — на полосах)')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
     +card('📊 Покрытие спроса (сценарий '+G.name+')',sw('gapscen',[
         ['A','Сценарий А · Базовый'],['B','Сценарий Б · Захват рынка'],['C','Сценарий В · Фокус на прибыли']])
       +`<div class="gap-chart">${gap}</div>`
@@ -539,7 +540,6 @@ function vSupply(){
         :`<b>✅ СПРОС ПОКРЫТ ПОЛНОСТЬЮ</b> · доступно ${N(G.available)} из ${N(G.demand)} т<br>${G.reasons}`)
       +insight('<b>📌 Вывод:</b> '+G.insight)
       +tbl('tbl-gap-'+gs,['Сегмент','Неогр. спрос (т)','Покрытие %','Доступно (т)','Разрыв (т)'],gapRows))
-    +card('📊 Детализация ограничений',canvas('c-constr','Горизонтальная диаграмма ограничений цепочки (значения — на полосах)')+insight(S.constraints.insight)+tbl('tbl-constr',S.constraints.heads,S.constraints.rows))
     +`<h3 class="section-h">🎯 Сценарии покрытия спроса (закрытие разрыва)</h3><div class="grid-3">${scenCards}</div>`
     +card('📊 Сравнение сценариев: объём против маржи и выполнение годового плана 2026',
       `<div class="scen-split"><div class="scen-split-l">${canvas('c-radar','Радарная диаграмма сравнения сценариев')}</div>`

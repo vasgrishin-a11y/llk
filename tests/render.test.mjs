@@ -96,6 +96,12 @@ test('приложение рендерит все рабочие вкладки
   assert.ok(!$('.gap-chart').textContent.includes('Не покрыто (разрыв)'),'отдельная строка разрыва удалена');
   assert.match($('#content').textContent,/Серебро −8 000 т \+ Бронза −11 000 т = −19 000 т/);
   assert.ok(!$('#content').textContent.includes('S&OP пред. цикла ·'),'S&OP пред. цикла убран из анализа сценариев');
+  // порядок карточек: «Детализация ограничений» идёт перед «Покрытием спроса»
+  const supplyHtml=$('#content').innerHTML;
+  const iConstr=supplyHtml.indexOf('📊 Детализация ограничений'),iGap=supplyHtml.indexOf('📊 Покрытие спроса');
+  assert.ok(iConstr>=0&&iGap>=0,'обе карточки присутствуют в разделе «Поставки»');
+  assert.ok(iConstr<iGap,`«Детализация ограничений» (${iConstr}) стоит перед «Покрытием спроса» (${iGap})`);
+  assert.ok(iConstr>supplyHtml.indexOf('🏭 Карта цепочки поставок'),'детализация ограничений идёт после карты цепочки');
 
   click('[data-tab="supply"]');
   click('[data-sw="hmscen"][data-val="C"]');
