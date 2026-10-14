@@ -105,7 +105,12 @@ test('приложение рендерит все рабочие вкладки
 
   click('[data-tab="supply"]');
   click('[data-sw="hmscen"][data-val="C"]');
-  assert.match($('#content').innerHTML,/hm-delta-neg-good/);
+  /* дельты сценария В: Серебро получает объём (+13,1 п.п.), Платина, Золото и Бронза отдают */
+  const covTxt=$('#content').textContent.replace(/\u00a0/g,' ');
+  assert.match($('#content').innerHTML,/hm-delta-pos/,'в сценарии В есть зелёные дельты');
+  assert.ok(/\+13,1/.test(covTxt),'Серебро: +13,1 п.п. покрытия');
+  assert.ok(/\u22129,5/.test(covTxt),'Бронза: −9,5 п.п. покрытия');
+  assert.ok(!/hm-delta-neg-good/.test($('#content').innerHTML),'улучшения не подсвечиваются как «хорошие минусы»');
   click('[data-sw="hmmode"][data-val="mrg"]');
   assert.match($('#content').innerHTML,/hm-cell/);
 

@@ -448,24 +448,27 @@ function chainGraphHTML(){
     +`</div></div>`;
 }
 const fmtM1=v=>Number(v).toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1}).replace('-','−');
+/* покрытие печатается с русским разделителем: 65,2% / 100% */
+const fmtCov=v=>Number(v).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%';
+/* дельта покрытия — в процентных пунктах, поэтому знак % не нужен */
+const fmtPp=v=>Number(v).toLocaleString('ru-RU',{maximumFractionDigits:1});
 function hmCell(cell,mode,scen){
-  const obj=cell&&typeof cell==='object',v=obj?cell.v:cell,good=obj&&cell.good;
+  /* Ячейки сценариев Б и В — всегда дельта к сценарию А: «+» зелёный, «−» красный. */
+  const v=cell;
   if(scen==='A'){
     if(v==null)return `<td class="hm-cell ${mode==='cov'?'hm-0':'hm-m-na'}">—</td>`;
     const cls=mode==='cov'?(v>=100?'hm-100':v>=90?'hm-90':v>=80?'hm-80':v>=70?'hm-70':v>=60?'hm-60':v>=50?'hm-50':v>=40?'hm-40':v>=30?'hm-30':'hm-0')
       :(v>=50?'hm-m-high':v>=25?'hm-m-good':v>=15?'hm-m-mid':v>=8?'hm-m-low':v>=3?'hm-m-vlow':v>=0?'hm-m-minimal':'hm-m-loss');
-    return `<td class="hm-cell ${cls}">${mode==='cov'?v+'%':fmtM1(v)}</td>`;
+    return `<td class="hm-cell ${cls}">${mode==='cov'?fmtCov(v):fmtM1(v)}</td>`;
   }
   if(v==null)return `<td class="hm-cell hm-delta-zero">—</td>`;
-  if(v===0)return `<td class="hm-cell hm-delta-zero">0${mode==='cov'?'%':''}</td>`;
-  const txt=(v>0?'+':'−')+(mode==='cov'?Math.abs(v):fmtM1(Math.abs(v)))+(mode==='cov'?'%':'');
-  if(v>0)return `<td class="hm-cell hm-delta-pos">${txt}</td>`;
-  if(good)return `<td class="hm-cell hm-delta-neg hm-delta-neg-good">${txt} ✓</td>`;
-  return `<td class="hm-cell hm-delta-neg">${txt}</td>`;
+  if(v===0)return `<td class="hm-cell hm-delta-zero">0</td>`;
+  const txt=(v>0?'+':'−')+(mode==='cov'?fmtPp(Math.abs(v)):fmtM1(Math.abs(v)));
+  return `<td class="hm-cell ${v>0?'hm-delta-pos':'hm-delta-neg'}">${txt}</td>`;
 }
 function hmTable(scen,mode){
   const HH=HEATMAP[scen][mode];
-  let h=`<div class="hm-scroll"><table class="hm"><thead><tr><th class="row-header">Клиент / Сегмент</th>${HEATMAP.products.map(p=>`<th>${p.replace(/ ([^ ]+)$/,'<br>$1')}</th>`).join('')}<th class="hm-total">${mode==='cov'?'Итого<br>покрытие':'Итого<br>маржа'}</th></tr></thead><tbody>`;
+  let h=`<div class="hm-scroll"><table class="hm"><thead><tr><th class="row-header">Клиент / Сегмент</th>${HEATMAP.products.map(p=>`<th>${p.replace(/ ([^ ]+)$/,'<br>$1')}</th>`).join('')}<th class="hm-total">${mode==='cov'?(scen==='A'?'Итого<br>покрытие':'Итого<br>п.п.'):'Итого<br>маржа'}</th></tr></thead><tbody>`;
   HEATMAP.clients.forEach(([name,seg],i)=>{
     h+=`<tr><td class="row-header">${seg} ${name}</td>${HH.m[i].map(c=>hmCell(c,mode,scen)).join('')}${hmCell(HH.ct[i],mode,scen)}</tr>`;
   });
@@ -501,6 +504,8 @@ function vSupply(){
   /* Полоса сегмента: цветная часть — доступный объём, лёгкая штриховка — разрыв.
      Справа остаются только объёмы: доступный и, при наличии, малый красный объём разрыва. */
   const gs=ui.gapscen??'A',G=S.gaps[gs]||S.gaps.A;
+  /* Бейджи перераспределения: знак берём из той же структуры, что и объёмы сегментов */
+  const signedT=([k,v])=>SEG_LBL[k]+' '+(v>0?'+':'−')+N(Math.abs(v))+' т';
   const gap=G.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}${r.delta?` <span class="gap-delta ${r.delta.kind}">${r.delta.v}</span>`:''}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
   const gapRows=[...G.tableRows,{cells:['<b>Итого</b>','<b>'+N(G.demand)+'</b>','<b>'+NF(G.available/G.demand*100,1)+'%</b>','<b>'+N(G.available)+'</b>','<b>'+(G.gap?'−'+N(G.gap):'0')+'</b>'],cls:'row-sum'}];
   J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:280,barValuesIn:true,barValueFont:13});
@@ -534,7 +539,7 @@ function vSupply(){
     +card('📊 Покрытие спроса (сценарий '+G.name+')',sw('gapscen',[
         ['A','Сценарий А · Базовый'],['B','Сценарий Б · Захват рынка'],['C','Сценарий В · Фокус на прибыли']])
       +`<div class="gap-chart">${gap}</div>`
-      +(G.redist?`<div class="muted" style="font-size:11px;margin-top:6px">🔁 Перераспределение ${N(G.redist.total)} т внутри квартала: ${G.redist.from.map(([k,v])=>SEG_LBL[k]+' −'+N(v)+' т').join(' и ')} → ${G.redist.to.map(([k,v])=>SEG_LBL[k]+' +'+N(v)+' т').join(' и ')}. <b style="color:#137333">Зелёный бейдж</b> — сегмент получил объём, <b style="color:#D93025">красный</b> — отдал (к прежней редакции плана).</div>`:'')
+      +(G.redist?`<div class="muted" style="font-size:11px;margin-top:6px">🔁 Перераспределение ${N(G.redist.total)} т: ${G.redist.from.map(([k,v])=>SEG_LBL[k]+' −'+N(v)+' т').join(' и ')} → ${G.redist.to.map(([k,v])=>SEG_LBL[k]+' +'+N(v)+' т').join(' и ')}; ${N(G.redist.dropped)} т низкомаржинального хвоста в план не приняты. Изменение объёма к сценарию А: ${G.redist.deltas.filter(([,v])=>v).map(signedT).join(', ')} — итого ${G.redist.netVol<0?'−':'+'}${N(Math.abs(G.redist.netVol))} т (${N(S.gaps.A.available)} → ${N(G.available)} т). <b style="color:#137333">Зелёный бейдж</b> — сегмент получил объём, <b style="color:#D93025">красный</b> — отдал.</div>`:'')
       +info(G.gap?'danger':'success',G.gap
         ?`<b class="gap-break">⚠️ НЕ ПОКРЫТО: ${N(G.gap)} т</b> · доступно ${N(G.available)} из ${N(G.demand)} т · покрытие ${NF(G.available/G.demand*100,1)}%<br>${G.reasons}`
         :`<b>✅ СПРОС ПОКРЫТ ПОЛНОСТЬЮ</b> · доступно ${N(G.available)} из ${N(G.demand)} т<br>${G.reasons}`)

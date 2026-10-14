@@ -422,23 +422,33 @@ test('сценарий В: перераспределение 5 000 т (Плат
     assert.ok(Math.abs(r.w+r.gapW-100)<0.06,`${r.label}: w+gapW ≠ 100`);
     assert.ok(Math.abs(r.w-num(r.value)/num(r.label.match(/спрос ([\d\s]+) т/)[1])*100)<0.06,`${r.label}: ширина полосы ≠ покрытию`);
   });
-  /* перераспределение: снято = перенесено = 5 000 т */
+  /* перераспределение: снято 5 000 т = передано Серебру 3 000 т + 2 000 т выведено из плана */
   assert.equal(C.redist.total,5000);
   assert.equal(C.redist.from.reduce((a,x)=>a+x[1],0),C.redist.total,'снято с Платины и Золота');
-  assert.equal(C.redist.to.reduce((a,x)=>a+x[1],0),C.redist.total,'перенесено в Серебро и Бронзу');
-  /* Платина и Золото недовыполнены, Серебро и Бронза получили объём (бейджи перераспределения) */
-  const badge=lbl=>{const r=C.rows.find(x=>x.label&&x.label.startsWith(lbl));return {delta:r.delta&&r.delta.v,kind:r.delta&&r.delta.kind};};
+  assert.equal(C.redist.to.reduce((a,x)=>a+x[1],0)+C.redist.dropped,C.redist.total,
+    'передано Серебру + выведено из плана = снятому объёму');
+  /* бейджи перераспределения = фактической разнице объёмов к сценарию А */
+  const volA=Object.fromEntries(SUP.gaps.A.tableRows.map(r=>[r[0].split(' ')[1],num(r[3])]));
+  const sp=x=>String(x).replace(/\u00a0/g,' ');   // числа в данных форматируются через F()
+  const badge=lbl=>{const r=C.rows.find(x=>x.label&&x.label.startsWith(lbl));return {delta:r.delta&&sp(r.delta.v),kind:r.delta&&r.delta.kind};};
   assert.deepEqual(badge('⬣'),{delta:'−2 000 т',kind:'neg'});
   assert.deepEqual(badge('●'),{delta:'−3 000 т',kind:'neg'});
   assert.deepEqual(badge('⚪'),{delta:'+3 000 т',kind:'pos'});
-  assert.deepEqual(badge('🟤'),{delta:'+2 000 т',kind:'pos'});
+  assert.deepEqual(badge('🟤'),{delta:'−2 000 т',kind:'neg'});
+  C.redist.deltas.forEach(([seg,d])=>{
+    const key={diamond:'Бриллиант',platinum:'Платина',gold:'Золото',silver:'Серебро',bronze:'Бронза'}[seg];
+    const alloc=C.tableRows.find(r=>r[0].includes(key));
+    assert.equal(num(alloc[3])-volA[key],d,`${key}: дельта ${d} т не равна разнице объёмов`);
+  });
+  assert.equal(C.redist.deltas.reduce((a,x)=>a+x[1],0),C.available-SUP.gaps.A.available,
+    'сумма дельт сегментов = изменению объёма квартала');
   /* итоговые метрики сценария не изменились */
   assert.equal(C.available,129000);
   assert.ok(/94,3%/.test(C.tableRows[1][2])&&/88,9%/.test(C.tableRows[2][2]),'покрытие Платины и Золота');
   assert.ok(/78,3%/.test(C.tableRows[3][2])&&/38,1%/.test(C.tableRows[4][2]),'покрытие Серебра и Бронзы');
   const sc=SUP.scenarios.find(x=>x.id==='C');
   assert.ok(/перераспределение 5 000 т/.test(sc.desc),'карточка сценария: перераспределение 5 000 т'); 
-  assert.ok(/\+3 000/.test(sc.desc)&&/\+2 000/.test(sc.desc),'карточка сценария: получатели объёма');
+  assert.ok(/\+3 000/.test(sc.desc)&&/\u22122 000/.test(sc.desc),'карточка сценария: получатель и отдавший объём');
   assert.ok(/94,3%/.test(C.reasons)&&/88,9%/.test(C.reasons)&&/78,3%/.test(C.reasons)&&/38,1%/.test(C.reasons),'пояснение к графику обновлено');
   assert.equal(SUP.scenYear.rows[2].q4vol,129000,'год 2026: 4 кв. = 129 000 т');
   assert.equal(SUP.scenYear.rows[2].q4gp,5002,'год 2026: ВП 4 кв. = 5 002 млн');
