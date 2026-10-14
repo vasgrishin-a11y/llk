@@ -119,20 +119,22 @@ test('онлайн-канал получил объём, донаты и ито�
   assert.ok(year[5]/73440>0.02&&year[5]/73440<0.04,'доля онлайн ≈3%');
 });
 
+const sp=x=>String(x).replace(/\u00a0/g,' ');   // данные форматируются через F(): неразрывный пробел
+
 test('разрыв покрытия спроса: Серебро и Бронза в сумме не покрыты ровно на 19 000 т',()=>{
   const rows=SUPPLY.gap.table.rows;
   const silver=rows.find(r=>/Серебро/.test(r[0])),bronze=rows.find(r=>/Бронза/.test(r[0]));
-  assert.equal(silver[5],'15 000');assert.equal(silver[6],'−8 000');
-  assert.equal(bronze[5],'10 000');assert.equal(bronze[6],'−11 000');
+  assert.equal(sp(silver[5]),'15 000');assert.equal(sp(silver[6]),'−8 000');
+  assert.equal(sp(bronze[5]),'10 000');assert.equal(sp(bronze[6]),'−11 000');
   assert.equal(23000-15000+21000-10000,19000);
   // проценты покрытия соответствуют доступно/спрос
-  assert.equal(silver[4],'65,2%');assert.equal(bronze[4],'47,6%');
+  assert.equal(sp(silver[4]),'65,2%');assert.equal(sp(bronze[4]),'47,6%');
   // в диаграмме остаются только штрихуемые зоны разрыва в полосах сегментов — без отдельной строки разрыва
   assert.ok(SUPPLY.gap.rows.some(r=>r.gapW>0),'зоны разрыва в полосах');
   assert.ok(!SUPPLY.gap.rows.some(r=>r.gapRow||/Не покрыто \(разрыв\)/.test(r.label||'')),'отдельная строка разрыва удалена');
   const silverBar=SUPPLY.gap.rows.find(r=>/Серебро/.test(r.label));
-  assert.equal(silverBar.value,'15 000 т');
-  assert.equal(silverBar.gapVal,'8 000 т');
+  assert.equal(sp(silverBar.value),'15 000 т');
+  assert.equal(sp(silverBar.gapVal),'8 000 т');
 });
 
 test('запасы: моторные и трансмиссионные масла ниже страхового уровня (алерт)',()=>{
@@ -209,4 +211,100 @@ test('drawChart: ряд с hidden:true выключен по умолчанию,
   drawChart(canvas,'combo',mk(),labels,opts);
   assert.ok(!canvas.__state.hidden.has(1),'включенный легендой ряд остаётся видимым');
   assert.ok(canvas.__state.hidden.has(2),'остальные скрытые ряды не всплывают');
+});
+
+/* ── Тепловая карта клиент × продукт: связность с графиками покрытия и сценариями ── */
+const SEG_OF=Object.fromEntries(CLIENTS.map(c=>[c.name,c.seg]));
+const segOfRow=i=>SEG_OF[HEATMAP.clients[i][0]];
+const r1=v=>Math.round(v*10)/10;
+const SCEN={A:'A',B:'B',C:'C'};
+
+test('тепловая карта: покрытие ячейки = покрытию сегмента на графике «Покрытие спроса»',()=>{
+  for(const sc of ['A','B','C']){
+    const G=SUPPLY.gaps[sc],H=HEATMAP.abs[sc]||HEATMAP[sc];
+    HEATMAP.clients.forEach((_,i)=>{
+      const seg=segOfRow(i),cov=r1(G.segAlloc[seg]/SUPPLY.segDemand[seg]*100);
+      H.cov.m[i].forEach(v=>{
+        if(v==null)return;                       // категория клиенту не поставляется
+        assert.equal(v,cov,`${sc} / ${HEATMAP.clients[i][0]}: ${v}% ≠ ${cov}%`);
+      });
+    });
+  }
+});
+
+test('тепловая карта: покрытие не бывает больше 100% (сценарий Б не «перекрывает» спрос)',()=>{
+  for(const sc of ['A','B','C']){
+    const H=HEATMAP.abs[sc]||HEATMAP[sc];
+    H.cov.m.forEach(row=>row.forEach(v=>{if(v!=null)assert.ok(v<=100,`${sc}: ${v}% > 100%`)}));
+    assert.ok(H.cov.ctAll<=100,`${sc}: итог по выборке ${H.cov.ctAll}% > 100%`);
+  }
+});
+
+test('тепловая карта: дельты Б и В равны разнице абсолютных значений к сценарию А',()=>{
+  for(const sc of ['B','C']){
+    const A=HEATMAP.abs.A,S=HEATMAP.abs[sc],D=HEATMAP[sc];
+    for(const mode of ['cov','mrg']){
+      S[mode].m.forEach((row,i)=>row.forEach((v,j)=>{
+        const exp=(A[mode].m[i][j]==null||v==null)?null:r1(v-A[mode].m[i][j]);
+        assert.equal(D[mode].m[i][j],exp,`${sc}.${mode}[${i}][${j}]: ${D[mode].m[i][j]} ≠ ${exp}`);
+      }));
+      S[mode].mt.forEach((v,j)=>assert.equal(D[mode].mt[j],r1(v-A[mode].mt[j]),`${sc}.${mode} итог по продукту ${j}`));
+      S[mode].ct.forEach((v,i)=>assert.equal(D[mode].ct[i],r1(v-A[mode].ct[i]),`${sc}.${mode} итог по клиенту ${i}`));
+      assert.equal(D[mode].ctAll,r1(S[mode].ctAll-A[mode].ctAll),`${sc}.${mode} общий итог`);
+    }
+  }
+});
+
+test('тепловая карта: знак дельты покрытия повторяет знак изменения объёма сегмента',()=>{
+  for(const sc of ['B','C']){
+    ['diamond','platinum','gold','silver','bronze'].forEach(seg=>{
+      const i=HEATMAP.clients.findIndex(([n])=>SEG_OF[n]===seg);
+      if(i<0)return;
+      const dVol=SUPPLY.gaps[sc].segAlloc[seg]-SUPPLY.gaps.A.segAlloc[seg];
+      const dCov=HEATMAP[sc].cov.ct[i];
+      if(dVol===0)assert.equal(dCov,0,`${sc}/${seg}: объём не менялся, покрытие ${dCov}`);
+      else assert.ok(Math.sign(dCov)===Math.sign(dVol),
+        `${sc}/${seg}: объём ${dVol>0?'+':''}${dVol} т, покрытие ${dCov} п.п.`);
+    });
+  }
+});
+
+test('тепловая карта: итоги строк и столбцов лежат внутри диапазона ячеек',()=>{
+  for(const sc of ['A','B','C']){
+    const H=HEATMAP.abs[sc]||HEATMAP[sc];
+    H.cov.mt.forEach((v,j)=>{
+      const col=H.cov.m.map(r=>r[j]).filter(x=>x!=null);
+      assert.ok(v>=Math.min(...col)-0.05&&v<=Math.max(...col)+0.05,`${sc}: итог по продукту ${j} = ${v} вне [${Math.min(...col)}, ${Math.max(...col)}]`);
+    });
+    H.cov.ct.forEach((v,i)=>{
+      const row=H.cov.m[i].filter(x=>x!=null);
+      assert.ok(v>=Math.min(...row)-0.05&&v<=Math.max(...row)+0.05,`${sc}: итог по клиенту ${i} = ${v} вне строки`);
+    });
+  }
+});
+
+test('тепловая карта: валовая прибыль портфеля по сценариям сходится с финансовой моделью квартала',()=>{
+  const segRev={};CLIENTS.forEach(c=>segRev[c.seg]=(segRev[c.seg]||0)+c.rev);
+  [['A','А'],['B','Б'],['C','В']].forEach(([sc,id])=>{
+    let gp=0,vol=0;
+    CLIENTS.forEach(c=>{
+      const v=SUPPLY.gaps[sc].segAlloc[c.seg]*(c.rev/segRev[c.seg]);
+      vol+=v;gp+=v*0.1415*(c.marginPct/100+HEATMAP.calib[sc]);
+    });
+    const target=SUPPLY.scenYear.rows.find(r=>r.id===id).q4gp;
+    assert.ok(Math.abs(gp-target)<1,`${sc}: ВП портфеля ${gp.toFixed(1)} млн ≠ ${target} млн`);
+    assert.ok(Math.abs(vol-SUPPLY.gaps[sc].available)<1,`${sc}: объём портфеля ${vol.toFixed(0)} т ≠ ${SUPPLY.gaps[sc].available} т`);
+  });
+});
+
+test('тепловая карта: выборка — 13 приоритетных клиентов и 3 контрольных (Серебро и Бронза)',()=>{
+  assert.equal(HEATMAP.clients.length,16);
+  assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='silver').length,1);
+  assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='bronze').length,2);
+  assert.equal(HEATMAP.clients.filter(([n])=>['diamond','platinum','gold'].includes(SEG_OF[n])).length,13);
+  /* Серебро и Бронза обслуживаются по сокращённой матрице: 6 категорий из 8 */
+  HEATMAP.clients.forEach(([n],i)=>{
+    const empty=HEATMAP.A.cov.m[i].filter(v=>v==null).length;
+    assert.equal(empty,['silver','bronze'].includes(SEG_OF[n])?2:0,`${n}: пустых ячеек ${empty}`);
+  });
 });
