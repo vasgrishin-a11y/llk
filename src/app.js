@@ -506,6 +506,13 @@ function vSupply(){
   const gs=ui.gapscen??'A',G=S.gaps[gs]||S.gaps.A;
   /* Бейджи перераспределения: знак берём из той же структуры, что и объёмы сегментов */
   const signedT=([k,v])=>SEG_LBL[k]+' '+(v>0?'+':'−')+N(Math.abs(v))+' т';
+  const listJ=a=>a.length<3?a.join(' и '):a.slice(0,-1).join(', ')+' и '+a[a.length-1];
+  /* сегмент, который и отдаёт, и получает (у Бронзы срез хвоста и контракт MTO-премиум) */
+  const bothNetTxt=R=>{const net=Object.fromEntries(R.deltas);
+    const both=R.from.filter(([k])=>R.to.some(([t])=>t===k)).map(([k,v])=>{
+      const got=(R.to.find(([t])=>t===k)||[k,0])[1];
+      return ` ${SEG_LBL[k]}: отдаёт ${N(v)} т хвоста и получает ${N(got)} т контракта — нетто ${net[k]<0?'−':'+'}${N(Math.abs(net[k]))} т`;});
+    return both.length?both.join('')+'.':'';};
   const gap=G.rows.map(r=>r.div?'<div class="gap-divider"></div>':`<div class="gap-row"><div class="gap-label${r.main?' main':''}">${r.label}${r.delta?` <span class="gap-delta ${r.delta.kind}">${r.delta.v}</span>`:''}</div><div class="gap-bar-bg"><div class="gap-bar" style="width:${r.w}%;background:${r.c}"></div>${r.gapW?`<div class="gap-bar gap-bar-un" style="width:${r.gapW}%"></div>`:''}</div><div class="gap-val${r.main?' main':''}" style="color:${r.c}">${r.value}${r.gapVal?`<br><small class="neg">${r.gapVal}</small>`:''}</div></div>`).join('');
   const gapRows=[...G.tableRows,{cells:['<b>Итого</b>','<b>'+N(G.demand)+'</b>','<b>'+NF(G.available/G.demand*100,1)+'%</b>','<b>'+N(G.available)+'</b>','<b>'+(G.gap?'−'+N(G.gap):'0')+'</b>'],cls:'row-sum'}];
   J('#c-constr','hbar',[{data:S.constraints.data,pointColors:S.constraints.colors,color:'#D93025'}],S.constraints.labels,{height:280,barValuesIn:true,barValueFont:13});
@@ -525,7 +532,7 @@ function vSupply(){
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
   const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Фокус на валовой прибыли)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
-    +`<div class="muted" style="font-size:11px;margin-top:6px">🗂️ Все ${HEATMAP.clients.length} клиента портфеля × 8 продуктовых категорий (Серебро и Бронза — 6 категорий: технические и трансмиссионные жидкости им не отгружаются). Итоги строк, столбцов и таблицы данных считаются из ячеек и сходятся с валовой прибылью сценария.</div>`
+    +`<div class="muted" style="font-size:11px;margin-top:6px">🗂️ Все ${HEATMAP.clients.length} клиента портфеля × 8 продуктовых категорий (Серебро и Бронза — 6 категорий: технические и трансмиссионные жидкости им не отгружаются; исключение — ЕВРАЗ КГОК, контракт MTO-премиум по трансмиссионным маслам). В сценариях А и Б покрытие общее для клиентов сегмента, в сценарии В объём внутри сегмента распределён адресно: ${S.heatmapPlaceNote} против среза хвоста Бронзы −3 000 т. Адресный заказ не может превысить спрогнозированный спрос клиента (покрытие ≤ 100%), остаток заказа размещается у других клиентов сегмента — поэтому покрытие клиентов одного сегмента различается. Итоги строк, столбцов и таблицы данных считаются из ячеек и сходятся с валовой прибылью сценария.</div>`
     +(hs!=='A'?info('primary',S.kpiNote):'')
     +hmTable(hs,hm)
     +`<div class="hm-legend">${hs==='A'?S.heatmapLegends[hm]:S.heatmapLegends.delta}</div>`
@@ -540,7 +547,7 @@ function vSupply(){
     +card('📊 Покрытие спроса (сценарий '+G.name+')',sw('gapscen',[
         ['A','Сценарий А · Базовый'],['B','Сценарий Б · Захват рынка'],['C','Сценарий В · Фокус на прибыли']])
       +`<div class="gap-chart">${gap}</div>`
-      +(G.redist?`<div class="muted" style="font-size:11px;margin-top:6px">🔁 Перераспределение ${N(G.redist.total)} т: ${G.redist.from.map(([k,v])=>SEG_LBL[k]+' −'+N(v)+' т').join(' и ')} → ${G.redist.to.map(([k,v])=>SEG_LBL[k]+' +'+N(v)+' т').join(' и ')}; ${N(G.redist.dropped)} т низкомаржинального хвоста в план не приняты. Изменение объёма к сценарию А: ${G.redist.deltas.filter(([,v])=>v).map(signedT).join(', ')} — итого ${G.redist.netVol<0?'−':'+'}${N(Math.abs(G.redist.netVol))} т (${N(S.gaps.A.available)} → ${N(G.available)} т). <b style="color:#137333">Зелёный бейдж</b> — сегмент получил объём, <b style="color:#D93025">красный</b> — отдал.</div>`:'')
+      +(G.redist?`<div class="muted" style="font-size:11px;margin-top:6px">🔁 Снято ${N(G.redist.total)} т: ${listJ(G.redist.from.map(([k,v])=>SEG_LBL[k]+' −'+N(v)+' т'))} → в план возвращены ${listJ(G.redist.to.map(([k,v])=>SEG_LBL[k]+' +'+N(v)+' т'))}; ${N(G.redist.dropped)} т низкомаржинального хвоста в план не приняты.${bothNetTxt(G.redist)} Изменение объёма к сценарию А: ${G.redist.deltas.filter(([,v])=>v).map(signedT).join(', ')} — итого ${G.redist.netVol<0?'−':'+'}${N(Math.abs(G.redist.netVol))} т (${N(S.gaps.A.available)} → ${N(G.available)} т). <b style="color:#137333">Зелёный бейдж</b> — сегмент получил объём, <b style="color:#D93025">красный</b> — отдал.</div>`:'')
       +info(G.gap?'danger':'success',G.gap
         ?`<b class="gap-break">⚠️ НЕ ПОКРЫТО: ${N(G.gap)} т</b> · доступно ${N(G.available)} из ${N(G.demand)} т · покрытие ${NF(G.available/G.demand*100,1)}%<br>${G.reasons}`
         :`<b>✅ СПРОС ПОКРЫТ ПОЛНОСТЬЮ</b> · доступно ${N(G.available)} из ${N(G.demand)} т<br>${G.reasons}`)

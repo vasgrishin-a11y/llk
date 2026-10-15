@@ -220,7 +220,9 @@ const r1=v=>Math.round(v*10)/10;
 const SCEN={A:'A',B:'B',C:'C'};
 
 test('тепловая карта: покрытие ячейки = покрытию сегмента на графике «Покрытие спроса»',()=>{
-  for(const sc of ['A','B','C']){
+  /* В сценариях А и Б действует правило приоритетной матрицы на уровне сегмента:
+     у всех клиентов сегмента покрытие одинаково и равно плану сегмента. */
+  for(const sc of ['A','B']){
     const G=SUPPLY.gaps[sc],H=HEATMAP.abs[sc]||HEATMAP[sc];
     HEATMAP.clients.forEach((_,i)=>{
       const seg=segOfRow(i),cov=r1(G.segAlloc[seg]/SUPPLY.segDemand[seg]*100);
@@ -232,11 +234,61 @@ test('тепловая карта: покрытие ячейки = покрыт�
   }
 });
 
-test('тепловая карта: покрытие не бывает больше 100% (сценарий Б не «перекрывает» спрос)',()=>{
+test('тепловая карта В: покрытие клиента = его объём к спросу, итог сегмента = плану сегмента',()=>{
+  const H=HEATMAP.abs.C;
+  const segAgg={};
+  HEATMAP.clients.forEach((_,i)=>{
+    const seg=segOfRow(i);
+    assert.equal(H.cov.ct[i],r1(HEATMAP.vols.C[i]/HEATMAP.dem[i]*100),
+      `В / ${HEATMAP.clients[i][0]}: покрытие ≠ объёму к спросу`);
+    (segAgg[seg]=segAgg[seg]||{v:0,d:0});segAgg[seg].v+=HEATMAP.vols.C[i];segAgg[seg].d+=HEATMAP.dem[i];
+  });
+  ['diamond','platinum','gold','silver','bronze'].forEach(seg=>{
+    const cov=r1(SUPPLY.gaps.C.segAlloc[seg]/SUPPLY.segDemand[seg]*100);
+    assert.ok(Math.abs(r1(segAgg[seg].v/segAgg[seg].d*100)-cov)<0.06,
+      `В / ${seg}: итог по клиентам ${segAgg[seg].v.toFixed(0)} т ≠ плану сегмента ${cov}%`);
+  });
+  /* адресные контракты MTO-премиум растут, хвост Бронзы отдаёт объём */
+  const idx=n=>HEATMAP.clients.findIndex(([x])=>x===n);
+  const dVol=n=>Math.round(HEATMAP.vols.C[idx(n)]-HEATMAP.vols.A[idx(n)]);
+  /* заказ НЛМК 3 000 т размещается в пределах спрогнозированного спроса: до 100% покрытия */
+  const nlmc=HEATMAP.clients.findIndex(([x])=>x==='НЛМК');
+  const room=Math.round(HEATMAP.dem[nlmc]-HEATMAP.vols.A[nlmc]);
+  assert.equal(dVol('НЛМК'),room,`НЛМК: +${room} т — ровно до своего спрогнозированного спроса`);
+  assert.equal(HEATMAP.abs.C.cov.ct[nlmc],100,'НЛМК: покрытие ровно 100%');
+  assert.equal(Math.round(HEATMAP.cap[0].want),3000,'НЛМК: заказ 3 000 т');
+  assert.equal(Math.round(HEATMAP.cap[0].left),HEATMAP.contracts.C[0].vol-room,'остаток заказа не размещён у клиента');
+  assert.equal(dVol('ЕВРАЗ КГОК'),1000,'ЕВРАЗ КГОК: +1 000 т премиальных продуктов');
+  /* остаток заказа разлили по другим клиентам Серебра — сегментный план не поехал */
+  const silv=['Лебединский ГОК','Масло24 (маркетплейс)','Михайловский ГОК им. А.В. Варичева','Камский кабель'];
+  assert.equal(silv.reduce((a,nm)=>a+dVol(nm),0)+dVol('НЛМК'),
+    SUPPLY.gaps.C.segAlloc.silver-SUPPLY.gaps.A.segAlloc.silver,'Серебро: +3 000 т целиком размещены в сегменте');
+  assert.ok(silv.every(nm=>dVol(nm)>0),'остаток неразмещённого заказа у других клиентов Серебра');
+  assert.ok(dVol('Сургутнефтегаз')<0&&dVol('Татнефть-АЗС Центр')<0&&dVol('Уральская Сталь')<0,
+    'Бронза без контракта отдаёт объём');
+  assert.equal(Math.round(['НЛМК','Лебединский ГОК','Масло24 (маркетплейс)','Михайловский ГОК им. А.В. Варичева','Камский кабель',
+    'Сургутнефтегаз','ЕВРАЗ КГОК','Татнефть-АЗС Центр','Уральская Сталь']
+    .reduce((a,n)=>a+dVol(n),0)),
+    (SUPPLY.gaps.C.segAlloc.silver-SUPPLY.gaps.A.segAlloc.silver)+(SUPPLY.gaps.C.segAlloc.bronze-SUPPLY.gaps.A.segAlloc.bronze),
+    'Серебро +3 000 т и Бронза −2 000 т — итог по двум сегментам как в плане');
+});
+
+test('тепловая карта: покрытие не бывает больше 100% ни у одного клиента',()=>{
+  /* Ни сценарий Б (100% спрос закрыт), ни адресные контракты сценария В не могут дать
+     покрытию перевалить за 100%: объём клиента размещается в пределах его спрогнозированного
+     спроса, а остаток заказа расходится по другим клиентам сегмента. */
   for(const sc of ['A','B','C']){
     const H=HEATMAP.abs[sc]||HEATMAP[sc];
-    H.cov.m.forEach(row=>row.forEach(v=>{if(v!=null)assert.ok(v<=100,`${sc}: ${v}% > 100%`)}));
+    H.cov.m.forEach((row,i)=>row.forEach(v=>{
+      if(v==null)return;
+      const name=HEATMAP.clients[i][0];
+      assert.ok(v<=100,`${sc}: ${name} ${v}% > 100%`);
+    }));
     assert.ok(H.cov.ctAll<=100,`${sc}: итог по портфелю ${H.cov.ctAll}% > 100%`);
+    const seg={};
+    HEATMAP.clients.forEach((_,i)=>{const g=segOfRow(i);(seg[g]=seg[g]||{v:0,d:0});
+      seg[g].v+=HEATMAP.vols[sc][i];seg[g].d+=HEATMAP.dem[i];});
+    Object.entries(seg).forEach(([g,x])=>assert.ok(x.v/x.d*100<=100.05,`${sc}: покрытие сегмента ${g} = ${(x.v/x.d*100).toFixed(1)}% > 100%`));
   }
 });
 
@@ -256,17 +308,56 @@ test('тепловая карта: дельты Б и В равны разниц
 });
 
 test('тепловая карта: знак дельты покрытия повторяет знак изменения объёма сегмента',()=>{
-  for(const sc of ['B','C']){
-    ['diamond','platinum','gold','silver','bronze'].forEach(seg=>{
-      const i=HEATMAP.clients.findIndex(([n])=>SEG_OF[n]===seg);
-      if(i<0)return;
-      const dVol=SUPPLY.gaps[sc].segAlloc[seg]-SUPPLY.gaps.A.segAlloc[seg];
-      const dCov=HEATMAP[sc].cov.ct[i];
-      if(dVol===0)assert.equal(dCov,0,`${sc}/${seg}: объём не менялся, покрытие ${dCov}`);
+  ['diamond','platinum','gold','silver','bronze'].forEach(seg=>{
+    const idxs=CLIENTS.map((c,i)=>c.seg===seg?i:-1).filter(i=>i>=0);
+    const vol=sc=>idxs.reduce((a,i)=>a+HEATMAP.vols[sc][i],0);
+    const dem=idxs.reduce((a,i)=>a+HEATMAP.dem[i],0);
+    for(const sc of ['B','C']){
+      const dVol=vol(sc)-vol('A');
+      const dCov=(vol(sc)-vol('A'))/dem*100;
+      if(dVol===0)assert.ok(Math.abs(dCov)<0.06,`${sc}/${seg}: объём не менялся, покрытие ${dCov}`);
       else assert.ok(Math.sign(dCov)===Math.sign(dVol),
         `${sc}/${seg}: объём ${dVol>0?'+':''}${dVol} т, покрытие ${dCov} п.п.`);
-    });
-  }
+    }
+  });
+});
+
+test('тепловая карта В: маржинальные MTO-контракты в плюсе, хвост Бронзы отдаёт объём',()=>{
+  const idx=n=>HEATMAP.clients.findIndex(([x])=>x===n);
+  const d=n=>HEATMAP.C.mrg.ct[idx(n)];
+  const base=n=>HEATMAP.abs.A.mrg.ct[idx(n)];
+  const P=0.1415;
+  const gp=(n,mgn,sc)=>HEATMAP.vols[sc][idx(n)]*P*(mgn/100+HEATMAP.calib[sc]);
+  /* строка клиента = объём × ставка; дельта В к А складывается из размещённой части
+     контракта по ставке сценария В и переоценки базы А на калибровку В (А +1,04 → В +4,25 п.п.) */
+  assert.equal(Math.round(HEATMAP.vols.C[idx('НЛМК')]-HEATMAP.vols.A[idx('НЛМК')]),
+    Math.round(HEATMAP.dem[idx('НЛМК')]-HEATMAP.vols.A[idx('НЛМК')]),
+    'НЛМК: размещён ровно свободный спрос клиента, не весь заказ');
+  [['ЕВРАЗ КГОК',27],['НЛМК',25]].forEach(([n,mgn])=>{
+    const exp=gp(n,mgn,'C')-gp(n,mgn,'A');
+    assert.ok(Math.abs(d(n)-exp)<1.5,`${n}: Δмаржи ${d(n)} ≠ ${exp.toFixed(1)} млн`);
+  });
+  assert.ok(d('ЕВРАЗ КГОК')>0,'ЕВРАЗ КГОК в сценарии В в плюсе (маржинальный добор объёма)');
+  assert.ok(d('НЛМК')>0,'НЛМК в сценарии В в плюсе');
+  assert.ok(d('Сургутнефтегаз')<0&&d('Татнефть-АЗС Центр')<0&&d('Уральская Сталь')<0,
+    'низкомаржинальный хвост Бронзы (16–18%) в минусе');
+  assert.ok(HEATMAP.abs.C.mrg.ct[idx('ЕВРАЗ КГОК')]>base('ЕВРАЗ КГОК'),
+    'валовая прибыль ЕВРАЗ КГОК в В больше, чем в А');
+  /* контракт виден в строке: 1 000 т × 141 500 руб/т × (27% + калибровка В) */
+  const contract=1000*P*(27/100+HEATMAP.calib.C);
+  assert.ok(Math.abs(d('ЕВРАЗ КГОК')-contract)>1,
+    `ЕВРАЗ КГОК: дельта ${d('ЕВРАЗ КГОК')} = контракт ${contract.toFixed(1)} + переоценка базы`);
+  assert.ok(d('ЕВРАЗ КГОК')>contract,'дельта ЕВРАЗ КГОК ≥ стоимости контракта');
+  /* Бронза отдаёт нетто 2 000 т хвоста и получает 1 000 т премиума → итог около нуля */
+  const bronzeD=CLIENTS.reduce((a,c,i)=>a+(c.seg==='bronze'?HEATMAP.C.mrg.ct[i]:0),0);
+  assert.ok(Math.abs(bronzeD)<15,'Бронза: итог Δмаржи '+bronzeD.toFixed(1)+' млн (срез хвоста компенсирован премиумом)');
+  /* Серебро забирает весь прирост: +3 000 т у НЛМК дают основную часть дельты сценария */
+  const silverD=CLIENTS.reduce((a,c,i)=>a+(c.seg==='silver'?HEATMAP.C.mrg.ct[i]:0),0);
+  assert.ok(silverD>150,'Серебро: итог Δмаржи +'+silverD.toFixed(1)+' млн');
+  assert.ok(HEATMAP.C.mrg.ct[HEATMAP.clients.findIndex(([x])=>x==='НЛМК')]>silverD*0.45,
+    'НЛМК даёт почти половину прироста Серебра одним клиентом (адресный контракт, а не «размазанный» бонус)');
+  /* калибровка В меньше, чем в модели без контрактов: премия разложена явно, а не «всему портфелю» */
+  assert.ok(HEATMAP.calib.C*100>4&&HEATMAP.calib.C*100<4.4,'калибровка В '+(HEATMAP.calib.C*100).toFixed(2)+' п.п.');
 });
 
 test('тепловая карта: итоги строк и столбцов лежат внутри диапазона ячеек',()=>{
@@ -284,16 +375,21 @@ test('тепловая карта: итоги строк и столбцов л�
 });
 
 test('тепловая карта: валовая прибыль портфеля по сценариям сходится с финансовой моделью квартала',()=>{
-  const segRev={};CLIENTS.forEach(c=>segRev[c.seg]=(segRev[c.seg]||0)+c.rev);
   [['A','А'],['B','Б'],['C','В']].forEach(([sc,id])=>{
     let gp=0,vol=0;
-    CLIENTS.forEach(c=>{
-      const v=SUPPLY.gaps[sc].segAlloc[c.seg]*(c.rev/segRev[c.seg]);
+    CLIENTS.forEach((c,i)=>{
+      const v=HEATMAP.vols[sc][i];
       vol+=v;gp+=v*0.1415*(c.marginPct/100+HEATMAP.calib[sc]);
     });
     const target=SUPPLY.scenYear.rows.find(r=>r.id===id).q4gp;
     assert.ok(Math.abs(gp-target)<1,`${sc}: ВП портфеля ${gp.toFixed(1)} млн ≠ ${target} млн`);
     assert.ok(Math.abs(vol-SUPPLY.gaps[sc].available)<1,`${sc}: объём портфеля ${vol.toFixed(0)} т ≠ ${SUPPLY.gaps[sc].available} т`);
+    /* объёмы клиентов внутри сегмента сходятся к плану сегмента */
+    const segRev={};CLIENTS.forEach(c=>segRev[c.seg]=(segRev[c.seg]||0)+c.rev);
+    Object.keys(segRev).forEach(seg=>{
+      const v=CLIENTS.reduce((a,c,i)=>a+(c.seg===seg?HEATMAP.vols[sc][i]:0),0);
+      assert.ok(Math.abs(v-SUPPLY.gaps[sc].segAlloc[seg])<1,`${sc}: ${seg} ${v.toFixed(0)} т ≠ ${SUPPLY.gaps[sc].segAlloc[seg]} т`);
+    });
   });
 });
 
@@ -304,11 +400,17 @@ test('тепловая карта: в карте весь портфель — 2
   assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='bronze').length,4);
   assert.equal(HEATMAP.clients.filter(([n])=>['diamond','platinum','gold'].includes(SEG_OF[n])).length,13);
   ['АСТОН','НЛМК','ЕВРАЗ КГОК'].forEach(n=>assert.ok(HEATMAP.clients.some(([x])=>x===n),n+' отсутствует в карте'));
-  /* Серебро и Бронза обслуживаются по сокращённой матрице: 6 категорий из 8 */
+  /* Серебро и Бронза обслуживаются по сокращённой матрице: 6 категорий из 8.
+     Исключение — ЕВРАЗ КГОК: контракт MTO-премиум по трансмиссионным маслам (7 категорий). */
   HEATMAP.clients.forEach(([n],i)=>{
     const empty=HEATMAP.A.cov.m[i].filter(v=>v==null).length;
-    assert.equal(empty,['silver','bronze'].includes(SEG_OF[n])?2:0,`${n}: пустых ячеек ${empty}`);
+    const exp=n==='ЕВРАЗ КГОК'?1:(['silver','bronze'].includes(SEG_OF[n])?2:0);
+    assert.equal(empty,exp,`${n}: пустых ячеек ${empty}, ожидалось ${exp}`);
   });
+  /* таблица данных: заголовки и строки согласованы, есть объёмы и дельта к А */
+  const FT=HEATMAP.flatTable;
+  assert.ok(FT.heads.slice(0,4).join('|').includes('Объём'),'таблица данных: колонки объёма');
+  FT.rows.forEach(r=>{const cells=r.cells||r;assert.equal(cells.length,FT.heads.length,'число колонок таблицы данных');});
   /* выборки нет: итог карты равен валовой прибыли сценария, таблица данных — все строки */
   [['A','А'],['B','Б'],['C','В']].forEach(([sc,id])=>{
     const gp=SUPPLY.scenYear.rows.find(r=>r.id===id).q4gp;

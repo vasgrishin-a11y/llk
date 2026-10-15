@@ -111,8 +111,25 @@ test('приложение рендерит все рабочие вкладки
   assert.ok(/\+13,1/.test(covTxt),'Серебро: +13,1 п.п. покрытия');
   assert.ok(/\u22129,5/.test(covTxt),'Бронза: −9,5 п.п. покрытия');
   assert.ok(!/hm-delta-neg-good/.test($('#content').innerHTML),'улучшения не подсвечиваются как «хорошие минусы»');
+  /* сценарий В адресный: покрытие различается внутри сегмента — клиенты с MTO-премиумом растут */
+  const rowOf=nm=>{
+    const td=[...$$('.hm .row-header')].find(x=>x.textContent.replace(/\u00a0/g,' ').includes(nm));
+    return td?td.parentElement.textContent.replace(/\u00a0/g,' '):'';
+  };
+  assert.match(rowOf('НЛМК'),/\+34,8/,'НЛМК: +34,8 п.п. покрытия — заказ размещён до 100% спроса');
+  assert.ok(!/1[01][,.]\d|12[0-9]/.test(rowOf('НЛМК')),'у НЛМК нет покрытия больше 100%');
+  assert.match(rowOf('ЕВРАЗ КГОК'),/\+18,1/,'ЕВРАЗ КГОК: +18,1 п.п. покрытия (+1 000 т)');
+  assert.match(rowOf('Сургутнефтегаз'),/\u221219,4/,'Сургутнефтегаз (хвост Бронзы): −19,4 п.п. покрытия');
+  assert.match(rowOf('Лебединский ГОК'),/\+6,6/,'Серебро без контракта приняло остаток заказа: +6,6 п.п. покрытия');
   click('[data-sw="hmmode"][data-val="mrg"]');
   assert.match($('#content').innerHTML,/hm-cell/);
+  const mrowOf=nm=>{
+    const td=[...$$('.hm .row-header')].find(x=>x.textContent.replace(/\u00a0/g,' ').includes(nm));
+    return td?td.parentElement.textContent.replace(/\u00a0/g,' '):'';
+  };
+  assert.match(mrowOf('ЕВРАЗ КГОК'),/\+56,2/,'ЕВРАЗ КГОК: валовая маржа В к А +56,2 млн (маржинальный добор)');
+  assert.match(mrowOf('НЛМК'),/\+91,3/,'НЛМК: +91,3 млн — крупнейший адресат контракта');
+  assert.ok(!/\u221210,8/.test(mrowOf('ЕВРАЗ КГОК')),'ЕВРАЗ КГОК: прежний минус −10,8 млн исчез');
 
   // сценарии: кнопок «Свернуть сценарий» нет — вместо них пропорциональное увеличение
   assert.equal($$('.scen-toggle').length,0,'кнопки «+/−» у сценариев удалены');
