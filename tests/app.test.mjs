@@ -250,9 +250,11 @@ test('тепловая карта В: покрытие клиента = его �
   });
   /* адресные контракты MTO-премиум растут, хвост Бронзы отдаёт объём */
   const idx=n=>HEATMAP.clients.findIndex(([x])=>x===n);
-  const dVol=n=>HEATMAP.vols.C[idx(n)]-HEATMAP.vols.A[idx(n)];
-  assert.equal(dVol('НЛМК'),1500,'НЛМК: +1 500 т');
-  assert.equal(dVol('ЕВРАЗ КГОК'),1500,'ЕВРАЗ КГОК: +1 500 т');
+  const dVol=n=>Math.round(HEATMAP.vols.C[idx(n)]-HEATMAP.vols.A[idx(n)]);
+  assert.equal(dVol('НЛМК'),3000,'НЛМК: +3 000 т контракта MTO-премиум');
+  assert.equal(dVol('ЕВРАЗ КГОК'),1000,'ЕВРАЗ КГОК: +1 000 т премиальных продуктов');
+  assert.equal(Math.round(HEATMAP.contracts.C.reduce((a,x)=>a+x.vol,0)),4000,
+    'вся дельта сценария по двум сегментам закрыта контрактами: 4 000 т');
   assert.ok(dVol('Сургутнефтегаз')<0&&dVol('Татнефть-АЗС Центр')<0&&dVol('Уральская Сталь')<0,
     'Бронза без контракта отдаёт объём');
   assert.equal(Math.round(['НЛМК','Лебединский ГОК','Масло24 (маркетплейс)','Михайловский ГОК им. А.В. Варичева','Камский кабель',
@@ -263,10 +265,21 @@ test('тепловая карта В: покрытие клиента = его �
 });
 
 test('тепловая карта: покрытие не бывает больше 100% (сценарий Б не «перекрывает» спрос)',()=>{
+  /* Больше 100% может быть только у клиента с адресным контрактом в сценарии В:
+     объём выше базовой доли клиента в прогнозе спроса, но внутри спроса сегмента. */
   for(const sc of ['A','B','C']){
     const H=HEATMAP.abs[sc]||HEATMAP[sc];
-    H.cov.m.forEach(row=>row.forEach(v=>{if(v!=null)assert.ok(v<=100,`${sc}: ${v}% > 100%`)}));
+    const withContract=new Set((HEATMAP.contracts[sc]||[]).map(x=>x.client));
+    H.cov.m.forEach((row,i)=>row.forEach(v=>{
+      if(v==null)return;
+      const name=HEATMAP.clients[i][0];
+      assert.ok(v<=100||withContract.has(name),`${sc}: ${name} ${v}% > 100% без адресного контракта`);
+    }));
     assert.ok(H.cov.ctAll<=100,`${sc}: итог по портфелю ${H.cov.ctAll}% > 100%`);
+    const seg={};
+    HEATMAP.clients.forEach((_,i)=>{const g=segOfRow(i);(seg[g]=seg[g]||{v:0,d:0});
+      seg[g].v+=HEATMAP.vols[sc][i];seg[g].d+=HEATMAP.dem[i];});
+    Object.entries(seg).forEach(([g,x])=>assert.ok(x.v/x.d*100<=100.05,`${sc}: покрытие сегмента ${g} = ${(x.v/x.d*100).toFixed(1)}% > 100%`));
   }
 });
 
@@ -306,8 +319,8 @@ test('тепловая карта В: маржинальные MTO-контра�
   const base=n=>HEATMAP.abs.A.mrg.ct[idx(n)];
   const P=0.1415;
   const gp=(n,mgn,sc)=>HEATMAP.vols[sc][idx(n)]*P*(mgn/100+HEATMAP.calib[sc]);
-  /* строка клиента = объём × ставка; дельта В к А складывается из контракта 1 500 т
-     по ставке сценария В и переоценки базы А на калибровку В (А +1,04 п.п. → В +4,23 п.п.) */
+  /* строка клиента = объём × ставка; дельта В к А складывается из контракта
+     по ставке сценария В и переоценки базы А на калибровку В (А +1,04 п.п. → В +4,20 п.п.) */
   [['ЕВРАЗ КГОК',27],['НЛМК',25]].forEach(([n,mgn])=>{
     const exp=gp(n,mgn,'C')-gp(n,mgn,'A');
     assert.ok(Math.abs(d(n)-exp)<1.5,`${n}: Δмаржи ${d(n)} ≠ ${exp.toFixed(1)} млн`);
@@ -318,14 +331,19 @@ test('тепловая карта В: маржинальные MTO-контра�
     'низкомаржинальный хвост Бронзы (16–18%) в минусе');
   assert.ok(HEATMAP.abs.C.mrg.ct[idx('ЕВРАЗ КГОК')]>base('ЕВРАЗ КГОК'),
     'валовая прибыль ЕВРАЗ КГОК в В больше, чем в А');
-  /* контракт виден в строке: 1 500 т × 141 500 руб/т × (27% + калибровка В) */
-  const contract=1500*P*(27/100+HEATMAP.calib.C);
+  /* контракт виден в строке: 1 000 т × 141 500 руб/т × (27% + калибровка В) */
+  const contract=1000*P*(27/100+HEATMAP.calib.C);
   assert.ok(Math.abs(d('ЕВРАЗ КГОК')-contract)>1,
     `ЕВРАЗ КГОК: дельта ${d('ЕВРАЗ КГОК')} = контракт ${contract.toFixed(1)} + переоценка базы`);
   assert.ok(d('ЕВРАЗ КГОК')>contract,'дельта ЕВРАЗ КГОК ≥ стоимости контракта');
-  /* итог по Бронзе остаётся положительным: +1 500 т премиума перекрывает срез хвоста */
+  /* Бронза отдаёт нетто 2 000 т хвоста и получает 1 000 т премиума → итог около нуля */
   const bronzeD=CLIENTS.reduce((a,c,i)=>a+(c.seg==='bronze'?HEATMAP.C.mrg.ct[i]:0),0);
-  assert.ok(bronzeD>0,'Бронза: итог Δмаржи > 0 (получил '+bronzeD.toFixed(1)+' млн)');
+  assert.ok(Math.abs(bronzeD)<15,'Бронза: итог Δмаржи '+bronzeD.toFixed(1)+' млн (срез хвоста компенсирован премиумом)');
+  /* Серебро забирает весь прирост: +3 000 т у НЛМК дают основную часть дельты сценария */
+  const silverD=CLIENTS.reduce((a,c,i)=>a+(c.seg==='silver'?HEATMAP.C.mrg.ct[i]:0),0);
+  assert.ok(silverD>150,'Серебро: итог Δмаржи +'+silverD.toFixed(1)+' млн');
+  assert.ok(HEATMAP.C.mrg.ct[HEATMAP.clients.findIndex(([x])=>x==='НЛМК')]>silverD*0.6,
+    'НЛМК даёт больше половины прироста Серебра (адресный контракт, а не «размазанный» бонус)');
   /* калибровка В меньше, чем в модели без контрактов: премия разложена явно, а не «всему портфелю» */
   assert.ok(HEATMAP.calib.C*100>4&&HEATMAP.calib.C*100<4.4,'калибровка В '+(HEATMAP.calib.C*100).toFixed(2)+' п.п.');
 });

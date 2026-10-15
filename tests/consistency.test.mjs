@@ -402,8 +402,8 @@ test('Планы: таблицы во всех срезах не теряют д
   assert.ok(sum.heads.join('|').includes('Страховой'),'сводный план запасов: колонка страхового запаса');
 });
 
-/* ── 25. Сценарий В: перераспределение 5 000 т ── */
-test('сценарий В: перераспределение 5 000 т (Платина/Золото → Серебро/Бронза), итог 129 000 т',()=>{
+/* ── 25. Сценарий В: снято 8 000 т, в план возвращены 4 000 т ── */
+test('сценарий В: −4 000 т к А (снято 8 000 т хвоста, возвращены 4 000 т контрактов), итог 129 000 т',()=>{
   const C=SUP.gaps.C;
   const num=s=>Number(String(s).replace(/[^0-9,−-]/g,'').replace('−','-').replace(',','.'));
   const volumes=C.tableRows.map(r=>num(r[3]));
@@ -422,11 +422,13 @@ test('сценарий В: перераспределение 5 000 т (Плат
     assert.ok(Math.abs(r.w+r.gapW-100)<0.06,`${r.label}: w+gapW ≠ 100`);
     assert.ok(Math.abs(r.w-num(r.value)/num(r.label.match(/спрос ([\d\s]+) т/)[1])*100)<0.06,`${r.label}: ширина полосы ≠ покрытию`);
   });
-  /* перераспределение: снято 5 000 т = передано Серебру 3 000 т + 2 000 т выведено из плана */
-  assert.equal(C.redist.total,5000);
-  assert.equal(C.redist.from.reduce((a,x)=>a+x[1],0),C.redist.total,'снято с Платины и Золота');
+  /* баланс: снято 8 000 т = возвращено в план 4 000 т (НЛМК 3 000 + ЕВРАЗ 1 000) + 4 000 т выведено */
+  assert.equal(C.redist.total,8000);
+  assert.equal(C.redist.from.reduce((a,x)=>a+x[1],0),C.redist.total,'снято с Платины, Золота и хвоста Бронзы');
+  assert.equal(C.redist.to.reduce((a,x)=>a+x[1],0),4000,'в план возвращены 4 000 т адресных контрактов');
   assert.equal(C.redist.to.reduce((a,x)=>a+x[1],0)+C.redist.dropped,C.redist.total,
-    'передано Серебру + выведено из плана = снятому объёму');
+    'передано в план + выведено из плана = снятому объёму');
+  assert.equal(C.redist.netVol,-4000,'разница сценария В к А по объёму −4 000 т');
   /* бейджи перераспределения = фактической разнице объёмов к сценарию А */
   const volA=Object.fromEntries(SUP.gaps.A.tableRows.map(r=>[r[0].split(' ')[1],num(r[3])]));
   const sp=x=>String(x).replace(/\u00a0/g,' ');   // числа в данных форматируются через F()
@@ -447,8 +449,11 @@ test('сценарий В: перераспределение 5 000 т (Плат
   assert.ok(/94,3%/.test(C.tableRows[1][2])&&/88,9%/.test(C.tableRows[2][2]),'покрытие Платины и Золота');
   assert.ok(/78,3%/.test(C.tableRows[3][2])&&/38,1%/.test(C.tableRows[4][2]),'покрытие Серебра и Бронзы');
   const sc=SUP.scenarios.find(x=>x.id==='C');
-  assert.ok(/перераспределение 5 000 т/.test(sc.desc),'карточка сценария: перераспределение 5 000 т'); 
-  assert.ok(/\+3 000/.test(sc.desc)&&/\u22122 000/.test(sc.desc),'карточка сценария: получатель и отдавший объём');
+  assert.ok(/\u22124 000 т/.test(sc.desc)&&/8 000 т/.test(sc.desc),'карточка сценария: −4 000 т к А, снято 8 000 т');
+  assert.ok(/НЛМК \+3 000 т/.test(sc.desc)&&/ЕВРАЗ КГОК \+1 000 т/.test(sc.desc),'карточка: адресаты контрактов');
+  const plain=sc.desc.replace(/<[^>]+>/g,'');
+  assert.ok(plain.length<400,'карточка сценария компактная: '+plain.length+' симв. текста');
+  assert.ok(/\u043c\u0430\u0440\u0436\u0430 27,4%/.test(plain)&&/\+485/.test(plain),'карточка: финальные метрики на месте');
   assert.ok(/94,3%/.test(C.reasons)&&/88,9%/.test(C.reasons)&&/78,3%/.test(C.reasons)&&/38,1%/.test(C.reasons),'пояснение к графику обновлено');
   assert.equal(SUP.scenYear.rows[2].q4vol,129000,'год 2026: 4 кв. = 129 000 т');
   assert.equal(SUP.scenYear.rows[2].q4gp,5002,'год 2026: ВП 4 кв. = 5 002 млн');
