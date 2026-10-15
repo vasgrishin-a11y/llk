@@ -1,1 +1,16 @@
-{"name":"analytics-dashboard-template","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.mjs","start":"python3 -m http.server 8080"},"devDependencies":{"jsdom":"^30.0.1"}}
+{
+  "name": "analytics-dashboard-template",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "start": "python3 -m http.server 8080",
+    "export:data": "node tools/export-business-data.mjs",
+    "export:csv": "node tools/csv-from-markdown.mjs",
+    "export:all": "npm run export:data && npm run export:csv"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}
