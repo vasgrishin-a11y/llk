@@ -450,9 +450,10 @@ test('сценарий В: −4 000 т к А (снято 8 000 т хвоста, 
   assert.ok(/78,3%/.test(C.tableRows[3][2])&&/38,1%/.test(C.tableRows[4][2]),'покрытие Серебра и Бронзы');
   const sc=SUP.scenarios.find(x=>x.id==='C');
   assert.ok(/\u22124 000 т/.test(sc.desc)&&/8 000 т/.test(sc.desc),'карточка сценария: −4 000 т к А, снято 8 000 т');
-  assert.ok(/НЛМК \+3 000 т/.test(sc.desc)&&/ЕВРАЗ КГОК \+1 000 т/.test(sc.desc),'карточка: адресаты контрактов');
+  assert.ok(/НЛМК \+1 829 т/.test(sc.desc)&&/ЕВРАЗ КГОК \+1 000 т/.test(sc.desc),'карточка: адресаты контрактов');
+  assert.ok(/1 171 т/.test(sc.desc),'карточка: остаток заказа размещён в сегменте');
   const plain=sc.desc.replace(/<[^>]+>/g,'');
-  assert.ok(plain.length<400,'карточка сценария компактная: '+plain.length+' симв. текста');
+  assert.ok(plain.length<420,'карточка сценария компактная: '+plain.length+' симв. текста');
   assert.ok(/\u043c\u0430\u0440\u0436\u0430 27,4%/.test(plain)&&/\+485/.test(plain),'карточка: финальные метрики на месте');
   assert.ok(/94,3%/.test(C.reasons)&&/88,9%/.test(C.reasons)&&/78,3%/.test(C.reasons)&&/38,1%/.test(C.reasons),'пояснение к графику обновлено');
   assert.equal(SUP.scenYear.rows[2].q4vol,129000,'год 2026: 4 кв. = 129 000 т');
