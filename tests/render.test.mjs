@@ -111,8 +111,22 @@ test('приложение рендерит все рабочие вкладки
   assert.ok(/\+13,1/.test(covTxt),'Серебро: +13,1 п.п. покрытия');
   assert.ok(/\u22129,5/.test(covTxt),'Бронза: −9,5 п.п. покрытия');
   assert.ok(!/hm-delta-neg-good/.test($('#content').innerHTML),'улучшения не подсвечиваются как «хорошие минусы»');
+  /* сценарий В адресный: покрытие различается внутри сегмента — клиенты с MTO-премиумом растут */
+  const rowOf=nm=>{
+    const td=[...$$('.hm .row-header')].find(x=>x.textContent.replace(/\u00a0/g,' ').includes(nm));
+    return td?td.parentElement.textContent.replace(/\u00a0/g,' '):'';
+  };
+  assert.match(rowOf('НЛМК'),/\+28,6/,'НЛМК: +28,6 п.п. покрытия (контракт MTO-премиум)');
+  assert.match(rowOf('ЕВРАЗ КГОК'),/\+27,2/,'ЕВРАЗ КГОК: +27,2 п.п. покрытия');
+  assert.match(rowOf('Сургутнефтегаз'),/\u221222,6/,'Сургутнефтегаз (хвост Бронзы): −22,6 п.п. покрытия');
   click('[data-sw="hmmode"][data-val="mrg"]');
   assert.match($('#content').innerHTML,/hm-cell/);
+  const mrowOf=nm=>{
+    const td=[...$$('.hm .row-header')].find(x=>x.textContent.replace(/\u00a0/g,' ').includes(nm));
+    return td?td.parentElement.textContent.replace(/\u00a0/g,' '):'';
+  };
+  assert.match(mrowOf('ЕВРАЗ КГОК'),/\+78,1/,'ЕВРАЗ КГОК: валовая маржа В к А +78,1 млн (маржинальный добор)');
+  assert.ok(!/\u221210,8/.test(mrowOf('ЕВРАЗ КГОК')),'ЕВРАЗ КГОК: прежний минус −10,8 млн исчез');
 
   // сценарии: кнопок «Свернуть сценарий» нет — вместо них пропорциональное увеличение
   assert.equal($$('.scen-toggle').length,0,'кнопки «+/−» у сценариев удалены');
