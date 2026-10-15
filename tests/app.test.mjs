@@ -236,7 +236,7 @@ test('тепловая карта: покрытие не бывает больш
   for(const sc of ['A','B','C']){
     const H=HEATMAP.abs[sc]||HEATMAP[sc];
     H.cov.m.forEach(row=>row.forEach(v=>{if(v!=null)assert.ok(v<=100,`${sc}: ${v}% > 100%`)}));
-    assert.ok(H.cov.ctAll<=100,`${sc}: итог по выборке ${H.cov.ctAll}% > 100%`);
+    assert.ok(H.cov.ctAll<=100,`${sc}: итог по портфелю ${H.cov.ctAll}% > 100%`);
   }
 });
 
@@ -297,14 +297,23 @@ test('тепловая карта: валовая прибыль портфел�
   });
 });
 
-test('тепловая карта: выборка — 13 приоритетных клиентов и 3 контрольных (Серебро и Бронза)',()=>{
-  assert.equal(HEATMAP.clients.length,16);
-  assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='silver').length,1);
-  assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='bronze').length,2);
+test('тепловая карта: в карте весь портфель — 22 клиента, включая ЕВРАЗ КГОК (на пересмотр ↑)',()=>{
+  assert.equal(HEATMAP.clients.length,22);
+  assert.deepEqual(HEATMAP.clients.map(([n])=>n),CLIENTS.map(c=>c.name),'карта содержит всех клиентов портфеля в том же порядке');
+  assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='silver').length,5);
+  assert.equal(HEATMAP.clients.filter(([n])=>SEG_OF[n]==='bronze').length,4);
   assert.equal(HEATMAP.clients.filter(([n])=>['diamond','platinum','gold'].includes(SEG_OF[n])).length,13);
+  ['АСТОН','НЛМК','ЕВРАЗ КГОК'].forEach(n=>assert.ok(HEATMAP.clients.some(([x])=>x===n),n+' отсутствует в карте'));
   /* Серебро и Бронза обслуживаются по сокращённой матрице: 6 категорий из 8 */
   HEATMAP.clients.forEach(([n],i)=>{
     const empty=HEATMAP.A.cov.m[i].filter(v=>v==null).length;
     assert.equal(empty,['silver','bronze'].includes(SEG_OF[n])?2:0,`${n}: пустых ячеек ${empty}`);
   });
+  /* выборки нет: итог карты равен валовой прибыли сценария, таблица данных — все строки */
+  [['A','А'],['B','Б'],['C','В']].forEach(([sc,id])=>{
+    const gp=SUPPLY.scenYear.rows.find(r=>r.id===id).q4gp;
+    assert.ok(Math.abs(HEATMAP.abs[sc].mrg.ctAll-gp)<1,`${sc}: итог карты ${HEATMAP.abs[sc].mrg.ctAll} ≠ ${gp} млн`);
+  });
+  assert.equal(HEATMAP.flatTable.rows.length,23,'таблица данных: 22 клиента + итоговая строка');
+  assert.ok(/все 22 клиента/i.test(SUPPLY.heatmapMethodology.Acov),'методология: карта по всему портфелю');
 });
