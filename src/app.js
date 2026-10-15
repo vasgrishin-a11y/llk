@@ -525,6 +525,7 @@ function vSupply(){
   const hs=ui.hmscen??'A',hm=ui.hmmode??'cov';
   const heatmapHtml=sw('hmscen',[['A','Сценарий А (Базовый)'],['B','Сценарий Б (Захват рынка)'],['C','Сценарий В (Фокус на валовой прибыли)']])
     +sw('hmmode',[['cov','Покрытие спроса (%)'],['mrg','Валовая маржа (млн руб.)']])
+    +`<div class="muted" style="font-size:11px;margin-top:6px">🗂️ Все ${HEATMAP.clients.length} клиента портфеля × 8 продуктовых категорий (Серебро и Бронза — 6 категорий: технические и трансмиссионные жидкости им не отгружаются). Итоги строк, столбцов и таблицы данных считаются из ячеек и сходятся с валовой прибылью сценария.</div>`
     +(hs!=='A'?info('primary',S.kpiNote):'')
     +hmTable(hs,hm)
     +`<div class="hm-legend">${hs==='A'?S.heatmapLegends[hm]:S.heatmapLegends.delta}</div>`
