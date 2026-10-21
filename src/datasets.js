@@ -367,7 +367,6 @@ export const DEMAND={
     insight:'<b>📌 Вывод:</b> недопродажи янв–сен — <b>25 000 т</b> (план 415 000 → факт 390 000, −6,0%). Лидеры — <b>Бронза (Сургутнефтегаз, Уральская Сталь)</b> и <b>Серебро (Камский кабель, НЛМК)</b> по низкомаржинальным продуктам; по категориям — <b>СОЖ и охлаждающие жидкости</b> (до 400 т на клиента): WAPE 30–33% и длинные ЖД-плечи. Меньше всего — моторные масла у Бриллианта (короткое плечо, точный прогноз).',
     legend:'<b>Легенда недопродаж, т:</b><span class=\"hm-lg\" style=\"background:#8BC34A\"></span>≤80<span class=\"hm-lg\" style=\"background:#FFC107\"></span>80–150<span class=\"hm-lg\" style=\"background:#FF9800\"></span>150–250<span class=\"hm-lg\" style=\"background:#FF5722\"></span>250–400<span class=\"hm-lg\" style=\"background:#D93025\"></span>>400<span class=\"hm-lg\" style=\"background:#e8ecef;border:1px solid #ccc\"></span>не поставляется',
     shortColor,
-    periodLabel:'Янв–Сен 2026 (факт 390 000 / план 415 000 т)',
   };
 })();
 

@@ -301,7 +301,7 @@ function vDemand(){
       +insight(W.insight)+tbl('tbl-wf',W.heads,W.rows))
     +card('🌡️ Точность прогноза по категориям — тепловая карта WAPE',wapeHeatmapHTML(AC)+`<div class="hm-legend">${AC.legend}</div>`+insight(AC.insight)+tbl('tbl-acc2',AC.heads,AC.rows.map(r=>[r.name,NF(r.w[0]),NF(r.w[1]),NF(r.w[2]),NF(r.w[3]),r.bias,N(r.vol),r.mode])))
     +`</div><div class="grid">`
-    +card('📉 Систематическая ошибка по каналам',(()=>{const biasToggle=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;padding:8px 10px;background:var(--scp-surface-2);border:1px solid var(--scp-line-2);border-radius:8px"><span class="muted" style="font-size:11px;font-weight:600">Режим:</span>`+sw('demandView',[['bias','📉 Систематическая ошибка'],['shortfall','🔥 Недопродажи']])+(demandView==='shortfall'?`<span class="muted" style="font-size:10px;margin-left:auto">Клиент × продукт · ${esc(D.shortfall?D.shortfall.periodLabel:'Янв–Сен 2026')}</span>`:'')+`</div>`;return demandView==='shortfall'&&D.shortfall? biasToggle+shortfallHeatmapHTML(D.shortfall)+`<div class="hm-legend">${D.shortfall.legend}</div>`+insight(D.shortfall.insight)+tbl('tbl-shortfall',D.shortfall.heads,D.shortfall.rows) : biasToggle+canvas('c-bias','Горизонтальная диаграмма систематической ошибки по каналам')+insight(B.insight)+tbl('tbl-bias',B.heads,B.rows);})())
+    +card('📉 Систематическая ошибка по каналам',(()=>{const biasToggle=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;padding:8px 10px;background:var(--scp-surface-2);border:1px solid var(--scp-line-2);border-radius:8px"><span class="muted" style="font-size:11px;font-weight:600">Режим:</span>`+sw('demandView',[['bias','📉 Систематическая ошибка'],['shortfall','🔥 Недопродажи']])+`</div>`;return demandView==='shortfall'&&D.shortfall? biasToggle+shortfallHeatmapHTML(D.shortfall)+`<div class="hm-legend">${D.shortfall.legend}</div>`+insight(D.shortfall.insight)+tbl('tbl-shortfall',D.shortfall.heads,D.shortfall.rows) : biasToggle+canvas('c-bias','Горизонтальная диаграмма систематической ошибки по каналам')+insight(B.insight)+tbl('tbl-bias',B.heads,B.rows);})())
     +card('🔍 Статистический прогноз vs корректировка продаж vs факт',canvas('c-fva','Линейный график: статистика, корректировки и факт')
       +`<div class="muted" style="font-size:11px;margin-top:6px">Ось объёма — не от нуля (от ${N(fvaMin)} до ${N(fvaMax)} т): масштаб выбран так, чтобы расхождения статистического прогноза, корректировок продаж и факта были видны явно.</div>`
       +insight(F.insight)+tbl('tbl-fva',F.heads,F.rows))
@@ -898,8 +898,8 @@ function wireCardExpand(root){
   const targets=[...root.querySelectorAll('.card'),...root.querySelectorAll(ZOOM_SEL)];
   targets.forEach(el=>{
     const zoomable=el.matches(ZOOM_SEL);
-    /* карточки — только с графиками; сценарии и панель бизнес-плана — всегда */
-    if(!zoomable&&!el.querySelector('canvas.chart,.gap-chart'))return;
+    /* карточки — с графиками или таблицами; сценарии и панель бизнес-плана — всегда */
+    if(!zoomable&&!el.querySelector('canvas.chart,.gap-chart,table'))return;
     if(el.querySelector(':scope > .chart-expand'))return;
     const b=document.createElement('button');
     b.className='chart-expand'+(zoomable?' zoom-trigger':'');
