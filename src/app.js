@@ -5,7 +5,7 @@
    локальные переключатели вкладок — в `ui` (в памяти), открытые таблицы — `open`. */
 import {DASHBOARD_CONFIG as C} from './config.js';
 import {MONTHLY,normalizeRows,summary} from './data.js';
-import {OVERVIEW,SEGMENTS,DEMAND,DEMAND_KPIS,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView,COST_TON} from './datasets.js';
+import {OVERVIEW,SEGMENTS,DEMAND,DEMAND_KPIS,STOCK,SUPPLY,HEATMAP,PLANS,ACTIONS,M12_LABELS,MONTHS18,PLAN_PERIODS,planRange,planView,COST_TON,CLIENTS} from './datasets.js';
 import {drawChart} from './charts.js';
 import {exportDashboard} from './export.js';
 import {storage} from './storage.js';
@@ -219,7 +219,7 @@ function shortfallHeatmapHTML(SF){
   const cell=(v)=>{
     if(v==null) return `<td class="hm-cell hm-m-na">—</td>`;
     const cls=colorCls(v);
-    return `<td class="hm-cell ${cls}" data-info="${esc('Недопродажи: '+F(v)+' т')}">${F(v)}</td>`;
+    return `<td class="hm-cell ${cls}" data-info="${esc('Недопродажи: '+N(v)+' т')}">${N(v)}</td>`;
   };
   let h=`<div class="hm-scroll"><table class="hm"><thead><tr><th class="row-header">Клиент / Сегмент</th>`
     +SF.products.map(p=>`<th>${p.replace(/ /g,'<br>')}</th>`).join('')+`<th class="hm-total">Итого<br>недопродаж (т)</th></tr></thead><tbody>`;
@@ -227,9 +227,9 @@ function shortfallHeatmapHTML(SF){
     const c=CLIENTS[i];
     const segEmoji={diamond:'💎',platinum:'⬣',gold:'●',silver:'⚪',bronze:'🟤'}[c?.seg]||'●';
     const label=c? segEmoji+' '+c.name : `Клиент ${i+1}`;
-    h+=`<tr><td class="row-header">${esc(label)}</td>`+row.map(cell).join('')+`<td class="hm-cell hm-m-na" style="font-weight:700">${F(SF.rowTot[i])}</td></tr>`;
+    h+=`<tr><td class="row-header">${esc(label)}</td>`+row.map(cell).join('')+`<td class="hm-cell hm-m-na" style="font-weight:700">${N(SF.rowTot[i])}</td></tr>`;
   });
-  h+=`<tr class="row-sum"><td class="row-header">📊 Итого по продукту</td>`+SF.colTot.map(v=>`<td class="hm-cell hm-0" style="font-weight:700">${F(v)}</td>`).join('')+`<td class="hm-cell" style="background:var(--scp-n-900);color:#fff;font-weight:700">${F(SF.total)}</td></tr>`;
+  h+=`<tr class="row-sum"><td class="row-header">📊 Итого по продукту</td>`+SF.colTot.map(v=>`<td class="hm-cell hm-0" style="font-weight:700">${N(v)}</td>`).join('')+`<td class="hm-cell" style="background:var(--scp-n-900);color:#fff;font-weight:700">${N(SF.total)}</td></tr>`;
   h+=`</tbody></table></div>`;
   return h;
 }
@@ -301,7 +301,7 @@ function vDemand(){
       +insight(W.insight)+tbl('tbl-wf',W.heads,W.rows))
     +card('🌡️ Точность прогноза по категориям — тепловая карта WAPE',wapeHeatmapHTML(AC)+`<div class="hm-legend">${AC.legend}</div>`+insight(AC.insight)+tbl('tbl-acc2',AC.heads,AC.rows.map(r=>[r.name,NF(r.w[0]),NF(r.w[1]),NF(r.w[2]),NF(r.w[3]),r.bias,N(r.vol),r.mode])))
     +`</div><div class="grid">`
-    +card('📉 Систематическая ошибка по каналам',(()=>{const biasToggle=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;padding:8px 10px;background:var(--scp-surface-2);border:1px solid var(--scp-line-2);border-radius:8px"><span class="muted" style="font-size:11px;font-weight:600">Режим:</span>`+sw('demandView',[['bias','📉 Систематическая ошибка'],['shortfall','🔥 Недопродажи']])+`<span class="muted" style="font-size:10px;margin-left:auto">`+(demandView==='shortfall'?'Клиент × продукт · '+esc(D.shortfall?D.shortfall.periodLabel:'Янв–Сен 2026'):'Нажмите «Недопродажи» для теплокарты клиент × продукт')+`</span></div>`;return demandView==='shortfall'&&D.shortfall? biasToggle+shortfallHeatmapHTML(D.shortfall)+`<div class="hm-legend">${D.shortfall.legend}</div>`+insight(D.shortfall.insight)+tbl('tbl-shortfall',D.shortfall.heads,D.shortfall.rows) : biasToggle+canvas('c-bias','Горизонтальная диаграмма систематической ошибки по каналам')+insight(B.insight)+tbl('tbl-bias',B.heads,B.rows);})())
+    +card('📉 Систематическая ошибка по каналам',(()=>{const biasToggle=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 8px;padding:8px 10px;background:var(--scp-surface-2);border:1px solid var(--scp-line-2);border-radius:8px"><span class="muted" style="font-size:11px;font-weight:600">Режим:</span>`+sw('demandView',[['bias','📉 Систематическая ошибка'],['shortfall','🔥 Недопродажи']])+(demandView==='shortfall'?`<span class="muted" style="font-size:10px;margin-left:auto">Клиент × продукт · ${esc(D.shortfall?D.shortfall.periodLabel:'Янв–Сен 2026')}</span>`:'')+`</div>`;return demandView==='shortfall'&&D.shortfall? biasToggle+shortfallHeatmapHTML(D.shortfall)+`<div class="hm-legend">${D.shortfall.legend}</div>`+insight(D.shortfall.insight)+tbl('tbl-shortfall',D.shortfall.heads,D.shortfall.rows) : biasToggle+canvas('c-bias','Горизонтальная диаграмма систематической ошибки по каналам')+insight(B.insight)+tbl('tbl-bias',B.heads,B.rows);})())
     +card('🔍 Статистический прогноз vs корректировка продаж vs факт',canvas('c-fva','Линейный график: статистика, корректировки и факт')
       +`<div class="muted" style="font-size:11px;margin-top:6px">Ось объёма — не от нуля (от ${N(fvaMin)} до ${N(fvaMax)} т): масштаб выбран так, чтобы расхождения статистического прогноза, корректировок продаж и факта были видны явно.</div>`
       +insight(F.insight)+tbl('tbl-fva',F.heads,F.rows))
@@ -417,8 +417,8 @@ function vStock(){
   J('#c-abc','scatter',AX.scatter.map(s=>({data:s.points,color:s.color,r:7})),[],{height:340,legend:AX.scatter.map(s=>s.name),xTitle:'Вариативность спроса (XYZ)',yTitle:'Доля маржи (ABC)'});
   J('#c-mto','donut',[S.mtomts.data],S.mtomts.labels,{height:340,colors:S.mtomts.colors});
   const statCard=x=>`<article class="kpi bt-${x.cls}"><div class="muted kpi-label">${x.name}</div><div class="value ${x.cls}">${x.days}</div><div class="kpi-sub">${x.target}</div><div class="dev dev-${x.cls==='green'?'pos':x.cls==='red'?'neg':'neu'}">${x.delta}</div><div class="kpi-foot ${x.cls}">${x.effect}</div></article>`;
-  const coverInsightT = `<b>📌 Вывод (в тоннах):</b> фактический запас — <b>`+F(coverActualT.reduce((a,b)=>a+b,0))+` т</b> при страховом <b>`+F(coverSafetyT.reduce((a,b)=>a+b,0))+` т</b> и целевом <b>`+F(coverTargetT.reduce((a,b)=>a+b,0))+` т</b> Перетовар — `+F(coverActualT.reduce((a,b)=>a+b,0)-coverTargetT.reduce((a,b)=>a+b,0))+` т сверх цели. В днях: `+F(CV.avgDays,1)+` дн. против цели `+F(CV.avgTarget,1)+` дн.`;
-  const coverInsightM = `<b>📌 Вывод (в деньгах):</b> стоимость фактического запаса — <b>`+F(coverActualM.reduce((a,b)=>a+b,0))+` млн руб.</b> при страховом <b>`+F(coverSafetyM.reduce((a,b)=>a+b,0))+`</b> и целевом <b>`+F(coverTargetM.reduce((a,b)=>a+b,0))+` млн руб.</b> Перетовар — `+F(coverActualM.reduce((a,b)=>a+b,0)-coverTargetM.reduce((a,b)=>a+b,0))+` млн руб. сверх цели.`;
+  const coverInsightT = `<b>📌 Вывод (в тоннах):</b> фактический запас — <b>`+N(coverActualT.reduce((a,b)=>a+b,0))+` т</b> при страховом <b>`+N(coverSafetyT.reduce((a,b)=>a+b,0))+` т</b> и целевом <b>`+N(coverTargetT.reduce((a,b)=>a+b,0))+` т</b> Перетовар — `+N(coverActualT.reduce((a,b)=>a+b,0)-coverTargetT.reduce((a,b)=>a+b,0))+` т сверх цели. В днях: `+N(CV.avgDays,1)+` дн. против цели `+N(CV.avgTarget,1)+` дн.`;
+  const coverInsightM = `<b>📌 Вывод (в деньгах):</b> стоимость фактического запаса — <b>`+N(coverActualM.reduce((a,b)=>a+b,0))+` млн руб.</b> при страховом <b>`+N(coverSafetyM.reduce((a,b)=>a+b,0))+`</b> и целевом <b>`+N(coverTargetM.reduce((a,b)=>a+b,0))+` млн руб.</b> Перетовар — `+N(coverActualM.reduce((a,b)=>a+b,0)-coverTargetM.reduce((a,b)=>a+b,0))+` млн руб. сверх цели.`;
   const coverInsightHtml = covIsMoney ? coverInsightM : coverInsightT;
   return kpis('stock')
     +card('📦 Покрытие запасов',sw('invview',[['channels','По каналам сбыта'],['products','По категориям продуктов'],['echelons','По эшелонам']])+`<div style="margin:6px 0">`+sw('coverUnit',[['tons','В тоннах'],['money','В деньгах (млн руб.)']])+`</div>`+canvas('c-cover',covIsMoney?'Диаграмма покрытия запасов в млн руб.; красные столбцы — ниже страхового уровня':'Диаграмма покрытия запасов в тоннах; красные столбцы — ниже страхового уровня')+covAlertHtml+insight(coverInsightHtml)+tbl('tbl-inv-coverage',S.coverage.heads,covRows))
