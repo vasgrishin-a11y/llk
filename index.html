@@ -105,14 +105,12 @@ button{font:inherit;cursor:pointer}
 .topnav .dot{width:6px;height:6px;border-radius:50%;background:#5c5c66;flex:0 0 6px;transition:.15s}
 .topnav button.on .dot{background:var(--scp-accent-sub);box-shadow:0 0 6px rgba(175,71,255,.7)}
 
-/* ═══════════════ ШАПКА: заголовок раздела + статус + икон-кнопки ═══════════════ */
+/* ═══════════════ ШАПКА: заголовок раздела ═══════════════ */
 header{background:var(--scp-surface);border-bottom:1px solid var(--scp-line-2);
   padding:14px 32px 12px;display:flex;align-items:flex-start;gap:16px}
 .hdr-left{display:flex;align-items:flex-start;gap:12px;min-width:0}
 h1{font:600 26px/32px 'Open Sans',sans-serif;margin:0;color:var(--scp-text)}
 .h-sub{font-size:12px;line-height:16px;color:var(--scp-text-3);margin-top:2px}
-.stat{font-size:12px;line-height:16px;color:var(--scp-text-3);text-align:right;white-space:nowrap;
-  align-self:center;margin-left:auto}
 .hdr-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
   background:var(--scp-surface);border:1px solid var(--scp-ctrl);border-radius:var(--r-s);
@@ -436,7 +434,7 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
 .model h5{font:600 11.5px/16px 'Open Sans',sans-serif;margin:0 0 6px;color:var(--scp-text)}
 .badge{background:#4CAF50;color:#fff;padding:2px 6px;border-radius:var(--r-s);
   font-size:8px;font-weight:700;vertical-align:1px}
-.model .stat{font-size:10.5px;color:var(--scp-text-3);margin-bottom:2px;display:block;text-align:left}
+.model .stat{font-size:10.5px;line-height:16px;color:var(--scp-text-3);margin-bottom:2px;display:block;text-align:left}
 .model .stat.dim{opacity:.75}
 .model canvas.chart{background:var(--scp-surface-2);border:1px solid var(--scp-line);
   border-radius:var(--r-s);margin:6px 0}
@@ -539,7 +537,6 @@ tr.dead td{background:#fdf1f2;color:var(--scp-err);font-weight:600}
   .grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
   header,main,.ctxbar{padding-left:16px;padding-right:16px}
   h1{font-size:22px;line-height:28px}
-  .stat{display:none}
 }
 @media(max-width:800px){
   .grid-3{grid-template-columns:1fr}
