@@ -21,6 +21,8 @@ test('приложение рендерит все рабочие вкладки
   assert.ok($$('#content .kpi').length>=7,'KPI обзора');
   assert.ok($$('canvas.chart').length>0,'canvas обзора');
   assert.equal($$('[data-tab="quality"]').length,0,'раздел качества данных удалён');
+  assert.equal($('header .stat'),null,'информационная подпись источника данных убрана из шапки');
+  assert.ok(!/строк данных|источник: демо-данные/.test($('header').textContent),'в шапке нет текста о строках/источнике данных');
 
   for(const id of ['segments','demand','stock','supply','plans','actions']){
     click(`[data-tab="${id}"]`);

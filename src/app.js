@@ -984,8 +984,7 @@ function render(){
         +`<button class="tb-btn d" id="reset" data-tip="Вернуть демо-данные" aria-label="Вернуть демо-данные">${ICON_RESET}</button>`
       +`</div></div>`
     +`<div class="wrap">`
-    +`<header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${esc(t.desc||C.subtitle)}</div></div></div>`
-    +`<div class="stat">${summ.rows} строк данных · ${summ.custom?'источник: загруженный XLSX':'источник: демо-данные'}</div></header>`
+    +`<header><div class="hdr-left"><div><h1>${t.label}</h1><div class="h-sub">${esc(t.desc||C.subtitle)}</div></div></div></header>`
     +`<div class="ctxbar"><span class="ctx-lbl">Контекст</span>${C.context.map(([k,v])=>`<span class="ctx-chip"><span class="cd"></span><b>${esc(k)}:</b>&nbsp;${esc(v)}</span>`).join('')}</div>`
     +`<main id="content"></main></div></div>`;
   renderContent();
