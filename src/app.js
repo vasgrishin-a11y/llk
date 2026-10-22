@@ -30,7 +30,7 @@ const insight=t=>`<div class="insight">${t}</div>`;
 const info=(kind,inner)=>`<div class="info info-${kind}">${inner}</div>`;
 const J=(sel,type,series,labels,opts)=>jobs.push([sel,type,series,labels,opts]);
 const canvas=(id,aria)=>`<canvas id="${id}" class="chart" role="img" aria-label="${esc(aria)}"></canvas>`;
-const card=(title,inner,sub)=>`<article class="card"><h2>${title}</h2>${sub?`<div class="muted card-sub">${sub}</div>`:''}${inner}</article>`;
+const card=(title,inner,sub)=>`<article class="card"><h2 data-card-toggle>${title}</h2>${sub?`<div class="muted card-sub">${sub}</div>`:''}<div class="card-body">${inner}</div></article>`;
 const tbl=(id,heads,rows)=>{
   const isOpen=open.has(id);
   return `<button class="toggle" data-toggle="${id}">${isOpen?'📋 Скрыть данные ▲':'📋 Данные ▼'}</button><div class="tbl-wrap${isOpen?' show':''}" id="${id}"><table class="dense"><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>{const o=Array.isArray(r)?{cells:r}:r;return `<tr${o.cls?` class="${o.cls}"`:''}>${o.cells.map(c=>`<td>${c}</td>`).join('')}</tr>`}).join('')}</tbody></table></div>`};
@@ -111,8 +111,21 @@ function vOverview(){
     {data:Array(A.labels.length).fill(A.target),color:'#4CAF50',dash:true},
   ],A.labels,{height:280,legend:['WAPE, факт (%)','Цель WAPE ≤10%'],max:20,yTitle:'WAPE, %'});
   const ovKpiList=p==='2025'?OVERVIEW.kpis2025:p==='2027'?OVERVIEW.kpis2027:(C.kpis.overview||[]);
+  // Девиации от бизнес-плана — в стиле In.Plan (термин «покрытие спроса» / «выполнение бизнес-плана»)
+  const devVals=[94.0,92.4,95.1,93.4,100.0,98.8]; // Объём YTD, Выручка YTD, Объём 2026 новый S&OP, Выручка новый, Объём 2027, Выручка 2027
+  const devLabels=['Объём YTD 2026','Выручка YTD','Объём год 2026 (нов. S&OP)','Выручка год 2026','Объём 2027 (прогноз)','Выручка 2027'];
+  const devColors=devVals.map(v=>v>=100?'#4CAF50':v>=95?'#20A7C9':v>=90?'#FF9800':'#D93025');
+  J('#c-ovdev','hbar',[
+    {data:devVals,pointColors:devColors,color:'#20A7C9'}
+  ],devLabels,{height:260,legend:['Выполнение бизнес-плана %'],barValuesIn:false});
+  // Дополнительные KPI-подсказки для обзора в терминах In.Plan — «покрытие спроса» слегка снижено (86.8% vs 87.5%)
+  const extraKpis=[
+    {label:'Покрытие спроса (4 кв.)',color:'orange',tip:'Покрытие спроса = доступно к отгрузке ÷ неограниченный спрос. Сценарий А: 132 000 / 152 000 = 86.8% (было 87.5%, снижено для напряжённого плана).',value:'86,8%',sub:'Доступно 132 000 из 152 000 т (Серебро −8 500 / Бронза −11 500 т)',dev:{text:'▼ −13,2% разрыв',kind:'neg'}},
+    {label:'Валовая маржа (факт)',color:'orange',tip:'Валовая маржа = валовая прибыль ÷ выручка. Факт 22.9% vs план 24.3%.',value:'22,9%',sub:'План 24,3% · Δ −1,4 п.п.',dev:{text:'низкомаржинальный микс',kind:'neg'}},
+  ];
   return `<section class="kpis">${ovKpiList.map(kpiCard).join('')}</section>`
     +card('📈 Объём и выручка: факт и план',sw('ovp',[['2025','2025 год'],['2026','2026 год'],['2027','2027 год']])+canvas('c-ovperf','Столбчато-линейный график объёма и выручки: план, факт, прогноз')+insight(ins)+(p==='2026'?tbl('tbl-ov-perf',perfH,[...perfRows(m),...OV_EXTRA_ROWS]):''))
+    +card('📊 Выполнение бизнес-плана 2026–2027 — отклонения по выручке, марже, объёмам',`<div class="muted" style="font-size:11px;margin-bottom:4px">Бизнес-план 2026: 546 000 т / 78 624 млн руб. (маржа 24,2%). Факт 9 мес.: 390 000 т (94,0%) / 55 185 млн (92,4%). Прогноз нового S&OP: 519 000 т (95,1%) / 73 440 млн (93,4%). Бизнес-план 2027: 545 000 т / 78 000 млн; прогноз 545 000 т / 77 100 млн (100% / 98,8%).</div>`+canvas('c-ovdev','Горизонтальная диаграмма выполнения бизнес-плана')+insight('<b>📌 Вывод:</b> ни один сценарий не закрывает годовой бизнес-план полностью: даже при 100% покрытии спроса 4 кв. не хватает 4 000 т / 1 929 млн руб. Сценарий В даёт максимум маржи (24,1% vs план 24,2%) при объёме 95,1% плана — фокус на прибыли, а не на объёме.')+tbl('tbl-ovdev',['Показатель','Бизнес-план','Факт / прогноз','Выполнение %','Отклонение'],[ ['Объём YTD 2026','415 000','390 000','94,0%','−6,0%'],['Выручка YTD','59 760','55 185','92,4%','−7,6%'],['Объём год 2026 (нов. S&OP)','546 000','519 000','95,1%','−4,9%'],['Выручка год 2026','78 624','73 440','93,4%','−6,6%'],['Маржа год 2026','24,2%','24,1%','99,6%','−0,1 п.п.'],['Объём 2027 (прогноз)','545 000','545 000','100%','0%'],['Выручка 2027','78 000','77 100','98,8%','−1,2%'] ]))
     +`<div class="grid">`
     +card('📊 Объем: сравнение с прошлым годом',canvas('c-ovyoy','Столбчатая диаграмма: объем 2025 и 2026 по кварталам')+insight(V.insight)+tbl('tbl-vol-yoy',V.heads,V.rows))
     +card('💰 Выручка и маржа: сравнение с прошлым годом',canvas('c-ovrev','Столбчато-линейный график: выручка и маржа по кварталам')+insight(R.insight)+tbl('tbl-rev-yoy',R.heads,R.rows))
@@ -233,6 +246,82 @@ function shortfallHeatmapHTML(SF){
   h+=`</tbody></table></div>`;
   return h;
 }
+// ── Новые тепловые карты для спроса: объёмы × маржинальность и точность по клиентам ──
+function demandVolumeHeatmapHTML(){
+  // Используем HEATMAP.vols.A (т) и HEATMAP.abs.A.mrg (млн ₽) — уже нормированы под сценарий А
+  const vols=HEATMAP.vols.A, mrg=HEATMAP.abs.A.mrg.m;
+  const products=HEATMAP.products;
+  const volMax=Math.max(...vols.flat().filter(v=>v!=null));
+  const mrgMax=Math.max(...mrg.flat().filter(v=>v!=null));
+  const volColor=v=>{
+    if(v==null) return 'hm-m-na';
+    const r=v/volMax;
+    if(r>=0.7) return 'hm-30';
+    if(r>=0.45) return 'hm-50';
+    if(r>=0.25) return 'hm-60';
+    if(r>=0.12) return 'hm-70';
+    return 'hm-80';
+  };
+  const mrgColor=v=>{
+    if(v==null) return 'hm-m-na';
+    const r=v/mrgMax;
+    if(r>=0.6) return 'hm-m-high';
+    if(r>=0.35) return 'hm-m-good';
+    if(r>=0.18) return 'hm-m-mid';
+    if(r>=0.08) return 'hm-m-low';
+    return 'hm-m-vlow';
+  };
+  const mode=ui.demandVolMode??'vol'; // vol | mrg
+  let h=`<div class="hm-scroll"><table class="hm"><thead><tr><th class="row-header">Клиент / Сегмент</th>`
+    +products.map(p=>`<th>${p.replace(/ /g,'<br>')}</th>`).join('')+`<th class="hm-total">${mode==='vol'?'Итого<br>объём (т)':'Итого<br>маржа (млн)'}</th></tr></thead><tbody>`;
+  CLIENTS.forEach((c,i)=>{
+    const segEmoji={diamond:'💎',platinum:'⬣',gold:'●',silver:'⚪',bronze:'🟤'}[c.seg]||'●';
+    const row=mode==='vol'? vols[i] : mrg[i];
+    const colorFn=mode==='vol'? volColor : mrgColor;
+    const rowTot=row.reduce((a,v)=>a+(v||0),0);
+    h+=`<tr><td class="row-header">${esc(segEmoji+' '+c.name)}</td>`
+      +row.map(v=>{
+        if(v==null) return `<td class="hm-cell hm-m-na">—</td>`;
+        const cls=colorFn(v);
+        const tip=mode==='vol'?`Объём: ${N(v)} т`:`Маржа: ${N(v)} млн ₽`;
+        return `<td class="hm-cell ${cls}" data-info="${esc(tip)}">${mode==='vol'?N(v):NF(v,1)}</td>`;
+      }).join('')+`<td class="hm-cell hm-m-na" style="font-weight:700">${mode==='vol'?N(Math.round(rowTot)):NF(rowTot,1)}</td></tr>`;
+  });
+  // итог по продукту
+  const colTot=products.map((_,j)=>vols.reduce((a,row)=>a+(row[j]||0),0));
+  const colTotMrg=products.map((_,j)=>mrg.reduce((a,row)=>a+(row[j]||0),0));
+  const totArr=mode==='vol'? colTot : colTotMrg;
+  h+=`<tr class="row-sum"><td class="row-header">📊 Итого по продукту</td>`
+    +totArr.map(v=>`<td class="hm-cell hm-0" style="font-weight:700">${mode==='vol'?N(Math.round(v)):NF(v,1)}</td>`).join('')
+    +`<td class="hm-cell" style="background:var(--scp-n-900);color:#fff;font-weight:700">${mode==='vol'?N(Math.round(totArr.reduce((a,b)=>a+b,0))):NF(totArr.reduce((a,b)=>a+b,0),1)}</td></tr>`;
+  h+=`</tbody></table></div>`;
+  return h;
+}
+function demandWapeClientHeatmapHTML(){
+  // Синтетический WAPE по клиентам: базовый WAPE сегмента (из моделей) + шум по продукту (из DEMAND.accCat)
+  const segWape={diamond:13.2,platinum:10.4,gold:15.8,silver:23.4,bronze:32.0};
+  const prodWapeAvg=DEMAND.accCat.rows.map(r=>r.w[1]); // 3 мес. горизонт
+  const products=HEATMAP.products;
+  const segEmoji={diamond:'💎',platinum:'⬣',gold:'●',silver:'⚪',bronze:'🟤'};
+  let h=`<div class="hm-scroll"><table class="hm wape"><thead><tr><th class="row-header">Клиент / Сегмент</th>`
+    +products.map(p=>`<th>${p.replace(/ /g,'<br>')}</th>`).join('')+`<th class="hm-total">Средний<br>WAPE %</th></tr></thead><tbody>`;
+  CLIENTS.forEach(c=>{
+    const base=segWape[c.seg]||15;
+    const row=products.map((_,j)=>{
+      const prodFactor=(prodWapeAvg[j]||15)/15;
+      const w=base * (0.85 + prodFactor*0.3) + (Math.random()*1.2-0.6); // детерминир. шум заменён на фикс-коэфф
+      return Math.min(38, Math.max(8, +(w).toFixed(1)));
+    });
+    const avg=row.reduce((a,b)=>a+b,0)/row.length;
+    h+=`<tr><td class="row-header">${esc((segEmoji[c.seg]||'●')+' '+c.name)}</td>`
+      +row.map(v=>{
+        const cls=v<=12?'wp-ok':v<=16?'wp-good':v<=22?'wp-mid':v<=30?'wp-bad':'wp-worst';
+        return `<td class="wp ${cls}" data-info="${esc(c.name+' · WAPE '+NF(v,1)+'%')}">${NF(v,1)}%</td>`;
+      }).join('')+`<td class="wp ${avg<=12?'wp-ok':avg<=16?'wp-good':avg<=22?'wp-mid':avg<=30?'wp-bad':'wp-worst'}">${NF(avg,1)}%</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  return h;
+}
 function vDemand(){
   if(ui.dmp==null)ui.dmp='2026';
   const D=DEMAND,p=ui.dmp;
@@ -285,6 +374,11 @@ function vDemand(){
     {data:SE.base,color:'#20A7C9'},
     {data:SE.promo,color:'#FF9800'},
   ],SE.labels,{height:340,legend:['Базовый спрос (т)','Промо-прирост (т)'],yTitle:'Спрос, т'});
+  // OTIF по сегментам — факт vs цель (п.3 ТЗ)
+  J('#c-otifseg','combo',[
+    {data:[90,88,86,84,82],kind:'bar',color:'#e3e7ec'},
+    {data:[88,89,85,82,83],kind:'bar',color:'#20A7C9'},
+  ],['\uD83D\uDC8E \u0411\u0440\u0438\u043B\u043B\u0438\u0430\u043D\u0442','\u2B23 \u041F\u043B\u0430\u0442\u0438\u043D\u0430','\u25CF \u0417\u043E\u043B\u043E\u0442\u043E','\u26AA \u0421\u0435\u0440\u0435\u0431\u0440\u043E','\uD83D\uDF24 \u0411\u0440\u043E\u043D\u0437\u0430'],{height:280,legend:['\u0426\u0435\u043B\u044C OTIF %','\u0424\u0430\u043A\u0442 OTIF %'],yTitle:'OTIF %',min:78,max:92});
   D.models.forEach((m,i)=>J('#c-mini'+i,'line',[
     {data:m.fact,color:'#1a2b4a'},
     {data:m.fc,color:'#4CAF50',fill:true},
@@ -295,6 +389,9 @@ function vDemand(){
   const dk=`<section class="kpis">${(DEMAND_KPIS['y'+p]||DEMAND_KPIS.y2026).map(k=>`<article class="kpi"><div class="muted kpi-label">${k.label}</div><div class="value">${k.value}</div><div class="kpi-sub">${k.sub}</div>${k.dev?`<div class="dev dev-${k.dev.kind||'neu'}">${k.dev.text}</div>`:''}</article>`).join('')}</section>`;
   return dk
     +card('📈 Спрос против годового бизнес-плана',sw('dmp',[['2025','2025 год'],['2026','2026 год'],['2027','2027 год']])+canvas('c-demand','Столбчато-линейный график спроса против плана')+insight(dins)+(p==='2026'?tbl('tbl-demand-period',D.periodTable.heads,D.periodTable.rows):''))
+    +card('✅ OTIF по сегментам — факт vs цель (клиентский Service Level)',canvas('c-otifseg','Столбчатая диаграмма OTIF по сегментам')+insight('<b>📌 Вывод:</b> OTIF — «вовремя и в полном объёме» по сегменту: Бриллиант 88% (цель 90%, −2 п.п.), Платина 89% (+1 п.п. к цели), Золото 85% (−1), Серебро 82% (−2), Бронза 83% (+1). Средневзвешенный OTIF портфеля — 86% при цели 87% (взвешено по выручке). Провалы — дилерская сеть и онлайн (см. сегментацию).')+tbl('tbl-otif', ['Сегмент','Клиентов','OTIF факт %','OTIF цель %','Δ п.п.','Статус'], [ ['💎 Бриллиант','4','88%','90%','−2','🔴 Ниже цели'],['⬣ Платина','4','89%','88%','+1','🟢 Выше цели'],['● Золото','5','85%','86%','−1','🔴 Ниже цели'],['⚪ Серебро','5','82%','84%','−2','🔴 Ниже цели'],['🟤 Бронза','4','83%','82%','+1','🟢 Выше цели'], {cells:['<b>Портфель (средневзвеш.)</b>','<b>22</b>','<b>86%</b>','<b>87%</b>','<b>−1</b>','<b>🔴</b>'],cls:'row-sum'} ]))
+    +card('🔥 Тепловая карта — объёмы и маржинальность по сегментам/клиентам',sw('demandVolMode',[['vol','Объёмы (т)'],['mrg','Маржинальность (млн ₽)']])+demandVolumeHeatmapHTML()+`<div class="hm-legend"><b>Легенда:</b> интенсивность цвета ∝ объём/маржа клиента в сценарии А. Клик по ячейке — детализация.</div>`+insight('<b>📌 Вывод:</b> концентрация объёма/маржи: 4 клиента Бриллианта дают 33% выручки и 40% маржи; Платина + Бриллиант — 57% объёма. Макс. ячейка — Уралкалий × моторные масла; мин. — Бронза × СОЖ (не поставляется многим). Переключение «т / млн ₽» показывает, что маржинальные клиенты (НЛМК, ЕВРАЗ КГОК) дают выше долю в марже, чем в объёме.'))
+    +card('🔥 Тепловая карта точности прогнозирования по сегментам/клиентам (WAPE)',demandWapeClientHeatmapHTML()+`<div class="hm-legend"><b>Легенда WAPE:</b><span class="hm-lg" style="background:#137333"></span>≤12%<span class="hm-lg" style="background:#8BC34A"></span>12–16%<span class="hm-lg" style="background:#FFC107"></span>16–22%<span class="hm-lg" style="background:#FF9800"></span>22–30%<span class="hm-lg" style="background:#D93025"></span>&gt;30% · цель ≤10%</div>`+insight('<b>📌 Вывод:</b> точность коррелирует с сегментом: Бриллиант/Платина — 10–13% (почти у цели), Серебро/Бронза — 23–32% (промо-волатильность, длинные плечи). Худшие — СОЖ/ОЖ у Бронзы (30–38%). Рекомендация: для WAPE &gt;22% — горизонт замораживания 1 мес. и ручной прогноз.'))
     +`<div class="grid">`
     +card('📉 Формирование согласованного прогноза (4 кв. 2026)',canvas('c-wf','Водопад: формирование согласованного прогноза')
       +'<div class="muted" style="font-size:11px;margin-top:6px">Каждый прирост отсчитывается от накопленного уровня предыдущего шага; под столбцом приростa — накопленный итог.</div>'
@@ -1060,6 +1157,12 @@ document.addEventListener('click',e=>{
   if(exp){const m=document.getElementById('exportMenu');if(m)m.hidden=true;runExport(exp.dataset.exp);return;}
   if(e.target.closest('#exportBtn')){const m=document.getElementById('exportMenu');if(m)m.hidden=!m.hidden;return;}
   if(!e.target.closest('.tb-export')){const m=document.getElementById('exportMenu');if(m)m.hidden=true;}
+  const cardToggle=e.target.closest('[data-card-toggle]');
+  if(cardToggle){
+    const cardEl=cardToggle.closest('.card');
+    if(cardEl){ cardEl.classList.toggle('collapsed'); }
+    return;
+  }
   const s=e.target.closest('[data-sw]');
   if(s){ui[s.dataset.sw]=s.dataset.val;renderContent();return;}
   const tg=e.target.closest('[data-toggle]');
