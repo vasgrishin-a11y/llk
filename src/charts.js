@@ -1,28 +1,80 @@
 /* ═══════════════ Интерактивный canvas-движок графиков In.Plan ═══════════════
-   Самостоятельный рендеринг без chart-библиотек. Единая точка входа:
-   drawChart(canvas, type, series, labels, opts).
+   Самостоятельный рендеринг без chart-библиотек (гайдлайн октября 2026:
+   шрифт Manrope / Arial, палитра и фирменные градиенты графиков In.Plan).
+   Единая точка входа: drawChart(canvas, type, series, labels, opts).
 
    Интерактивность (подход как в Superset/ECharts, но без зависимостей):
    • плавающий HTML-тултип с вертикальным crosshair и значениями всех рядов;
    • клик по легенде — включает/выключает ряд (данные и оси пересчитываются);
    • колесо мыши — зум по оси X, перетаскивание — панорама;
-   • двойной клик — сброс зума; для scatter — тултип по ближайшей точке.
-
-   series — массив рядов; ряд — либо массив значений [1,2,3], либо объект:
-   { data:[...], kind:'bar'|'line', axis:0|1, color:'#hex', dash:true,
-     fill:true, r:6, pointColors:[...], hidden:true (ряд виден в легенде,
-     но выключен по умолчанию; включается кликом по легенде) }.
-   opts: { height, legend:[...], colors:[...], yTitle, y1Title, max, min,
-           max1, min1, barValues, compact, center, maxX, maxY, xTitle,
-           quadrants, unit, valueFmt, stackH:true (гориз. стек),
-           tipExtra:(i,label)=>html — доп. блок тултипа по индексу точки }. */
-const PALETTE=['#20A7C9','#4CAF50','#FF9800','#D93025','#8c9bae','#90CAF9','#9C27B0','#1a2b4a'];
+   • двойной клик — сброс зума; для scatter — тултип по ближайшей точке. */
+const PALETTE=['#4769ff','#0d9f6e','#ff8c00','#ff0017','#989fac','#88c7ff','#a5246c','#04143a'];
 export const CHART_TYPES=['line','bar','stacked','hbar','combo','area','waterfall','band','donut','radar','scatter'];
-const FONT="'Open Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+const FONT="'Manrope',Arial,sans-serif";
 const nf=(v,d=0)=>Number(v||0).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d}).replace('-','−');
 const fm=v=>{const a=Math.abs(v);if(a>=10000)return nf(v/1000,0)+' тыс.';if(a>=1000)return nf(v/1000,1)+' тыс.';return nf(v,Number.isInteger(v)?0:1);};
-const autoD=v=>Number.isInteger(v)?0:1;
 const ZOOMABLE=new Set(['line','bar','stacked','combo','area','band','waterfall']);
+
+/* Фирменные градиенты для графиков (In.Plan Visual Guidelines, стр. 17 и 26):
+   нижний (насыщенный) → верхний (светлый) стоп для столбцов, дуг и полос. */
+const GRAD_MAP={
+  '#4769ff':['#1451ff','#6d99ff'],
+  '#1451ff':['#1451ff','#88c7ff'],
+  '#88c7ff':['#5296ff','#9fd4ff'],
+  '#f09135':['#f09135','#e6779a'],
+  '#ff8c00':['#e87700','#ffb457'],
+  '#ff0017':['#ff0017','#e6779a'],
+  '#a5246c':['#a5246c','#e16ba8'],
+  '#c93b86':['#a5246c','#e6779a'],
+  '#e16ba8':['#c44b8d','#f09bc6'],
+  '#0a0a53':['#0a0a53','#486cad'],
+  '#486cad':['#203f7a','#6c92d4'],
+  '#1b1b63':['#1b1b63','#4643df'],
+  '#00576a':['#00576a','#5ee2ff'],
+  '#0e2c5e':['#0e2c5e','#5d85a6'],
+  '#4528c3':['#4528c3','#ad97fd'],
+  '#704bf9':['#704bf9','#e52b8a','#f37635'],
+  '#9f5bd6':['#6e3ab0','#c28ef2'],
+  '#e52b8a':['#a5246c','#f062a8'],
+  '#e6779a':['#d14d78','#f7a1bc'],
+  '#ed0084':['#b80066','#ff4da6'],
+  '#d91b38':['#b80e28','#f26379'],
+  '#1c2145':['#1c2145','#4b4986'],
+  '#2a2b4a':['#2a2b4a','#514a5e'],
+  '#989fac':['#989fac','#dfe3eb'],
+  '#dfe5f2':['#cbd4e6','#eaeef6'],
+  '#0d9f6e':['#08744f','#2dc48f'],
+  '#04143a':['#04143a','#1e3870'],
+  '#7d8799':['#687387','#9ba5b5'],
+  '#9c4a24':['#823a19','#c76c40'],
+};
+function makeGrad(ctx,col,x0,y0,x1,y1){
+  if(typeof col!=='string')return col;
+  const stops=GRAD_MAP[col.toLowerCase()];
+  if(!stops||typeof ctx.createLinearGradient!=='function')return col;
+  const g=ctx.createLinearGradient(x0,y0,x1,y1);
+  if(!g||typeof g.addColorStop!=='function')return col;
+  stops.forEach((c,i)=>g.addColorStop(stops.length===1?0:i/(stops.length-1),c));
+  return g;
+}
+function hexAlpha(hex,alpha){
+  if(typeof hex!=='string'||!/^#[0-9a-fA-F]{6}$/.test(hex))return null;
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function fillRRect(ctx,x,y,w,h,r){
+  if(w<=0||h<=0)return;
+  const rad=Math.min(r||0,w/2,h/2);
+  if(rad<1){ctx.fillRect(x,y,w,h);return;}
+  ctx.beginPath();
+  ctx.moveTo(x+rad,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rad);
+  ctx.arcTo(x+w,y+h,x,y+h,rad);
+  ctx.arcTo(x,y+h,x,y,rad);
+  ctx.arcTo(x,y,x+w,y,rad);
+  ctx.closePath();
+  ctx.fill();
+}
 
 /* ── Общий плавающий тултип (один на документ) ── */
 function tipEl(){
@@ -30,8 +82,8 @@ function tipEl(){
   let t=document.getElementById('__chartTip');
   if(!t){t=document.createElement('div');t.id='__chartTip';
     t.style.cssText='position:fixed;z-index:9999;pointer-events:none;display:none;'
-      +'background:#1f1f20;color:#fff;font:400 12px/1.5 '+FONT+';padding:8px 10px;'
-      +'border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.28);max-width:280px;white-space:nowrap';
+      +'background:#04143a;color:#ffffff;border:1px solid rgba(71,105,255,.35);font:400 12px/1.5 '+FONT+';padding:8px 11px;'
+      +'border-radius:8px;box-shadow:0 10px 28px rgba(4,20,58,.32);max-width:280px;white-space:nowrap';
     document.body.appendChild(t);}
   return t;
 }
@@ -60,10 +112,10 @@ function paint(canvas){
   const st=canvas.__state;
   const doc=typeof document!=='undefined'?document.documentElement:null;
   const css=doc&&typeof getComputedStyle==='function'?getComputedStyle(doc):{getPropertyValue:()=>''};
-  const MUTED=(css.getPropertyValue('--muted')||'').trim()||'#64748b';
-  const LINE=(css.getPropertyValue('--line')||'').trim()||'#dbe4ef';
+  const MUTED=(css.getPropertyValue('--muted')||'').trim()||'#687692';
+  const LINE=(css.getPropertyValue('--line')||'').trim()||'#dae2ef';
   const CARD=(css.getPropertyValue('--card')||'').trim()||'#ffffff';
-  const TEXT=(css.getPropertyValue('--text')||'').trim()||'#212529';
+  const TEXT=(css.getPropertyValue('--text')||'').trim()||'#04143a';
   const pal=(opts.colors||PALETTE);
   let S=(series||[]).map((s,i)=>{const o=Array.isArray(s)?{data:s}:Object.assign({},s);o.data=o.data||[];o.color=o.color||pal[i%pal.length];o.kind=o.kind||(type==='combo'?'bar':'line');o.__i=i;return o;});
 
@@ -81,20 +133,17 @@ function paint(canvas){
   const H=opts.height||280,W=Math.max(canvas.clientWidth||0,240),dpr=2;
   canvas.width=W*dpr;canvas.height=H*dpr;if(canvas.style)canvas.style.height=H+'px';
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
-  const compact=!!opts.compact,fs=compact?8:11;
+  const compact=!!opts.compact,fs=compact?8.5:11;
   ctx.font=fs+'px '+FONT;ctx.textAlign='left';ctx.textBaseline='alphabetic';
   const geom={type,plot:null,index:[],legendRects:[],points:[],zoomActive};canvas.__geom=geom;
 
-  /* ── легенда (с учётом скрытия и пустых рядов) ──
-     opts.legendExtra: [{t:'подпись',color:'#hex'}] — дополнительные некликабельные
-     пункты легенды (например, цветная зона fillBetween), рисуются после рядов. */
+  /* ── легенда (с учётом скрытия и пустых рядов) ── */
   const legendSrc=opts.legend&&opts.legend.length?opts.legend.map(String):null;
-  // для декартовых прячем легенду ряда, если у него совсем нет данных в окне
   const legItems=legendSrc?legendSrc.map((t,i)=>{
     const s=S[i];const hasData=!s||(s.data||[]).some(v=>v!=null);
     return {t,i,color:(S[i]?S[i].color:pal[i%pal.length]),hidden:st.hidden.has(i),empty:!hasData};
   }).filter(it=>!it.empty):[];
-  const extraItems=(Array.isArray(opts.legendExtra)?opts.legendExtra:[]).map(e=>({t:String(e.t||''),i:-1,color:e.color||'#8c9bae',hidden:false,empty:!e.t}));
+  const extraItems=(Array.isArray(opts.legendExtra)?opts.legendExtra:[]).map(e=>({t:String(e.t||''),i:-1,color:e.color||'#989fac',hidden:false,empty:!e.t}));
   const allLegItems=[...legItems,...extraItems.filter(e=>!e.empty)];
   const layoutLegend=list=>{const sw=compact?7:9,gap=compact?9:14,lh=compact?12:16;let x=6,rows=1;const items=[];ctx.font=fs+'px '+FONT;
     list.forEach(o=>{const t=typeof o==='string'?o:o.t;const w=sw+5+ctx.measureText(t).width+gap;if(x+w>W-6&&x!==6){rows++;x=6}items.push(Object.assign({},typeof o==='string'?{t:o}:o,{x,row:rows-1,w}));x+=w;});
@@ -103,7 +152,8 @@ function paint(canvas){
   const drawLegend=(top)=>{ctx.font=fs+'px '+FONT;ctx.textAlign='left';geom.legendRects=[];
     lay.items.forEach(it=>{const y=top+it.row*lay.lh+lay.lh-4;
       ctx.globalAlpha=it.hidden?0.4:1;
-      ctx.fillStyle=it.color;ctx.fillRect(it.x,y-lay.sw,lay.sw,lay.sw);
+      ctx.fillStyle=makeGrad(ctx,it.color,it.x,y,it.x,y-lay.sw);
+      fillRRect(ctx,it.x,y-lay.sw,lay.sw,lay.sw,2.5);
       ctx.fillStyle=it.hidden?MUTED:TEXT;ctx.fillText(it.t,it.x+lay.sw+5,y);
       if(it.hidden){const tw=ctx.measureText(it.t).width;ctx.strokeStyle=MUTED;ctx.beginPath();ctx.moveTo(it.x+lay.sw+5,y-4);ctx.lineTo(it.x+lay.sw+5+tw,y-4);ctx.stroke();}
       ctx.globalAlpha=1;
@@ -120,21 +170,23 @@ function paint(canvas){
     const cx=W/2,cy=(H-lg.h)/2+2,r=Math.min(W,H-lg.h)*0.36;let a0=-Math.PI/2;
     const arcs=[];
     raw.forEach((v,i)=>{if(st.hidden.has(i))return;const a1=a0+v/shownTotal*Math.PI*2;const on=st.hover===i;
+      const col=pal[i%pal.length];
       ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,on?r+5:r,a0,a1);ctx.closePath();
-      ctx.fillStyle=pal[i%pal.length];ctx.globalAlpha=st.hover==null||on?1:.55;ctx.fill();ctx.globalAlpha=1;
-      if(on){ctx.strokeStyle=CARD;ctx.lineWidth=2;ctx.stroke();}
+      ctx.fillStyle=makeGrad(ctx,col,cx-r*0.8,cy+r*0.8,cx+r*0.8,cy-r*0.8);
+      ctx.globalAlpha=st.hover==null||on?1:.55;ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=CARD;ctx.lineWidth=on?2.2:1.2;ctx.stroke();
       arcs.push({i,a0,a1});a0=a1;});
-    geom.donut={cx,cy,r,r0:r*0.55,total:shownTotal,vals:raw,labels:labs,arcs};
-    ctx.fillStyle=CARD;ctx.beginPath();ctx.arc(cx,cy,r*0.55,0,7);ctx.fill();
-    ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.font=(compact?11:14)+'px '+FONT;
-    ctx.fillText(opts.center!=null&&st.hidden.size===0?String(opts.center):fm(shownTotal),cx,cy+4);
-    if(opts.centerSub&&st.hidden.size===0){ctx.font=(compact?8:10)+'px '+FONT;ctx.fillStyle=MUTED;ctx.fillText(String(opts.centerSub),cx,cy+18);}
+    geom.donut={cx,cy,r,r0:r*0.56,total:shownTotal,vals:raw,labels:labs,arcs};
+    ctx.fillStyle=CARD;ctx.beginPath();ctx.arc(cx,cy,r*0.56,0,7);ctx.fill();
+    ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.font='700 '+(compact?11:15)+'px '+FONT;
+    ctx.fillText(opts.center!=null&&st.hidden.size===0?String(opts.center):fm(shownTotal),cx,cy+(opts.centerSub?1:5));
+    if(opts.centerSub&&st.hidden.size===0){ctx.font='500 '+(compact?8.5:10.5)+'px '+FONT;ctx.fillStyle=MUTED;ctx.fillText(String(opts.centerSub),cx,cy+16);}
     ctx.font=fs+'px '+FONT;
-    // легенда доната — кликабельная (скрыть/показать сегмент), с подсветкой при наведении
     ctx.textAlign='left';geom.legendRects=[];
     lg.items.forEach(it=>{const y=(H-lg.h)+it.row*lg.lh+lg.lh-4;
       ctx.globalAlpha=it.hidden?.4:1;
-      ctx.fillStyle=pal[it.i%pal.length];ctx.fillRect(it.x,y-lg.sw,lg.sw,lg.sw);
+      ctx.fillStyle=makeGrad(ctx,pal[it.i%pal.length],it.x,y,it.x,y-lg.sw);
+      fillRRect(ctx,it.x,y-lg.sw,lg.sw,lg.sw,2.5);
       ctx.fillStyle=it.hidden?MUTED:(st.hover===it.i?TEXT:MUTED);ctx.fillText(it.t,it.x+lg.sw+5,y);
       if(it.hidden){const tw=ctx.measureText(it.t).width;ctx.strokeStyle=MUTED;ctx.lineWidth=1;
         ctx.beginPath();ctx.moveTo(it.x+lg.sw+5,y-4);ctx.lineTo(it.x+lg.sw+5+tw,y-4);ctx.stroke();}
@@ -147,9 +199,6 @@ function paint(canvas){
   if(type==='radar'){
     const n=labels.length;if(!n)return;
     const cx=W/2,cy=(H-lay.h)/2+6;
-    /* Жирные видимые подписи осей; длинные подписи вида «Сырьё (затраты)»
-       переносятся на две строки. Радиус паутины — максимально большой,
-       при котором подписи не выходят за край канваса. */
     const labFs=compact?9:12,labGap=2,labOff=10;
     const parts=labels.map(l=>{const m=String(l).match(/^(.*?)\s*\((.+)\)$/);return m?[m[1],'('+m[2]+')']:[String(l)];});
     const partSize=p=>{ctx.font='700 '+labFs+'px '+FONT;const w=ctx.measureText(p[0]).width;
@@ -172,7 +221,6 @@ function paint(canvas){
       ctx.font='700 '+labFs+'px '+FONT;ctx.fillStyle=TEXT;
       ctx.textAlign=Math.abs(c)<0.35?'center':(c>0?'left':'right');
       if(Math.abs(c)<0.35){
-        /* почти вертикальные оси: блок подписи над/под вершиной паутины */
         if(s<0){ctx.textBaseline='bottom';
           ctx.fillText(p[0],lx,ly-(two?labFs+labGap:0));
           if(two)ctx.fillText(p[1],lx,ly);}
@@ -180,7 +228,6 @@ function paint(canvas){
           ctx.fillText(p[0],lx,ly);
           if(two)ctx.fillText(p[1],lx,ly+labFs+labGap);}
       }else{
-        /* боковые оси: блок из двух строк центрируется по высоте вершины */
         ctx.textBaseline='middle';
         const blockH=two?labFs*2+labGap:labFs;
         ctx.fillText(p[0],lx,ly-blockH/2+labFs/2);
@@ -188,9 +235,9 @@ function paint(canvas){
     }
     ctx.textBaseline='alphabetic';
     vis.forEach(s=>{ctx.beginPath();s.data.forEach((v,i)=>{const[x,y]=pt(i,v==null?0:v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();
-      ctx.globalAlpha=0.15;ctx.fillStyle=s.color;ctx.fill();ctx.globalAlpha=1;
-      ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.stroke();
-      s.data.forEach((v,i)=>{const[x,y]=pt(i,v==null?0:v);ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fillStyle=s.color;ctx.fill();});});
+      ctx.globalAlpha=0.14;ctx.fillStyle=s.color;ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=s.color;ctx.lineWidth=2.2;ctx.stroke();
+      s.data.forEach((v,i)=>{const[x,y]=pt(i,v==null?0:v);ctx.beginPath();ctx.arc(x,y,2.8,0,7);ctx.fillStyle=s.color;ctx.fill();});});
     geom.radar={cx,cy,R,n,max};
     drawLegend(H-lay.h);return;
   }
@@ -198,8 +245,6 @@ function paint(canvas){
   /* ─────────── scatter ─────────── */
   if(type==='scatter'){
     const mx=opts.maxX||100,my=opts.maxY||100;
-    /* Ширина подписей оси Y задаёт левый отступ, иначе они наезжают на заголовок оси;
-       заголовку оси X отводим собственную полосу под числами. */
     ctx.font=fs+'px '+FONT;
     let wy=0;for(let i=0;i<=4;i++)wy=Math.max(wy,ctx.measureText(fm(my*(4-i)/4)).width);
     const padL=Math.max(compact?26:40,Math.ceil(wy)+5+(opts.yTitle?16:3));
@@ -218,9 +263,12 @@ function paint(canvas){
     geom.points=[];
     vis.forEach(s=>(s.data||[]).forEach(p=>{const px=X(p.x),py=Y(p.y),rr=p.r||s.r||6;
       const on=st.hover&&st.hover.px===px&&st.hover.py===py;
-      ctx.beginPath();ctx.arc(px,py,on?rr+2:rr,0,7);ctx.fillStyle=(p.color)||s.color;ctx.globalAlpha=on?1:.85;ctx.fill();ctx.globalAlpha=1;
-      if(p.label){ctx.fillStyle=TEXT;ctx.font=(compact?8:9)+'px '+FONT;ctx.textAlign='center';ctx.fillText(p.label,px,py-rr-3);}
-      geom.points.push({px,py,r:rr,meta:p,color:(p.color)||s.color});}));
+      const col=(p.color)||s.color;
+      ctx.beginPath();ctx.arc(px,py,on?rr+2:rr,0,7);
+      ctx.fillStyle=makeGrad(ctx,col,px-rr,py+rr,px+rr,py-rr);
+      ctx.globalAlpha=on?1:.88;ctx.fill();ctx.globalAlpha=1;
+      if(p.label){ctx.fillStyle=TEXT;ctx.font=(compact?8.5:9.5)+'px '+FONT;ctx.textAlign='center';ctx.fillText(p.label,px,py-rr-3);}
+      geom.points.push({px,py,r:rr,meta:p,color:col});}));
     drawLegend(H-lay.h);return;
   }
 
@@ -249,19 +297,22 @@ function paint(canvas){
         ctx.fillText(txt===nm?nm:txt+'…',x0-6,cy+3);}
       if(stackH){let pos=0,neg=0;
         vis.forEach(s=>{const v=s.data[c];if(v==null)return;const base=v>=0?pos:neg;const bx=Math.min(X(base),X(base+v)),bw=Math.max(Math.abs(X(base+v)-X(base)),1);
-          ctx.fillStyle=(s.pointColors&&s.pointColors[c])||s.color;ctx.fillRect(bx,cy-rowH*0.3,bw,rowH*0.6);if(v>=0)pos+=v;else neg+=v;});
+          const col=(s.pointColors&&s.pointColors[c])||s.color;
+          ctx.fillStyle=makeGrad(ctx,col,bx,cy,bx+bw,cy);ctx.fillRect(bx,cy-rowH*0.3,bw,rowH*0.6);if(v>=0)pos+=v;else neg+=v;});
       }else{
         const bh=rowH*0.72/grp;
         vis.forEach((s,gi)=>{const v=s.data[c];if(v==null)return;const by=cy-rowH*0.36+gi*bh;
           const bx=Math.min(X(0),X(v)),bw=Math.max(Math.abs(X(v)-X(0)),1);
-          ctx.fillStyle=(s.pointColors&&s.pointColors[c])||s.color;ctx.fillRect(bx,by,bw,bh*0.86);
-          if(opts.barValuesIn){ /* значение внутри полосы, белым */
-            ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='700 '+(opts.barValueFont||(compact?8:10))+'px '+FONT;
+          const col=(s.pointColors&&s.pointColors[c])||s.color;
+          ctx.fillStyle=v>=0?makeGrad(ctx,col,bx,by,bx+bw,by):makeGrad(ctx,col,bx+bw,by,bx,by);
+          fillRRect(ctx,bx,by,bw,bh*0.86,3);
+          if(opts.barValuesIn){
+            ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.font='700 '+(opts.barValueFont||(compact?8.5:10))+'px '+FONT;
             const txt=fm(v);const tw=ctx.measureText(txt).width;
             if(bw>tw+8)ctx.fillText(txt,bx+bw/2,by+bh*0.7);
             else{ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.fillText(txt,v>=0?bx+bw+3:bx-3,by+bh*0.7);}
             ctx.font=fs+'px '+FONT;}
-          else{ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.font=(compact?8:10)+'px '+FONT;
+          else{ctx.fillStyle=MUTED;ctx.textAlign=v>=0?'left':'right';ctx.font=(compact?8.5:10)+'px '+FONT;
             ctx.fillText(fm(v),v>=0?bx+bw+3:bx-3,by+bh*0.7);ctx.font=fs+'px '+FONT;}});
       }
     }
@@ -276,7 +327,6 @@ function paint(canvas){
   let rg0,rg1=null;
   if(type==='stacked'||type==='area'){const sums=[];for(let i=0;i<n;i++)sums.push(vis.reduce((a,s)=>a+(s.data[i]||0),0));rg0=rangeOf(sums);}
   else if(type==='waterfall'){
-    /* накопление: первый столбец — база, промежуточные приросты идут от неё, последний — итог */
     const d=(vis[0]||{data:[]}).data,pts=[0];let acc=d[0]||0;pts.push(acc);
     for(let i=1;i<d.length-1;i++){acc+=(d[i]||0);pts.push(acc);}
     pts.push(d.length?(d[d.length-1]||0):0);rg0=rangeOf([pts]);}
@@ -285,8 +335,6 @@ function paint(canvas){
   if(opts.max!=null)rg0.max=opts.max;if(opts.min!=null)rg0.min=opts.min;
   if(rg1){if(opts.max1!=null)rg1.max=opts.max1;if(opts.min1!=null)rg1.min=opts.min1;}
   const rot=!compact&&n>12;
-  /* Отступы считаем от реальной ширины подписей, иначе длинные числа наезжают
-     на заголовок оси, а подписи оси X — на легенду. */
   ctx.font=fs+'px '+FONT;
   const tickW=(mn,mx)=>{let w=0;for(let i=0;i<=4;i++)w=Math.max(w,ctx.measureText(fm(mx-(mx-mn)*i/4)).width);return Math.ceil(w);};
   const w0=tickW(rg0.min,rg0.max),w1=rg1?tickW(rg1.min,rg1.max):0;
@@ -319,22 +367,21 @@ function paint(canvas){
   if(Array.isArray(opts.marks)&&opts.marks.length){
     const i0=zoomActive&&st.zoom?st.zoom.i0:0;
     opts.marks.forEach(mk=>{const idx=(mk.i|0)-i0;if(idx<0||idx>=n)return;const mx=cxL(idx);
-      ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle=mk.color||'#D93025';ctx.lineWidth=1.4;ctx.globalAlpha=.75;
+      ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle=mk.color||'#ff0017';ctx.lineWidth=1.4;ctx.globalAlpha=.78;
       ctx.beginPath();ctx.moveTo(mx,y0);ctx.lineTo(mx,y1);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
-      ctx.fillStyle=mk.color||'#D93025';ctx.beginPath();ctx.arc(mx,y0+5,4.5,0,7);ctx.fill();
-      ctx.fillStyle='#fff';ctx.font='700 7px '+FONT;ctx.textAlign='center';ctx.fillText('!',mx,y0+7.6);
+      ctx.fillStyle=mk.color||'#ff0017';ctx.beginPath();ctx.arc(mx,y0+5.5,5,0,7);ctx.fill();
+      ctx.fillStyle='#ffffff';ctx.font='700 8px '+FONT;ctx.textAlign='center';ctx.fillText('!',mx,y0+8.2);
       ctx.restore();ctx.font=fs+'px '+FONT;ctx.textAlign='left';});
   }
 
-  /* ── Минималистичный бейдж риска на столбце: белый круг с «!» ──
-     type 'under' (дефицит/ниже страхового) — красный, 'over' (перетовар/выше цели) — оранжевый. */
-  const riskCol=t=>t==='under'?'#D93025':'#E8930C';
+  /* ── Минималистичный бейдж риска на столбце: белый круг с «!» ── */
+  const riskCol=t=>t==='under'?'#ff0017':'#ff8c00';
   const drawRiskBadge=(cx,cy,rk)=>{
     const t=typeof rk==='string'?rk:(rk&&rk.type)||'over';
     const col=riskCol(t),r=compact?6:7.5;
     ctx.save();
-    ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fillStyle='#fff';ctx.fill();
-    ctx.lineWidth=1.6;ctx.strokeStyle=col;ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fillStyle='#ffffff';ctx.fill();
+    ctx.lineWidth=1.7;ctx.strokeStyle=col;ctx.stroke();
     ctx.fillStyle=col;ctx.font='700 '+(compact?8:10)+'px '+FONT;
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('!',cx,cy+0.5);
@@ -345,19 +392,18 @@ function paint(canvas){
 
   const linePoints=s=>{const pts=[];s.data.forEach((v,i)=>{if(v!=null)pts.push([cxL(i),(s.axis===1?Y1:Y0)(v),i])});return pts;};
   const drawLineSeries=s=>{const pts=linePoints(s);if(!pts.length)return;
-    ctx.setLineDash(s.dash?[6,4]:[]);ctx.strokeStyle=s.color;ctx.lineWidth=s.w||s.lineWidth||2;ctx.beginPath();
+    ctx.setLineDash(s.dash?[6,4]:[]);ctx.strokeStyle=s.color;ctx.lineWidth=s.w||s.lineWidth||2.1;ctx.beginPath();
     let prevI=null;pts.forEach(([x,y,i])=>{if(prevI!==null&&i===prevI+1)ctx.lineTo(x,y);else ctx.moveTo(x,y);prevI=i;});
     ctx.stroke();ctx.setLineDash([]);
-    pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,compact?1.6:2.6,0,7);ctx.fillStyle=s.color;ctx.fill();});};
+    pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,compact?1.7:2.7,0,7);ctx.fillStyle=s.color;ctx.fill();});};
   const fillUnder=s=>{const pts=linePoints(s);if(pts.length<2)return;
-    ctx.beginPath();ctx.moveTo(pts[0][0],Y0(0));pts.forEach(([x,y])=>ctx.lineTo(x,y));ctx.lineTo(pts[pts.length-1][0],Y0(0));ctx.closePath();
-    ctx.globalAlpha=0.16;ctx.fillStyle=s.fill===true?s.color:s.fill;ctx.fill();ctx.globalAlpha=1;};
-  /* ── Заливка области между двумя рядами (opts.fillBetween) ──
-     {upper:i, lower:j, color, alpha, only:'above'|'both'} — красная зона между
-     «Планом запасов IBP» и «Целевым запасом»: закрашиваются только участки, где
-     верхний ряд выше нижнего (only:'above', сверхнормативный запас). Каждый
-     непрерывный участок расширяется на полшага оси X, чтобы был виден даже
-     в одном месяце. */
+    const baseCol=s.fill===true?s.color:s.fill;
+    const minY=Math.min(...pts.map(p=>p[1])),baseY=Y0(0);
+    ctx.beginPath();ctx.moveTo(pts[0][0],baseY);pts.forEach(([x,y])=>ctx.lineTo(x,y));ctx.lineTo(pts[pts.length-1][0],baseY);ctx.closePath();
+    const cTop=hexAlpha(baseCol,0.22),cBot=hexAlpha(baseCol,0.02);
+    const g=(cTop&&cBot&&typeof ctx.createLinearGradient==='function')?ctx.createLinearGradient(0,minY,0,baseY):null;
+    if(g&&typeof g.addColorStop==='function'){g.addColorStop(0,cTop);g.addColorStop(1,cBot);ctx.fillStyle=g;ctx.fill();}
+    else{ctx.globalAlpha=0.15;ctx.fillStyle=baseCol;ctx.fill();ctx.globalAlpha=1;}};
   const drawFillBetween=()=>{
     const fbList=Array.isArray(opts.fillBetween)?opts.fillBetween:[opts.fillBetween];
     fbList.forEach(fb=>{
@@ -381,7 +427,7 @@ function paint(canvas){
         for(let k=run.length-1;k>=0;k--)ctx.lineTo(loM.get(run[k])[0],loM.get(run[k])[1]);
         ctx.lineTo(xL,loM.get(first)[1]);
         ctx.closePath();
-        ctx.globalAlpha=fb.alpha!=null?fb.alpha:0.16;ctx.fillStyle=fb.color||'#D93025';ctx.fill();ctx.globalAlpha=1;
+        ctx.globalAlpha=fb.alpha!=null?fb.alpha:0.16;ctx.fillStyle=fb.color||'#ff0017';ctx.fill();ctx.globalAlpha=1;
         run=[];
       };
       idxs.forEach(i=>{if(cond(i))run.push(i);else flush();});
@@ -394,10 +440,9 @@ function paint(canvas){
       const up=linePoints(vis[0]),lo=linePoints(vis[vis.length-1]);
       if(up.length>1&&lo.length>1){ctx.beginPath();ctx.moveTo(up[0][0],up[0][1]);up.forEach(p=>ctx.lineTo(p[0],p[1]));
         for(let i=lo.length-1;i>=0;i--)ctx.lineTo(lo[i][0],lo[i][1]);ctx.closePath();
-        ctx.globalAlpha=0.12;ctx.fillStyle=vis[0].color;ctx.fill();ctx.globalAlpha=1;}
-      /* средние линии — полная заливка+линия; границы — тонкий пунктирный контур поверх заливки */
+        ctx.globalAlpha=0.14;ctx.fillStyle=vis[0].color;ctx.fill();ctx.globalAlpha=1;}
       vis.forEach((s,idx)=>{if(s.fill)fillUnder(s);if(idx>0&&idx<vis.length-1)drawLineSeries(s);});
-      if(opts.bandStroke!==false){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=opts.bandStrokeColor||'#7c86a0';ctx.lineWidth=1.2;
+      if(opts.bandStroke!==false){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=opts.bandStrokeColor||'#7b879e';ctx.lineWidth=1.2;
         [up,lo].forEach(pts=>{if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}});
         ctx.restore();}
     }
@@ -408,24 +453,24 @@ function paint(canvas){
     vis.forEach(s=>{const tops=[],bots=[];for(let i=0;i<n;i++){bots.push([cxL(i),Y0(bottoms[i])]);bottoms[i]+=(s.data[i]||0);tops.push([cxL(i),Y0(bottoms[i])]);}
       ctx.beginPath();ctx.moveTo(bots[0][0],bots[0][1]);tops.forEach(p=>ctx.lineTo(p[0],p[1]));
       for(let i=bots.length-1;i>=0;i--)ctx.lineTo(bots[i][0],bots[i][1]);ctx.closePath();
-      ctx.globalAlpha=0.35;ctx.fillStyle=s.color;ctx.fill();ctx.globalAlpha=1;
-      ctx.setLineDash(s.dash?[6,4]:[]);ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();
+      ctx.globalAlpha=0.3;ctx.fillStyle=makeGrad(ctx,s.color,0,y1,0,y0);ctx.fill();ctx.globalAlpha=1;
+      ctx.setLineDash(s.dash?[6,4]:[]);ctx.strokeStyle=s.color;ctx.lineWidth=2.1;ctx.beginPath();
       tops.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.setLineDash([]);});
   }
   else if(type==='waterfall'){
     const d=(vis[0]||{data:[]}).data,bw=slot*0.54;let acc=0,prevY=null,prevCx=null;
     d.forEach((v,i)=>{const isFirst=i===0,isLast=i===d.length-1;
-      /* база и итог рисуются от нуля; промежуточные — приростом от накопленного уровня */
       const b0=isFirst||isLast?0:acc,b1=isFirst||isLast?Math.max(v,0):acc+v;
       if(isFirst)acc=v;else if(!isLast)acc+=v;
-      const col=isLast?(opts.wfTotalColor||'#4CAF50'):(isFirst?vis[0].color:(v>=0?(opts.wfUpColor||'#FF9800'):(opts.wfDownColor||'#D93025')));
-      const cx=cxL(i),yT=Y0(Math.max(b0,b1)),yB=Y0(Math.min(b0,b1));
-      ctx.fillStyle=col;ctx.fillRect(cx-bw/2,yT,bw,Math.max(yB-yT,2));
-      if(prevY!=null){ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle='#b8c0cc';ctx.lineWidth=1.2;
+      const col=isLast?(opts.wfTotalColor||'#0d9f6e'):(isFirst?vis[0].color:(v>=0?(opts.wfUpColor||'#ff8c00'):(opts.wfDownColor||'#ff0017')));
+      const cx=cxL(i),yT=Y0(Math.max(b0,b1)),yB=Y0(Math.min(b0,b1)),bh=Math.max(yB-yT,2);
+      ctx.fillStyle=makeGrad(ctx,col,cx,yB,cx,yT);
+      fillRRect(ctx,cx-bw/2,yT,bw,bh,4);
+      if(prevY!=null){ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle='#bcc6d9';ctx.lineWidth=1.2;
         ctx.beginPath();ctx.moveTo(prevCx+bw/2,prevY);ctx.lineTo(cx-bw/2,prevY);ctx.stroke();ctx.restore();}
       prevY=Y0(b1);prevCx=cx;
       ctx.fillStyle=isFirst||isLast?TEXT:col;ctx.textAlign='center';
-      ctx.font='700 '+(compact?8:11)+'px '+FONT;
+      ctx.font='700 '+(compact?8.5:11)+'px '+FONT;
       ctx.fillText(isFirst||isLast?nf(v):(v>0?'+':'−')+nf(Math.abs(v)),cx,yT-5);
       ctx.font=fs+'px '+FONT;
       if(!isFirst&&!isLast){ctx.fillStyle=MUTED;ctx.fillText('→ '+nf(b1),cx,yB+13);}});
@@ -433,11 +478,13 @@ function paint(canvas){
   else if(type==='stacked'){
     const cumPos=new Array(n).fill(0),cumNeg=new Array(n).fill(0),bw=slot*0.6;
     vis.forEach(s=>{for(let i=0;i<n;i++){const v=s.data[i];if(v==null)continue;
-      const x=cxL(i)-bw/2;ctx.fillStyle=(s.pointColors&&s.pointColors[i])||s.color;
-      if(v>=0){const yT=Y0(cumPos[i]+v),yB=Y0(cumPos[i]);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));
+      const x=cxL(i)-bw/2,col=(s.pointColors&&s.pointColors[i])||s.color;
+      if(v>=0){const yT=Y0(cumPos[i]+v),yB=Y0(cumPos[i]);
+        ctx.fillStyle=makeGrad(ctx,col,x,yB,x,yT);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));
         if(s.risks&&s.risks[i])riskMarkers.push({x:x+bw/2,y:(yT+yB)/2,rk:s.risks[i]});
         cumPos[i]+=v;}
-      else{const yT=Y0(cumNeg[i]),yB=Y0(cumNeg[i]+v);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));
+      else{const yT=Y0(cumNeg[i]),yB=Y0(cumNeg[i]+v);
+        ctx.fillStyle=makeGrad(ctx,col,x,yT,x,yB);ctx.fillRect(x,yT,bw,Math.max(yB-yT,1));
         if(s.risks&&s.risks[i])riskMarkers.push({x:x+bw/2,y:(yT+yB)/2,rk:s.risks[i]});
         cumNeg[i]+=v;}}});
     riskMarkers.forEach(m=>drawRiskBadge(m.x,m.y,m.rk));
@@ -447,9 +494,10 @@ function paint(canvas){
     const bw=Math.max(slot*0.68/Math.max(bars.length,1),2),gw=bw*bars.length;
     bars.forEach((s,bi)=>{for(let i=0;i<n;i++){const v=s.data[i];if(v==null)continue;
       const x=cxL(i)-gw/2+bi*bw,Y=s.axis===1?Y1:Y0;
-      ctx.fillStyle=(s.pointColors&&s.pointColors[i])||s.color;
-      const yT=Y(Math.max(v,0)),yB=Y(Math.min(v,0));
-      ctx.fillRect(x,yT,bw*0.9,Math.max(yB-yT,1));
+      const col=(s.pointColors&&s.pointColors[i])||s.color;
+      const yT=Y(Math.max(v,0)),yB=Y(Math.min(v,0)),bh=Math.max(yB-yT,1);
+      ctx.fillStyle=v>=0?makeGrad(ctx,col,x,yB,x,yT):makeGrad(ctx,col,x,yT,x,yB);
+      fillRRect(ctx,x,yT,bw*0.9,bh,3);
       if(s.risks&&s.risks[i]){const h=Math.abs(yB-yT);riskMarkers.push({x:x+bw*0.45,y:h>20?(yT+yB)/2:yT-10,rk:s.risks[i]});}
       if(opts.barValues){ctx.fillStyle=TEXT;ctx.textAlign='center';ctx.fillText(fm(v),x+bw*0.45,yT-3);}}});
     vis.filter(s=>s.kind==='line').forEach(s=>{if(s.fill)fillUnder(s);drawLineSeries(s);});
@@ -459,10 +507,10 @@ function paint(canvas){
   /* ── crosshair + подсветка точек при наведении ── */
   if(st.hover!=null&&typeof st.hover==='number'&&st.hover>=0&&st.hover<n){
     const hx=cxL(st.hover);
-    ctx.save();ctx.strokeStyle=MUTED;ctx.setLineDash([4,3]);ctx.globalAlpha=.7;
+    ctx.save();ctx.strokeStyle='#4769ff';ctx.setLineDash([4,3]);ctx.globalAlpha=.55;
     ctx.beginPath();ctx.moveTo(hx,y0);ctx.lineTo(hx,y1);ctx.stroke();ctx.restore();
     vis.forEach(s=>{const v=s.data[st.hover];if(v==null)return;const Y=s.axis===1?Y1:Y0;
-      ctx.beginPath();ctx.arc(hx,Y(v),4,0,7);ctx.fillStyle=s.color;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();});
+      ctx.beginPath();ctx.arc(hx,Y(v),4.2,0,7);ctx.fillStyle=s.color;ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=1.6;ctx.stroke();});
   }
   drawLegend(H-lay.h);
   ctx.textAlign='left';ctx.setLineDash([]);
@@ -479,7 +527,6 @@ function ensureInteractive(canvas){
   canvas.addEventListener('mousemove',e=>{
     const rect=canvas.getBoundingClientRect();const x=e.clientX-rect.left,y=e.clientY-rect.top;
     const g=geom(),{type,opts}=cfg();const s=st();
-    // scatter — ближайшая точка
     if(type==='scatter'){let hit=null,bd=1e9;(g.points||[]).forEach(p=>{const d=Math.hypot(p.px-x,p.py-y);if(d<Math.max(p.r+4,10)&&d<bd){bd=d;hit=p;}});
       if(hit){s.hover={px:hit.px,py:hit.py};paint(canvas);const m=hit.meta;
         showTip((m.label?'<b>'+m.label+'</b><br>':'')+(m.tip||('X: '+fm(m.x)+' · Y: '+fm(m.y))),e.clientX,e.clientY);}
@@ -509,15 +556,11 @@ function ensureInteractive(canvas){
       }
       hideTip();return;
     }
-    // декартовы — crosshair по ближайшему индексу
     if(!g.plot){hideTip();return;}
     if(x<g.plot.x0-6||x>g.plot.x1+6){if(s.hover!=null){s.hover=null;paint(canvas);}hideTip();return;}
     const i=nearestIndex(x);if(i==null)return;
     if(s.drag){return;}
     if(s.hover!==i){s.hover=i;paint(canvas);}
-    // сбор значений видимых рядов
-    let cfgSer=cfg().series,labels=cfg().labels;
-    // при зуме индекс относится к срезу — восстановим подписи из geom-окна
     const zoom=(s.zoom&&geom().zoomActive)?s.zoom:null;
     const realI=zoom?zoom.i0+i:i;
     const lab=(zoom?cfg().labels.slice(zoom.i0,zoom.i1+1):cfg().labels)[i];
@@ -531,18 +574,16 @@ function ensureInteractive(canvas){
       const rk=rkArr?(zoom?rkArr.slice(zoom.i0,zoom.i1+1):rkArr)[i]:null;
       if(rk){const t=typeof rk==='string'?rk:rk.type;
         const pct=typeof rk==='object'&&rk.pct!=null?((rk.pct>0?'+':rk.pct<0?'−':'')+Math.abs(rk.pct)+'%'):'';
-        const rc=t==='under'?'#FF8A80':'#FFB74D';
+        const rc=t==='under'?'#ff7585':'#ffbc69';
         riskHtml=' <b style="color:'+rc+'">⚠'+(pct?' '+pct:'')+'</b>';}
       return '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:'+col+';display:inline-block"></span>'+name+': <b>'+fm(v)+'</b>'+riskHtml+'</div>';
     }).filter(Boolean).join('');
-    /* opts.tipExtra(realIndex, label) — дополнительный контекст в тултипе (например, Δ к цели) */
     let extra='';
     if(typeof opts.tipExtra==='function'){try{extra=opts.tipExtra(realI,lab)||'';}catch(_e){extra='';}}
     if(rows||extra)showTip('<div style="margin-bottom:3px;opacity:.8">'+(lab!=null?lab:'')+'</div>'+rows+extra,e.clientX,e.clientY);else hideTip();
   });
   canvas.addEventListener('mouseleave',()=>{const s=st();if(s.hover!=null){s.hover=null;paint(canvas);}s.drag=null;hideTip();});
 
-  // клик по легенде — вкл/выкл ряд
   canvas.addEventListener('click',e=>{
     if(canvas.__moved){canvas.__moved=false;return;}
     const rect=canvas.getBoundingClientRect();const x=e.clientX-rect.left,y=e.clientY-rect.top;
@@ -550,7 +591,6 @@ function ensureInteractive(canvas){
     if(hit&&hit.i>=0){const s=st();if(s.hidden.has(hit.i))s.hidden.delete(hit.i);else s.hidden.add(hit.i);paint(canvas);}
   });
 
-  // зум колесом по X (декартовы)
   canvas.addEventListener('wheel',e=>{
     const {type}=cfg();if(!ZOOMABLE.has(type))return;
     const labels=cfg().labels;const N=labels.length;if(N<4)return;
@@ -559,18 +599,16 @@ function ensureInteractive(canvas){
     const rect=canvas.getBoundingClientRect();const g=geom();
     const frac=g.plot?Math.min(1,Math.max(0,((e.clientX-rect.left)-g.plot.x0)/((g.plot.x1-g.plot.x0)||1))):0.5;
     const center=z.i0+frac*span;
-    const factor=e.deltaY<0?0.75:1.35; // вверх — приблизить
+    const factor=e.deltaY<0?0.75:1.35;
     let newSpan=Math.round(span*factor);newSpan=Math.max(2,Math.min(N-1,newSpan));
     let i0=Math.round(center-frac*newSpan),i1=i0+newSpan;
     if(i0<0){i0=0;i1=newSpan;}if(i1>N-1){i1=N-1;i0=i1-newSpan;}i0=Math.max(0,i0);
     s.zoom=(i0<=0&&i1>=N-1)?null:{i0,i1};s.hover=null;paint(canvas);
   },{passive:false});
 
-  // перетаскивание — панорама зума (mousedown локально, move/up — глобально, см. ниже)
   canvas.addEventListener('mousedown',e=>{const s=st();if(!s.zoom)return;s.drag={x:e.clientX,i0:s.zoom.i0,i1:s.zoom.i1};canvas.__moved=false;__dragCanvas=canvas;});
   canvas.addEventListener('dblclick',()=>{const s=st();if(s.zoom){s.zoom=null;paint(canvas);}});
 }
-/* Глобальные слушатели панорамы — навешиваются один раз на документ, а не на каждый canvas */
 let __dragCanvas=null;
 if(typeof window!=='undefined'&&window.addEventListener&&!window.__inplanPanWired){
   window.__inplanPanWired=true;
