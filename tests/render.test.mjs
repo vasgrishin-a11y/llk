@@ -54,7 +54,7 @@ test('приложение рендерит все рабочие вкладки
   const echelonChart=$('#c-cover').__cfg;
   const threePlIndex=echelonChart.labels.indexOf('3PL — итого');
   assert.ok(threePlIndex>=0,'в эшелонах есть итог 3PL');
-  assert.equal(echelonChart.series[1].pointColors[threePlIndex],'#7C3AED','3PL выделен фиолетовым');
+  assert.equal(echelonChart.series[1].pointColors[threePlIndex],'#4528c3','3PL выделен фиолетовым');
   assert.ok(echelonChart.opts.legendExtra.some(x=>x.t==='3PL — факт'),'3PL указан в легенде');
 
   // запасы: карточка ретроспективы за прошедшие 18 месяцев идёт после карточки «Неликвиды»
@@ -73,7 +73,7 @@ test('приложение рендерит все рабочие вкладки
   const wapeChart=$('#c-invplan').__cfg;
   assert.equal(wapeChart.type,'combo');
   assert.ok(!wapeChart.series[0].pointColors,'светофор по столбцам убран');
-  assert.equal(wapeChart.series[0].color,'#20A7C9','все столбцы одного цвета');
+  assert.equal(wapeChart.series[0].color,'#4769ff','все столбцы одного цвета');
   const risks=wapeChart.series[0].risks;
   assert.ok(Array.isArray(risks)&&risks.length===18,'индикаторы отклонений по всем месяцам');
   assert.ok(risks.some(r=>r&&r.type==='under')&&risks.some(r=>r&&r.type==='over'),'есть бейджи недопоставки и перетовара');

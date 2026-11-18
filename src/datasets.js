@@ -143,11 +143,11 @@ export const CLIENTS=clientDefs.map(([name,seg,channel,rev,mgn,svc,review])=>{
   return {name,seg,channel,rev,marginPct:mgn,gp,cost,sTarget:SEG_SERVICE[seg],sFact:svc,priority:SEG_PRIORITY[seg],review:!!review,revDir:review||null};
 });
 export const SEG_LEVELS=[
-  {id:'diamond',label:'Бриллиант',color:'#0082a9',icon:'💎',desc:'Стратегическое ядро · OTIF 90%'},
-  {id:'platinum',label:'Платина',color:'#7c3aed',icon:'⬣',desc:'Ключевой рост · OTIF 88%'},
-  {id:'gold',label:'Золото',color:'#e8930c',icon:'●',desc:'Стабильная маржа · OTIF 86%'},
-  {id:'silver',label:'Серебро',color:'#94a3b8',icon:'●',desc:'Экономичный сервис · OTIF 84%'},
-  {id:'bronze',label:'Бронза',color:'#b45309',icon:'●',desc:'Транзакционная база · OTIF 82%'},
+  {id:'diamond',label:'Бриллиант',color:'#00576a',icon:'💎',desc:'Стратегическое ядро · OTIF 90%'},
+  {id:'platinum',label:'Платина',color:'#4528c3',icon:'⬣',desc:'Ключевой рост · OTIF 88%'},
+  {id:'gold',label:'Золото',color:'#ff8c00',icon:'●',desc:'Стабильная маржа · OTIF 86%'},
+  {id:'silver',label:'Серебро',color:'#989fac',icon:'●',desc:'Экономичный сервис · OTIF 84%'},
+  {id:'bronze',label:'Бронза',color:'#a5246c',icon:'●',desc:'Транзакционная база · OTIF 82%'},
 ];
 const segEmoji={diamond:'💎',platinum:'🟣',gold:'🟡',silver:'⚪',bronze:'🟤'};
 const segIconLabel=Object.fromEntries(SEG_LEVELS.map(s=>[s.id,s.label]));
@@ -169,8 +169,8 @@ const plural=(n,one,few,many)=>{const m10=n%10,m100=n%100;return n===1?one:(m10>
 const clientsTableRows=[
   ...CLIENTS.map(c=>{
     const mgn=c.marginPct.toFixed(0).replace('.',',')+'%';
-    const mgnCell=c.revDir==='down'?'<b style="color:#D93025">↓ '+mgn+'</b>':c.revDir==='up'?'<b style="color:#137333">↑ '+mgn+'</b>':mgn;
-    return [c.name+(c.review?' ⚑'+(c.revDir==='down'?'↓':'↑'):''),CH_ICON[c.channel]+' '+c.channel,F(c.rev),mgnCell,F(c.cost,1),c.sTarget+'%',c.sFact<c.sTarget?'<b style="color:#D93025">'+c.sFact+'%</b>':c.sFact+'%',c.priority+(c.review?' · ⚑ на пересмотр '+(c.revDir==='down'?'↓ понижение':'↑ повышение'):'')];
+    const mgnCell=c.revDir==='down'?'<b style="color:#ff0017">↓ '+mgn+'</b>':c.revDir==='up'?'<b style="color:#08744f">↑ '+mgn+'</b>':mgn;
+    return [c.name+(c.review?' ⚑'+(c.revDir==='down'?'↓':'↑'):''),CH_ICON[c.channel]+' '+c.channel,F(c.rev),mgnCell,F(c.cost,1),c.sTarget+'%',c.sFact<c.sTarget?'<b style="color:#ff0017">'+c.sFact+'%</b>':c.sFact+'%',c.priority+(c.review?' · ⚑ на пересмотр '+(c.revDir==='down'?'↓ понижение':'↑ повышение'):'')];
   }),
   {cells:['<b>Итого</b>','—','<b>'+F(TOTAL_REV)+'</b>','—','—','—','—','—'],cls:'row-sum'},
 ];
@@ -198,7 +198,7 @@ export const SEGMENTS={
     th:['Клиент','Канал продаж','Выручка (млн руб.)','Маржа %','Себестоимость (млн руб.)','Уровень сервиса (OTIF), цель','Уровень сервиса (OTIF), факт','Приоритет'],
     row:clientsTableRows,
   },
-  bubbleInsight:'<b>📌 Вывод:</b> портфель — <b>22 именованных клиента</b> в пяти сегментах ценности; размер круга — валовая прибыль. Красным в таблице отмечен OTIF ниже цели сегмента. <b>Три клиента «на пересмотр»</b> (ВП выбивается из сегмента): <b style="color:#D93025">АСТОН</b> — ВП 774 млн на уровне Золота, кандидат на понижение из Платины (красная рамка ↓); <b style="color:#137333">НЛМК</b> — ВП 600 млн на уровне Золота и <b style="color:#137333">ЕВРАЗ КГОК</b> — ВП 351 млн на уровне Серебра, кандидаты на повышение (зелёная рамка ↑). Онлайн-продажи — 2 000 млн (≈3%) через маркетплейс «Масло24». Бриллиант и Платина формируют ядро выручки; по Бриллианту приоритет — устранить разрыв OTIF 2 п.п.',
+  bubbleInsight:'<b>📌 Вывод:</b> портфель — <b>22 именованных клиента</b> в пяти сегментах ценности; размер круга — валовая прибыль. Красным в таблице отмечен OTIF ниже цели сегмента. <b>Три клиента «на пересмотр»</b> (ВП выбивается из сегмента): <b style="color:#ff0017">АСТОН</b> — ВП 774 млн на уровне Золота, кандидат на понижение из Платины (красная рамка ↓); <b style="color:#08744f">НЛМК</b> — ВП 600 млн на уровне Золота и <b style="color:#08744f">ЕВРАЗ КГОК</b> — ВП 351 млн на уровне Серебра, кандидаты на повышение (зелёная рамка ↑). Онлайн-продажи — 2 000 млн (≈3%) через маркетплейс «Масло24». Бриллиант и Платина формируют ядро выручки; по Бриллианту приоритет — устранить разрыв OTIF 2 п.п.',
   /* Донат сходится с разделом «Обзор»: режим «Год 2026» = 73 440 млн руб. (факт 9 мес. 55 185 + сценарий В 4 кв. 18 255),
      режим «Факт янв–сен» = 55 185 млн руб. — ровно YTD-выручка из KPI «Обзора». */
   revDonut:{labels:chanLabels,heads:['Канал продаж','Выручка (млн руб.)','Доля %','Кол-во клиентов','Средний чек (млн руб.)'],
@@ -217,7 +217,7 @@ export const SEGMENTS={
       insight:'<b>📌 Вывод:</b> валовая прибыль янв–сен — <b>'+F(Math.round(gpAll*YTD_SHARE))+' млн руб.</b> (+75% к плану по ВП). Доля B2B в прибыли выше, чем в выручке — маржа канала 25% против 17% у Бронзы.'},
     rows:channelRows,rowsGp:channelGpRows},
   costStack:{labels:CHANNELS7.map(c=>CH_SHORT[c]),
-    series:[['Закупка сырья',channelAgg.map(a=>Math.round(a.rev*costParts.raw)),'#4CAF50'],['Производство',channelAgg.map(a=>Math.round(a.rev*costParts.prod)),'#20A7C9'],['Логистика',channelAgg.map(a=>Math.round(a.rev*costParts.log)),'#FF9800'],['Хранение',channelAgg.map(a=>Math.round(a.rev*costParts.store)),'#8c9bae']],
+    series:[['Закупка сырья',channelAgg.map(a=>Math.round(a.rev*costParts.raw)),'#0d9f6e'],['Производство',channelAgg.map(a=>Math.round(a.rev*costParts.prod)),'#4769ff'],['Логистика',channelAgg.map(a=>Math.round(a.rev*costParts.log)),'#ff8c00'],['Хранение',channelAgg.map(a=>Math.round(a.rev*costParts.store)),'#989fac']],
     insight:'<b>📌 Вывод:</b> себестоимость по каналам — 77,0% выручки: сырьё 60,5%, производство 7,7%, логистика 4,9%, хранение 3,9%. Большие доли B2B и OEM дают эффект масштаба на производстве.',
     heads:['Канал продаж','Сырьё (млн руб.)','Производство (млн руб.)','Логистика (млн руб.)','Хранение (млн руб.)','Итого (млн руб.)','Сырьё %','Произв. %','Логист. %','Хран. %','Себестоимость % выручки'],
     rows:costRows},
@@ -273,10 +273,10 @@ export const DEMAND={
       {name:'Технические жидкости',vol:1500,w:[16.4,21.8,29.4,39.7],bias:'−0,8',mode:'Горизонт 3 мес.'},
       {name:'Трансмиссионные масла',vol:1100,w:[11.3,15.0,20.3,27.3],bias:'+0,4',mode:'Горизонт 6 мес., MTS'},
     ],
-    legend:'<b>Легенда WAPE:</b><span class="hm-lg" style="background:#137333"></span>≤10% (цель)<span class="hm-lg" style="background:#8BC34A"></span>10–15%<span class="hm-lg" style="background:#FFC107"></span>15–20%<span class="hm-lg" style="background:#FF9800"></span>20–30%<span class="hm-lg" style="background:#D93025"></span>&gt;30%',
+    legend:'<b>Легенда WAPE:</b><span class="hm-lg" style="background:#08744f"></span>≤10% (цель)<span class="hm-lg" style="background:#52c47e"></span>10–15%<span class="hm-lg" style="background:#f5be30"></span>15–20%<span class="hm-lg" style="background:#ff8c00"></span>20–30%<span class="hm-lg" style="background:#dc001b"></span>&gt;30%',
     insight:'<b>📌 Вывод:</b> в цель WAPE ≤10% на горизонте 1 мес. укладываются только <b>масла моторные (9,3%)</b>; масла гидравлические (10,7%) и трансмиссионные (11,3%) — у границы. На горизонте 3 мес. цель не выполняет ни одна категория. Худшие — <b>СОЖ (24,8% / 33,1%)</b> и охлаждающие жидкости (22,7% / 30,3%), на 12 мес. — 55–60%. Взвешенный WAPE портфеля (3 мес.) — <b>16,4%</b>. Решение: СОЖ и ОЖ — только под заказ; индустриальные и смазки — горизонт замораживания 3 мес.',
     heads:['Тип продукта','WAPE 1 мес. %','WAPE 3 мес. %','WAPE 6 мес. %','WAPE 12 мес. %','Систем. ошибка %','Объем (т/мес)','Рекомендация']},
-  bias:{labels:CHANNELS7.map(c=>CH_SHORT[c]),data:[7.4,4.6,-5.8,-8.9,-4.2,-9.6,2.1],colors:['#D93025','#FF9800','#20A7C9','#20A7C9','#20A7C9','#20A7C9','#FF9800'],
+  bias:{labels:CHANNELS7.map(c=>CH_SHORT[c]),data:[7.4,4.6,-5.8,-8.9,-4.2,-9.6,2.1],colors:['#ff0017','#ff8c00','#4769ff','#4769ff','#4769ff','#4769ff','#ff8c00'],
     insight:'<b>📌 Вывод:</b> Ключевые B2B завышают прогноз на +7,4%, онлайн занижает на −9,6%. Требуется калибровка и правила ответственности за bias >5%.',
     heads:['Канал продаж','Систем. ошибка %','Тренд','Причина','Действие'],
     rows:[['Ключевые клиенты B2B','+7,4%','↗ Растет','Страх дефицита','Штраф/эскалация за >5%'],['Производители оборудования','+4,6%','→ Стабильно','Оптимизм по зиме','Мониторинг'],['Ключевые клиенты B2C','−5,8%','↘ Растет','Занижение для плана','Пересмотр мотивации'],['Дилерская сеть','−8,9%','↗ Растет','Консервативный подход','Калибровка KPI'],['Макродистрибьюторы','−4,2%','→ Стабильно','Валютные риски','Принять как риск'],['Онлайн продажи','−9,6%','↗ Растет','Промо-волатильность','Отдельная модель'],['КК в СФО и ДФО','+2,1%','→ Стабильно','Длинное плечо','Мониторинг']]},
@@ -365,7 +365,7 @@ export const DEMAND={
     heads,
     rows,
     insight:'<b>📌 Вывод:</b> недопродажи янв–сен — <b>25 000 т</b> (план 415 000 → факт 390 000, −6,0%). Лидеры — <b>Бронза (Сургутнефтегаз, Уральская Сталь)</b> и <b>Серебро (Камский кабель, НЛМК)</b> по низкомаржинальным продуктам; по категориям — <b>СОЖ и охлаждающие жидкости</b> (до 400 т на клиента): WAPE 30–33% и длинные ЖД-плечи. Меньше всего — моторные масла у Бриллианта (короткое плечо, точный прогноз).',
-    legend:'<b>Легенда недопродаж, т:</b><span class=\"hm-lg\" style=\"background:#8BC34A\"></span>≤80<span class=\"hm-lg\" style=\"background:#FFC107\"></span>80–150<span class=\"hm-lg\" style=\"background:#FF9800\"></span>150–250<span class=\"hm-lg\" style=\"background:#FF5722\"></span>250–400<span class=\"hm-lg\" style=\"background:#D93025\"></span>>400<span class=\"hm-lg\" style=\"background:#e8ecef;border:1px solid #ccc\"></span>не поставляется',
+    legend:'<b>Легенда недопродаж, т:</b><span class=\"hm-lg\" style=\"background:#52c47e\"></span>≤80<span class=\"hm-lg\" style=\"background:#f5be30\"></span>80–150<span class=\"hm-lg\" style=\"background:#ff8c00\"></span>150–250<span class=\"hm-lg\" style=\"background:#f04822\"></span>250–400<span class=\"hm-lg\" style=\"background:#dc001b\"></span>>400<span class=\"hm-lg\" style=\"background:#eaedf5;border:1px solid #cbd3e3\"></span>не поставляется',
     shortColor,
   };
 })();
@@ -432,9 +432,9 @@ export const STOCK={
      Строки таблицы, цвета столбцов и выводы считаются из него, поэтому график и таблица всегда сходятся. */
   coverage:(()=>{
     const build=rows=>{
-      const st=r=>r.days<r.safety?{cls:'🔴 Ниже страхового',color:'#D93025'}
-        :r.days>r.target*1.15?{cls:'🟠 Выше целевого',color:'#FF9800'}
-        :r.days>r.target?{cls:'🟡 Немного выше цели',color:'#FFC107'}:{cls:'🟢 В целевом коридоре',color:'#4CAF50'};
+      const st=r=>r.days<r.safety?{cls:'🔴 Ниже страхового',color:'#ff0017'}
+        :r.days>r.target*1.15?{cls:'🟠 Выше целевого',color:'#ff8c00'}
+        :r.days>r.target?{cls:'🟡 Немного выше цели',color:'#f5be30'}:{cls:'🟢 В целевом коридоре',color:'#0d9f6e'};
       const cost=t=>Math.round(t*COST_TON);
       const totT=sum(rows.map(r=>r.t));
       const wd=k=>+(sum(rows.map(r=>r[k]*r.t))/totT).toFixed(1);
@@ -543,8 +543,8 @@ export const STOCK={
   },
   dead:{methodology:'Неликвид — запас без оборачиваемости свыше 6 месяцев. Риск списания — остаток со сроком годности менее 6 месяцев. Прогноз ближайших 6 месяцев показан отдельно и не считается гарантированным объёмом реализации.',
     insight:'<b>📌 Вывод:</b> неликвиды — 8 000 т / 824 млн руб. Прогноз спроса на 6 месяцев составляет только 245 т (3,1% остатка); по двум материалам прогноз отсутствует. Риск списания — 2 950 т / 308 млн руб.',
-    tons:{labels:['ГЕЙЗЕР ММ SYNTH 5W-30','ГЕЙЗЕР СТ 68 · 20 л','L GEYS ZF 46 · 20 л','L GEYS A GRADE 1 · 20 л','L GEYS ST 32 · 800 кг'],unit:'т',series:[['Запас (т)',[2400,1850,1300,900,1550],'#20A7C9'],['Риск списания (т)',[900,600,300,450,700],'#D93025'],['Прогноз на 6 мес. (т)',[0,120,35,0,90],'#FF9800']]},
-    money:{labels:['ГЕЙЗЕР ММ SYNTH 5W-30','ГЕЙЗЕР СТ 68 · 20 л','L GEYS ZF 46 · 20 л','L GEYS A GRADE 1 · 20 л','L GEYS ST 32 · 800 кг'],unit:'млн руб.',series:[['Стоимость запасов',[288,166.5,115.7,83.7,170.5],'#20A7C9'],['Риск списания',[108,54,26.7,41.9,77],'#D93025'],['Выручка от распродажи риска (−15%)',[91.8,45.9,22.7,35.6,65.5],'#4CAF50']]},
+    tons:{labels:['ГЕЙЗЕР ММ SYNTH 5W-30','ГЕЙЗЕР СТ 68 · 20 л','L GEYS ZF 46 · 20 л','L GEYS A GRADE 1 · 20 л','L GEYS ST 32 · 800 кг'],unit:'т',series:[['Запас (т)',[2400,1850,1300,900,1550],'#4769ff'],['Риск списания (т)',[900,600,300,450,700],'#ff0017'],['Прогноз на 6 мес. (т)',[0,120,35,0,90],'#ff8c00']]},
+    money:{labels:['ГЕЙЗЕР ММ SYNTH 5W-30','ГЕЙЗЕР СТ 68 · 20 л','L GEYS ZF 46 · 20 л','L GEYS A GRADE 1 · 20 л','L GEYS ST 32 · 800 кг'],unit:'млн руб.',series:[['Стоимость запасов',[288,166.5,115.7,83.7,170.5],'#4769ff'],['Риск списания',[108,54,26.7,41.9,77],'#ff0017'],['Выручка от распродажи риска (−15%)',[91.8,45.9,22.7,35.6,65.5],'#0d9f6e']]},
     effect:'<b>💰 Потенциальный эффект:</b> распродажа всего объёма риска списания со скидкой 15% даст <b>261,5 млн руб. выручки</b> и предотвратит прямое списание 2 950 т. Обычный прогноз спроса покрывает лишь 245 т и недостаточен для естественного выбытия остатков.',
     heads:['Материал','Категория','Запас (т)','Стоимость (млн руб.)','Необорачиваемость','Срок годности','Риск списания (т)','Прогноз 6 мес. (т)','Оценка прогноза','Действие'],
     rows:[
@@ -563,7 +563,7 @@ export const STOCK={
     {name:'⚙️ Модификатор вязкости',days:'24 дня',target:'Цель: 22 дня',delta:'▲ +2 дня',cls:'green',effect:'В норме'},
     {name:'🧴 Этиленгликоль',days:'26 дней',target:'Цель: 22 дня',delta:'▲ +4 дня',cls:'green',effect:'В норме'}],
   rawmTable:{heads:['Сырье','Текущий запас (т)','Дней','Цель (дни)','Δ дней','Статус','Цена (руб/т)','Финансовый эффект (млн)','Поставщик (РФ)','Дата поставки'],rows:[
-    ['Базовое масло VHVI-4','9 600','12','22','−10','🔴 Критично','68 000','<b style="color:#D93025">−180</b>','ЛУКОЙЛ-ННОС (Кстово)','18.10.2026'],
+    ['Базовое масло VHVI-4','9 600','12','22','−10','🔴 Критично','68 000','<b style="color:#ff0017">−180</b>','ЛУКОЙЛ-ННОС (Кстово)','18.10.2026'],
     ['Базовое масло SN-150','17 000','19','22','−3','🟡 Риск','52 000','−45','ЛУКОЙЛ-ННОС (Кстово)','12.10.2026'],
     ['Пакет присадок D-3900','2 600','34','22','+12','🟡 Перетовар','320 000','+95','Ворсино (Торжок)','20.10.2026'],
     ['Пакет присадок премиум','1 200','28','25','+3','🟡 Перетовар','610 000','+20','БХХ (Пермь)','22.10.2026'],
@@ -583,16 +583,16 @@ export const STOCK={
     ['ОЖ G12++','Охлаждающие','1 300','25','28','−3','🟡 Ниже цели','120 000','−60','0','0,9','36 мес.'],
     {cells:['<b>Итого эффект</b>','—','—','—','—','—','—','—','<b>+200</b>','<b>175</b>','<b>29,4</b>','—'],cls:'row-sum'}]},
   abcxyz_def:{scatter:[
-    {name:'AX',color:'#4CAF50',points:[{x:9,y:90},{x:13,y:92},{x:11,y:88},{x:16,y:85}]},
-    {name:'AY',color:'#FFC107',points:[{x:20,y:78},{x:23,y:74}]},
-    {name:'BX',color:'#20A7C9',points:[{x:14,y:55},{x:38,y:58},{x:42,y:52},{x:35,y:62}]},
-    {name:'BY',color:'#8c9bae',points:[{x:55,y:45},{x:62,y:40}]},
-    {name:'CX',color:'#9C27B0',points:[{x:18,y:25},{x:44,y:22}]},
-    {name:'CZ',color:'#D93025',points:[{x:74,y:18},{x:80,y:22},{x:78,y:14},{x:85,y:19}]}],
+    {name:'AX',color:'#0d9f6e',points:[{x:9,y:90},{x:13,y:92},{x:11,y:88},{x:16,y:85}]},
+    {name:'AY',color:'#f5be30',points:[{x:20,y:78},{x:23,y:74}]},
+    {name:'BX',color:'#4769ff',points:[{x:14,y:55},{x:38,y:58},{x:42,y:52},{x:35,y:62}]},
+    {name:'BY',color:'#989fac',points:[{x:55,y:45},{x:62,y:40}]},
+    {name:'CX',color:'#a5246c',points:[{x:18,y:25},{x:44,y:22}]},
+    {name:'CZ',color:'#ff0017',points:[{x:74,y:18},{x:80,y:22},{x:78,y:14},{x:85,y:19}]}],
     insight:'<b>📌 Вывод:</b> AX — высокий сервис и производство на склад; CZ — только под заказ и предоплата.',
     heads:['Сегмент','Позиций','Доля объема %','Доля маржи %','Сервис %','Стратегия','Страховой запас'],
     rows:[['AX','18','56','60','98','На склад','28 дней'],['AY','12','16','14','95','На склад','22 дня'],['AZ','6','5','4','92','На склад · контроль','15 дней'],['BX','34','12','11','93','На склад','18 дней'],['BY','21','4','4','88','Гибрид','10 дней'],['BZ','48','3','3','82','Под заказ','0'],['CX','26','2','2','85','Под заказ','0'],['CY','35','1','1','78','Под заказ','0'],['CZ','56','1','1','72','Под заказ, предоплата','0']]},
-  mtomts:{labels:['На склад (MTS)','Под заказ (MTO)'],data:[74,26],colors:['#4CAF50','#FF9800'],insight:'<b>📌 Вывод:</b> 74% объема производится на склад, 26% — под заказ. MTO снижает риск неликвидов по низкомаржинальным SKU (СОЖ, техжидкости).',heads:['Стратегия','Позиций','Доля объема %','Доля маржи %','Срок исполнения','Примеры'],rows:[['🟢 На склад (MTS)','81','74','81','2–3 дня','ПКМ, МКМ, пластичные смазки'],['🟡 Под заказ (MTO)','175','26','19','7–14 дней','СОЖ, технические жидкости, спецпродукты'],{cells:['<b>Итого</b>','<b>256</b>','<b>100</b>','<b>100</b>','—','—'],cls:'row-sum'}]},
+  mtomts:{labels:['На склад (MTS)','Под заказ (MTO)'],data:[74,26],colors:['#0d9f6e','#ff8c00'],insight:'<b>📌 Вывод:</b> 74% объема производится на склад, 26% — под заказ. MTO снижает риск неликвидов по низкомаржинальным SKU (СОЖ, техжидкости).',heads:['Стратегия','Позиций','Доля объема %','Доля маржи %','Срок исполнения','Примеры'],rows:[['🟢 На склад (MTS)','81','74','81','2–3 дня','ПКМ, МКМ, пластичные смазки'],['🟡 Под заказ (MTO)','175','26','19','7–14 дней','СОЖ, технические жидкости, спецпродукты'],{cells:['<b>Итого</b>','<b>256</b>','<b>100</b>','<b>100</b>','—','—'],cls:'row-sum'}]},
 };
 STOCK.abcxyz=STOCK.abcxyz_def; // корректный датасет (см. строку выше)
 
@@ -682,7 +682,7 @@ export const SUPPLY={
   },
   /* alias for backwards compatibility and consistency checks */
   gap:null,
-  constraints:{labels:['VHVI-4 · ЛУКОЙЛ-ННОС (Кстово)','Завод Волгоград, линия №2','3PL Тюмень (ОК)','ПС Ворсино'],data:[-8200,-5400,-3400,-2000],colors:['#D93025','#D93025','#FF9800','#FF9800'],
+  constraints:{labels:['VHVI-4 · ЛУКОЙЛ-ННОС (Кстово)','Завод Волгоград, линия №2','3PL Тюмень (ОК)','ПС Ворсино'],data:[-8200,-5400,-3400,-2000],colors:['#ff0017','#ff0017','#ff8c00','#ff8c00'],
     insight:'<b>📌 Вывод:</b> четыре ограничения на реальных объектах цепочки суммарно снимают −19 000 т предложения. Крупнейшее — базовое масло VHVI-4 от ЛУКОЙЛ-ННОС (Кстово): −8 200 т, поставка ожидается 18.10. Компенсирующие меры определяются выбором сценария.',
     heads:['Ограничение','Текущий уровень','Максимум / цель','Загрузка %','Влияние (т)','Тип'],
     rows:[['VHVI-4 · ЛУКОЙЛ-ННОС (Кстово)','9 600 т в наличии','22 000 т авансом','12 дней из 22','−8 200','📦 Физическое'],['Завод Волгоград, линия №2','28 400 т/мес','28 400 т/мес','100%','−5 400','🏭 Мощность'],['3PL Тюмень (ОК)','78 авто/сутки','92 авто/сутки','85%','−3 400','🚛 Логистическое'],['ПС Ворсино','заполнено 96%','100%','96%','−2 000','📦 Физическое'],{cells:['<b>Итого разрыв</b>','—','—','—','<b>−19 000</b>','—'],cls:'row-sum'}]},
@@ -712,7 +712,7 @@ export const SUPPLY={
     heads:['Сценарий','Объём 4 кв. (т)','Выручка 4 кв. (млн руб.)','Валовая прибыль 4 кв. (млн руб.)','Маржа 4 кв. %','Объём 2026 (т)','% плана по объёму','Выручка 2026 (млн руб.)','% плана по выручке','Валовая прибыль 2026 (млн руб.)','% плана по прибыли','Маржа 2026 %'],
     insight:'<b>📌 Как закрывается год:</b> полностью выполнить бизнес-план 2026 (546 000 т / 78 624 млн руб.) не может ни один сценарий — для этого в 4 кв. нужно 156 000 т, а весь неограниченный спрос квартала составляет 152 000 т. По объёму и выручке максимум даёт <b>Б</b> (542 000 т / 76 695 млн — 99,3% и 97,5% плана), но его валовая прибыль только 17 286 млн (90,8% плана 19 046 млн). По деньгам собственника выигрывает <b>В</b>: 17 663 млн валовой прибыли (92,7% плана, маржа 24,1%) — <b>+485 млн к А и +377 млн к Б</b>. При этом объём и выручка В примерно на 3% ниже А, что отражает отказ от низкомаржинальных отгрузок. Поэтому операционным планом утверждается сценарий В.'},
   radar:{axes:['Объём','Маржа %','Маржа млн','Сырьё (затраты)','Производство (затраты)','Логистика (затраты)','Хранение (затраты)'],
-    series:[['Сценарий А',[87.5,87.6,90.3,86.9,81.7,70.8,77.5],'#20A7C9'],['Сценарий Б',[100,78.5,92.5,100,100,100,100],'#FF9800'],['Сценарий В',[84.9,100,100,81.4,75.2,58.8,70.5],'#4CAF50']],max:110,
+    series:[['Сценарий А',[87.5,87.6,90.3,86.9,81.7,70.8,77.5],'#4769ff'],['Сценарий Б',[100,78.5,92.5,100,100,100,100],'#ff8c00'],['Сценарий В',[84.9,100,100,81.4,75.2,58.8,70.5],'#0d9f6e']],max:110,
     insight:'<b>📌 Вывод:</b> Б — максимум объёма и выручки, но маржа 21,5% и самые дорогие логистика с хранением. <b>В при объёме на 3% ниже А даёт +485 млн руб. валовой прибыли</b> (5 002 против 4 517) при минимальных затратах. Оси нормированы к лучшему значению; по затратам больше = дороже.',
     heads:['Параметр','Сценарий А (базовый)','Сценарий Б','Сценарий В','План 4 кв.','Лучший'],rows:[['Объём (т)','133 000','152 000','129 000','156 000','Б'],['Выручка (млн руб.)','18 820','21 510','18 255','23 439','Б'],['Валовая прибыль (млн)','4 517','4 625','5 002','6 385','В'],['Валовая маржа %','24,0%','21,5%','27,4%','27,2%','В'],['Закупки сырья (млн)','11 320','13 020','10 599','—','В'],['Производство (млн)','1 455','1 780','1 339','—','В'],['Логистика (млн)','935','1 320','776','—','В'],['Хранение (млн)','593','765','539','—','В'],{cells:['<b>Итого себестоимость (млн)</b>','<b>14 303</b>','<b>16 885</b>','<b>13 253</b>','—','<b>В</b>'],cls:'row-sum'}]},
   fan:{labels:MONTHS18,
@@ -735,7 +735,7 @@ export const SUPPLY={
 
   /* heatmapMethodology, kpiNote и heatmapInsights задаются в buildHeatmap ниже (после расчёта
      ячеек), чтобы тексты выводов не расходились с цифрами карты. */
-  heatmapLegends:{cov:'<b>Легенда покрытия:</b><span class="hm-lg" style="background:#137333"></span>100%<span class="hm-lg" style="background:#4CAF50"></span>90–99%<span class="hm-lg" style="background:#8BC34A"></span>80–89%<span class="hm-lg" style="background:#CDDC39"></span>60–79%<span class="hm-lg" style="background:#FF9800"></span>&lt;60%<span class="hm-lg" style="background:#e8ecef;border:1px solid #ccc"></span>Не поставляется',mrg:'<b>Легенда валовой прибыли за 4 кв., млн руб.:</b><span class="hm-lg" style="background:#137333"></span>≥50<span class="hm-lg" style="background:#4CAF50"></span>25–50<span class="hm-lg" style="background:#8BC34A"></span>15–25<span class="hm-lg" style="background:#CDDC39"></span>8–15<span class="hm-lg" style="background:#FFC107"></span>3–8<span class="hm-lg" style="background:#FF9800"></span>0–3<span class="hm-lg" style="background:#D93025"></span>Убыток',delta:'<b>Легенда отклонений к сценарию А (покрытие — в п.п., маржа — в млн руб.):</b><span class="hm-lg" style="background:#4CAF50"></span>Улучшение (+)<span class="hm-lg" style="background:#FFCDD2"></span>Снижение (−)'},
+  heatmapLegends:{cov:'<b>Легенда покрытия:</b><span class="hm-lg" style="background:#08744f"></span>100%<span class="hm-lg" style="background:#0d9f6e"></span>90–99%<span class="hm-lg" style="background:#52c47e"></span>80–89%<span class="hm-lg" style="background:#b5dc62"></span>60–79%<span class="hm-lg" style="background:#ff8c00"></span>&lt;60%<span class="hm-lg" style="background:#eaedf5;border:1px solid #cbd3e3"></span>Не поставляется',mrg:'<b>Легенда валовой прибыли за 4 кв., млн руб.:</b><span class="hm-lg" style="background:#08744f"></span>≥50<span class="hm-lg" style="background:#0d9f6e"></span>25–50<span class="hm-lg" style="background:#52c47e"></span>15–25<span class="hm-lg" style="background:#b5dc62"></span>8–15<span class="hm-lg" style="background:#f5be30"></span>3–8<span class="hm-lg" style="background:#ff8c00"></span>0–3<span class="hm-lg" style="background:#dc001b"></span>Убыток',delta:'<b>Легенда отклонений к сценарию А (покрытие — в п.п., маржа — в млн руб.):</b><span class="hm-lg" style="background:#0d9f6e"></span>Улучшение (+)<span class="hm-lg" style="background:#ffd9df"></span>Снижение (−)'},
 };
 
 /* ── Тепловая карта «клиент × продукт» (4 кв. 2026) ──
@@ -751,7 +751,7 @@ export const SUPPLY={
    Итоги строк, столбцов и таблицы данных считаются из ячеек, а не задаются вручную. */
 const SEG_KEYS=['diamond','platinum','gold','silver','bronze'];
 const SEG_LABEL={diamond:'💎 Бриллиант',platinum:'⬣ Платина',gold:'● Золото',silver:'⚪ Серебро',bronze:'🟤 Бронза'};
-const SEG_BAR_COLOR={diamond:'#0082a9',platinum:'#7c3aed',gold:'#e8930c',silver:'#94a3b8',bronze:'#b45309'};
+const SEG_BAR_COLOR={diamond:'#00576a',platinum:'#4528c3',gold:'#ff8c00',silver:'#989fac',bronze:'#a5246c'};
 const covTxt=v=>{const r=Math.round(v*10)/10;return (Number.isInteger(r)?F(r):F(r,1))+'%';};
 const r1=v=>Math.round(v*10)/10;
 const r2=v=>Math.round(v*100)/100;
@@ -765,7 +765,7 @@ SUPPLY.gap=SUPPLY.gaps.A;
     G.demand=sum(SEG_KEYS.map(s=>D[s]));
     G.available=sum(SEG_KEYS.map(s=>alloc[s]));
     G.gap=G.demand-G.available;
-    G.rows=[{label:'Неограниченный спрос',value:F(G.demand)+' т',w:100,c:'#20A7C9',main:true},{div:true},
+    G.rows=[{label:'Неограниченный спрос',value:F(G.demand)+' т',w:100,c:'#4769ff',main:true},{div:true},
       ...SEG_KEYS.map(s=>{
         const cov=alloc[s]/D[s]*100,miss=D[s]-alloc[s];
         const d=k==='C'?((G.redist.deltas.find(x=>x[0]===s)||[s,0])[1]):0;
@@ -776,7 +776,7 @@ SUPPLY.gap=SUPPLY.gaps.A;
         return row;}),
       {div:true},
       {label:'Доступно к отгрузке',value:F(G.available)+' т',
-        w:Math.round(G.available/G.demand*1000)/10,c:'#1a2b4a',main:true}];
+        w:Math.round(G.available/G.demand*1000)/10,c:'#04143a',main:true}];
     G.tableRows=SEG_KEYS.map(s=>[SEG_LABEL[s],F(D[s]),covTxt(alloc[s]/D[s]*100),F(alloc[s]),
       D[s]-alloc[s]?'−'+F(D[s]-alloc[s]):'0']);
   }
@@ -1069,7 +1069,7 @@ const movementRail=movementAuto.map(x=>Math.round(x*0.54));
    Хранение); остальные ранее выделенные статьи (НИОКР, упаковка/фасовка, финансовые,
    накладные) свёрнуты в «Закупку», чтобы сумма долей осталась 77,0% выручки (steady-state)
    и совпадала со средневзвешенной себестоимостью 76,3% за 18 месяцев. */
-const costItems=[['Закупка',.537,'#4CAF50'],['Производство',.117,'#20A7C9'],['Логистика',.075,'#FF9800'],['Хранение',.041,'#8c9bae']];
+const costItems=[['Закупка',.537,'#0d9f6e'],['Производство',.117,'#4769ff'],['Логистика',.075,'#ff8c00'],['Хранение',.041,'#989fac']];
 /* ── Придуманные аномалии структуры себестоимости: в отдельные месяцы доля статьи
    заметно превышает среднегодовую — подсвечиваются значком «!» на столбце ── */
 const COST_ANOMS=[
@@ -1303,7 +1303,7 @@ const anomCell=(pl,show,mi,note)=>{
   return months.includes(mi)?'⚠️ '+(note||PLAN_ANOM_SHORT[pl]||'отклонение'):'—';
 };
 function planChart(pl,a,b,variant='summary',showAnomalies=false){
-  const labels=SL(PLAN_MONTHS,a,b),pal=['#20A7C9','#7c3aed','#4CAF50','#FF9800','#D93025','#8c9bae','#00897B'];
+  const labels=SL(PLAN_MONTHS,a,b),pal=['#4769ff','#4528c3','#0d9f6e','#ff8c00','#ff0017','#989fac','#00576a'];
   if(variant==='summary')return null; // вызывающая сторона использует исходный сводный график
   const risksAt=list=>labels.map((_,i)=>riskAt(a+i,list,showAnomalies));
   /* Стеки строятся из тех же mix-матриц, что и строки детальной таблицы:
@@ -1328,8 +1328,8 @@ function planChart(pl,a,b,variant='summary',showAnomalies=false){
   if(pl==='movements'){
     if(variant==='corridors')return stackedFrom(MOV_CORRIDORS,(mi,j)=>moveMix(mi).corr[j],'Перемещения, т',PLAN_ANOM_MONTHS.movements);
     return {type:'combo',labels,series:[
-      {data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#FF9800',risks:risksAt(PLAN_ANOM_MONTHS.movements)},
-      {data:SL(movementRail,a,b).map(x=>+(x*.0036).toFixed(1)),kind:'bar',color:'#20A7C9'}],
+      {data:SL(movementAuto,a,b).map(x=>+(x*.0030).toFixed(1)),kind:'bar',color:'#ff8c00',risks:risksAt(PLAN_ANOM_MONTHS.movements)},
+      {data:SL(movementRail,a,b).map(x=>+(x*.0036).toFixed(1)),kind:'bar',color:'#4769ff'}],
       opts:{height:360,legend:['Авто, млн руб.','ЖД, млн руб.'],yTitle:'Стоимость, млн руб.'}};
   }
   if(pl==='purchases'){
@@ -1354,7 +1354,7 @@ function planChart(pl,a,b,variant='summary',showAnomalies=false){
 }
 export const PLANS={
   sales:{tab:'План продаж',insight:'<b>📌 План продаж</b> (сценарий В): 4 кв. 2026 — <b>129 000 т / 18 255 млн руб.</b>, валовая прибыль 5 002 млн (27,4%). Год 2026 — <b>519 000 т / 73 440 млн руб.</b> (95,1% / 93,4% плана), ВП 17 663 млн (92,7%). 2027 — ~545 000 т / ~78,0 млрд руб.',
-    chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(sales,a,b),kind:'bar',color:'#20A7C9'},{data:SL(revenue,a,b),kind:'line',axis:1,color:'#4CAF50'}],opts:{height:340,legend:['План объема (т)','План выручки (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'}}),
+    chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(sales,a,b),kind:'bar',color:'#4769ff'},{data:SL(revenue,a,b),kind:'line',axis:1,color:'#0d9f6e'}],opts:{height:340,legend:['План объема (т)','План выручки (млн руб.)'],yTitle:'Объем (т)',y1Title:'Выручка (млн руб.)'}}),
     /* Таблица «Данные» повторяет выбранный срез графика (variant):
        summary — месячные итоги, channels — по каналам, categories — по категориям.
        Все значения графика присутствуют в таблице; подытоги среза равны сериям
@@ -1392,7 +1392,7 @@ export const PLANS={
       return {heads,rows,note:'месячные итоги сводного графика (объём — столбцы, выручка — линия)'};
     }},
   production:{tab:'План производства',insight:'<b>📌 План производства:</b> за 18 месяцев 776 600 т  (себестоимость выпуска ~84,7 млрд руб.) — на 2 600 т выше продаж: идёт восстановление буфера перед зимой. Средняя загрузка 93%, пик 97% в декабре 2026.',
-    chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(production,a,b),kind:'bar',color:'#20A7C9'},{data:SL(capacity,a,b),kind:'line',axis:1,color:'#FF9800'}],opts:{height:340,legend:['План производства (т)','Загрузка мощностей %'],yTitle:'Объем (т)',y1Title:'Загрузка %',max1:112,min1:80}}),
+    chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(production,a,b),kind:'bar',color:'#4769ff'},{data:SL(capacity,a,b),kind:'line',axis:1,color:'#ff8c00'}],opts:{height:340,legend:['План производства (т)','Загрузка мощностей %'],yTitle:'Объем (т)',y1Title:'Загрузка %',max1:112,min1:80}}),
     build:(a,b,variant='summary',show=false)=>{
       const rows=[];
       const oeeAdj=[1,2,0,1,-1];
@@ -1443,7 +1443,7 @@ export const PLANS={
       return {heads,rows,note:'месячные итоги сводного графика (выпуск — столбцы, загрузка — линия)'};
     }},
   movements:{tab:'План перемещений',insight:'<b>📌 План перемещений:</b> за 18 месяцев — 328 636 т; логистический бюджет ~1 050 млн руб.: авто 65%, железная дорога 35%. Основной поток — отгрузка заводских складов в 7 опорных 3PL и опорные концентраторы Сибири/Дальнего Востока.',
-    chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(movementAuto,a,b),color:'#FF9800'},{data:SL(movementRail,a,b),color:'#20A7C9'}],opts:{height:340,legend:['Авто (т)','ЖД (т)'],yTitle:'т'}}),
+    chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(movementAuto,a,b),color:'#ff8c00'},{data:SL(movementRail,a,b),color:'#4769ff'}],opts:{height:340,legend:['Авто (т)','ЖД (т)'],yTitle:'т'}}),
     build:(a,b,variant='summary',show=false)=>{
       const rows=[];
       const rut=(c,v)=>F(v?c*1e6/v:0,0); /* руб/т */
@@ -1489,7 +1489,7 @@ export const PLANS={
       return {heads,rows,note:'месячные итоги сводного графика (авто и ЖД) со стоимостью перевозки'};
     }},
   purchases:{tab:'План закупок',insight:'<b>📌 План закупок:</b> бюджет 18 месяцев — <b>51 000 млн руб.</b> Основной риск — базовое масло VHVI-4 от ЛУКОЙЛ-ННОС (Кстово): поставка 18.10.2026 разблокирует дефицит −8 200 т; дублирующая площадка — ЛУКОЙЛ-ПНОС (Пермь).',
-    chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(purchG3,a,b),color:'#D93025'},{data:SL(purchBase,a,b),color:'#FF9800'},{data:SL(purchAdd,a,b),color:'#4CAF50'}],opts:{height:340,legend:['Базовые масла: ННОС + Татнефть','Базовые: ПНОС + Сибур','Пакеты присадок'],yTitle:'млн руб.'}}),
+    chart:(a,b)=>({type:'stacked',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(purchG3,a,b),color:'#ff0017'},{data:SL(purchBase,a,b),color:'#ff8c00'},{data:SL(purchAdd,a,b),color:'#0d9f6e'}],opts:{height:340,legend:['Базовые масла: ННОС + Татнефть','Базовые: ПНОС + Сибур','Пакеты присадок'],yTitle:'млн руб.'}}),
     build:(a,b,variant='summary',show=false)=>{
       const rows=[];
       /* ── «По поставщикам»: стоимость и тоннаж каждого поставщика ── */
@@ -1541,45 +1541,45 @@ export const PLANS={
   inventory:(()=>{
     const TOTAL_BASE=55300;
     const whGroups=[
-      {id:'ps_perm',name:'ПС Пермь',short:'ПС Пермь',kind:'plant',base:8700,safetyDays:20,targetDays:28,color:'#1976D2'},
-      {id:'ps_volg',name:'ПС Волгоград',short:'ПС Волгоград',kind:'plant',base:10400,safetyDays:22,targetDays:30,color:'#20A7C9'},
-      {id:'ps_tyum',name:'ПС Тюмень',short:'ПС Тюмень',kind:'plant',base:5100,safetyDays:18,targetDays:25,color:'#00897B'},
-      {id:'ps_torzh',name:'ПС Торжок',short:'ПС Торжок',kind:'plant',base:9200,safetyDays:21,targetDays:29,color:'#43A047'},
-      {id:'ps_vors',name:'ПС Ворсино',short:'ПС Ворсино',kind:'plant',base:7400,safetyDays:19,targetDays:27,color:'#7CB342'},
-      {id:'3pl_nw',name:'3PL Северо-Запад',short:'3PL СЗ',kind:'3pl',base:2300,safetyDays:19,targetDays:27,color:'#7C3AED'},
-      {id:'3pl_ctr',name:'3PL Центр',short:'3PL Центр',kind:'3pl',base:4600,safetyDays:19,targetDays:26,color:'#9C27B0'},
-      {id:'3pl_sth',name:'3PL Юг',short:'3PL Юг',kind:'3pl',base:2600,safetyDays:20,targetDays:28,color:'#FF9800'},
-      {id:'3pl_sib',name:'3PL Сибирь',short:'3PL Сибирь',kind:'3pl',base:3500,safetyDays:21,targetDays:30,color:'#F57C00'},
-      {id:'3pl_east',name:'3PL Восток',short:'3PL Восток',kind:'3pl',base:1500,safetyDays:22,targetDays:32,color:'#D93025'},
+      {id:'ps_perm',name:'ПС Пермь',short:'ПС Пермь',kind:'plant',base:8700,safetyDays:20,targetDays:28,color:'#1451ff'},
+      {id:'ps_volg',name:'ПС Волгоград',short:'ПС Волгоград',kind:'plant',base:10400,safetyDays:22,targetDays:30,color:'#4769ff'},
+      {id:'ps_tyum',name:'ПС Тюмень',short:'ПС Тюмень',kind:'plant',base:5100,safetyDays:18,targetDays:25,color:'#00576a'},
+      {id:'ps_torzh',name:'ПС Торжок',short:'ПС Торжок',kind:'plant',base:9200,safetyDays:21,targetDays:29,color:'#08744f'},
+      {id:'ps_vors',name:'ПС Ворсино',short:'ПС Ворсино',kind:'plant',base:7400,safetyDays:19,targetDays:27,color:'#52c47e'},
+      {id:'3pl_nw',name:'3PL Северо-Запад',short:'3PL СЗ',kind:'3pl',base:2300,safetyDays:19,targetDays:27,color:'#4528c3'},
+      {id:'3pl_ctr',name:'3PL Центр',short:'3PL Центр',kind:'3pl',base:4600,safetyDays:19,targetDays:26,color:'#a5246c'},
+      {id:'3pl_sth',name:'3PL Юг',short:'3PL Юг',kind:'3pl',base:2600,safetyDays:20,targetDays:28,color:'#ff8c00'},
+      {id:'3pl_sib',name:'3PL Сибирь',short:'3PL Сибирь',kind:'3pl',base:3500,safetyDays:21,targetDays:30,color:'#9c4a24'},
+      {id:'3pl_east',name:'3PL Восток',short:'3PL Восток',kind:'3pl',base:1500,safetyDays:22,targetDays:32,color:'#ff0017'},
     ];
     const warehouses=[
-      {id:'ps_perm',group:'ps_perm',name:'ПС Пермь',region:'Заводской склад',base:8700,safetyDays:20,targetDays:28,color:'#1976D2'},
-      {id:'ps_volg',group:'ps_volg',name:'ПС Волгоград',region:'Заводской склад',base:10400,safetyDays:22,targetDays:30,color:'#20A7C9'},
-      {id:'ps_tyum',group:'ps_tyum',name:'ПС Тюмень',region:'Заводской склад',base:5100,safetyDays:18,targetDays:25,color:'#00897B'},
-      {id:'ps_torzh',group:'ps_torzh',name:'ПС Торжок',region:'Заводской склад',base:9200,safetyDays:21,targetDays:29,color:'#43A047'},
-      {id:'ps_vors',group:'ps_vors',name:'ПС Ворсино',region:'Заводской склад',base:7400,safetyDays:19,targetDays:27,color:'#7CB342'},
-      {id:'3pl_spb',group:'3pl_nw',name:'3PL СЗ · Санкт-Петербург',region:'3PL Северо-Запад',base:1600,safetyDays:19,targetDays:27,color:'#7C3AED'},
-      {id:'3pl_ptz',group:'3pl_nw',name:'3PL СЗ · Петрозаводск',region:'3PL Северо-Запад',base:700,safetyDays:18,targetDays:26,color:'#8E54E9'},
-      {id:'3pl_msk',group:'3pl_ctr',name:'3PL Центр · Москва',region:'3PL Центр',base:2400,safetyDays:19,targetDays:26,color:'#9C27B0'},
-      {id:'3pl_nn',group:'3pl_ctr',name:'3PL Центр · Нижний Новгород',region:'3PL Центр',base:1200,safetyDays:19,targetDays:27,color:'#AB47BC'},
-      {id:'3pl_vrn',group:'3pl_ctr',name:'3PL Центр · Воронеж',region:'3PL Центр',base:1000,safetyDays:19,targetDays:27,color:'#BA68C8'},
-      {id:'3pl_rnd',group:'3pl_sth',name:'3PL Юг · Ростов-на-Дону',region:'3PL Юг',base:1550,safetyDays:20,targetDays:28,color:'#FF9800'},
-      {id:'3pl_krd',group:'3pl_sth',name:'3PL Юг · Краснодар',region:'3PL Юг',base:1050,safetyDays:19,targetDays:27,color:'#FFA726'},
-      {id:'3pl_tmn',group:'3pl_sib',name:'3PL Сибирь · Тюмень (ОК)',region:'3PL Сибирь',base:1500,safetyDays:21,targetDays:29,color:'#F57C00'},
-      {id:'3pl_nsk',group:'3pl_sib',name:'3PL Сибирь · Новосибирск',region:'3PL Сибирь',base:1150,safetyDays:21,targetDays:30,color:'#FB8C00'},
-      {id:'3pl_krk',group:'3pl_sib',name:'3PL Сибирь · Красноярск',region:'3PL Сибирь',base:850,safetyDays:21,targetDays:30,color:'#EF6C00'},
-      {id:'3pl_khv',group:'3pl_east',name:'3PL Восток · Хабаровск',region:'3PL Восток',base:850,safetyDays:22,targetDays:32,color:'#D93025'},
-      {id:'3pl_vvo',group:'3pl_east',name:'3PL Восток · Владивосток',region:'3PL Восток',base:650,safetyDays:22,targetDays:32,color:'#E53935'},
+      {id:'ps_perm',group:'ps_perm',name:'ПС Пермь',region:'Заводской склад',base:8700,safetyDays:20,targetDays:28,color:'#1451ff'},
+      {id:'ps_volg',group:'ps_volg',name:'ПС Волгоград',region:'Заводской склад',base:10400,safetyDays:22,targetDays:30,color:'#4769ff'},
+      {id:'ps_tyum',group:'ps_tyum',name:'ПС Тюмень',region:'Заводской склад',base:5100,safetyDays:18,targetDays:25,color:'#00576a'},
+      {id:'ps_torzh',group:'ps_torzh',name:'ПС Торжок',region:'Заводской склад',base:9200,safetyDays:21,targetDays:29,color:'#08744f'},
+      {id:'ps_vors',group:'ps_vors',name:'ПС Ворсино',region:'Заводской склад',base:7400,safetyDays:19,targetDays:27,color:'#52c47e'},
+      {id:'3pl_spb',group:'3pl_nw',name:'3PL СЗ · Санкт-Петербург',region:'3PL Северо-Запад',base:1600,safetyDays:19,targetDays:27,color:'#4528c3'},
+      {id:'3pl_ptz',group:'3pl_nw',name:'3PL СЗ · Петрозаводск',region:'3PL Северо-Запад',base:700,safetyDays:18,targetDays:26,color:'#704bf9'},
+      {id:'3pl_msk',group:'3pl_ctr',name:'3PL Центр · Москва',region:'3PL Центр',base:2400,safetyDays:19,targetDays:26,color:'#a5246c'},
+      {id:'3pl_nn',group:'3pl_ctr',name:'3PL Центр · Нижний Новгород',region:'3PL Центр',base:1200,safetyDays:19,targetDays:27,color:'#c93b86'},
+      {id:'3pl_vrn',group:'3pl_ctr',name:'3PL Центр · Воронеж',region:'3PL Центр',base:1000,safetyDays:19,targetDays:27,color:'#e16ba8'},
+      {id:'3pl_rnd',group:'3pl_sth',name:'3PL Юг · Ростов-на-Дону',region:'3PL Юг',base:1550,safetyDays:20,targetDays:28,color:'#ff8c00'},
+      {id:'3pl_krd',group:'3pl_sth',name:'3PL Юг · Краснодар',region:'3PL Юг',base:1050,safetyDays:19,targetDays:27,color:'#f09135'},
+      {id:'3pl_tmn',group:'3pl_sib',name:'3PL Сибирь · Тюмень (ОК)',region:'3PL Сибирь',base:1500,safetyDays:21,targetDays:29,color:'#9c4a24'},
+      {id:'3pl_nsk',group:'3pl_sib',name:'3PL Сибирь · Новосибирск',region:'3PL Сибирь',base:1150,safetyDays:21,targetDays:30,color:'#e6779a'},
+      {id:'3pl_krk',group:'3pl_sib',name:'3PL Сибирь · Красноярск',region:'3PL Сибирь',base:850,safetyDays:21,targetDays:30,color:'#ed0084'},
+      {id:'3pl_khv',group:'3pl_east',name:'3PL Восток · Хабаровск',region:'3PL Восток',base:850,safetyDays:22,targetDays:32,color:'#ff0017'},
+      {id:'3pl_vvo',group:'3pl_east',name:'3PL Восток · Владивосток',region:'3PL Восток',base:650,safetyDays:22,targetDays:32,color:'#d91b38'},
     ];
     const products=[
-      {id:'mot',name:'Масла моторные',short:'Моторные',base:15100,safetyDays:20,targetDays:26,color:'#20A7C9'},
-      {id:'hyd',name:'Масла гидравлические',short:'Гидравлические',base:16450,safetyDays:22,targetDays:29,color:'#1976D2'},
-      {id:'ind',name:'Индустриальные масла',short:'Индустриальные',base:9500,safetyDays:22,targetDays:28,color:'#4CAF50'},
-      {id:'grs',name:'Пластичные смазки',short:'Смазки',base:7650,safetyDays:27,targetDays:35,color:'#FF9800'},
-      {id:'clt',name:'СОЖ',short:'СОЖ',base:2480,safetyDays:31,targetDays:38,color:'#7C3AED'},
-      {id:'oj',name:'Охлаждающие жидкости',short:'Охлаждающие',base:1570,safetyDays:23,targetDays:28,color:'#00897B'},
-      {id:'tf',name:'Технические жидкости',short:'Тех. жидкости',base:1670,safetyDays:23,targetDays:29,color:'#8c9bae'},
-      {id:'trm',name:'Трансмиссионные масла',short:'Трансмиссионные',base:880,safetyDays:19,targetDays:24,color:'#D93025'},
+      {id:'mot',name:'Масла моторные',short:'Моторные',base:15100,safetyDays:20,targetDays:26,color:'#4769ff'},
+      {id:'hyd',name:'Масла гидравлические',short:'Гидравлические',base:16450,safetyDays:22,targetDays:29,color:'#1451ff'},
+      {id:'ind',name:'Индустриальные масла',short:'Индустриальные',base:9500,safetyDays:22,targetDays:28,color:'#0d9f6e'},
+      {id:'grs',name:'Пластичные смазки',short:'Смазки',base:7650,safetyDays:27,targetDays:35,color:'#ff8c00'},
+      {id:'clt',name:'СОЖ',short:'СОЖ',base:2480,safetyDays:31,targetDays:38,color:'#4528c3'},
+      {id:'oj',name:'Охлаждающие жидкости',short:'Охлаждающие',base:1570,safetyDays:23,targetDays:28,color:'#00576a'},
+      {id:'tf',name:'Технические жидкости',short:'Тех. жидкости',base:1670,safetyDays:23,targetDays:29,color:'#989fac'},
+      {id:'trm',name:'Трансмиссионные масла',short:'Трансмиссионные',base:880,safetyDays:19,targetDays:24,color:'#ff0017'},
     ];
     const lrm=(tot,weights)=>{
       const sw=sum(weights)||1;
@@ -1660,7 +1660,7 @@ export const PLANS={
     const ALL_CAT=products.map((_,i)=>i),ALL_WH=warehouses.map((_,i)=>i),ALL_GRP=whGroups.map((_,i)=>i);
     const whOfGroup=gid=>warehouses.map((w,i)=>w.group===gid?i:-1).filter(i=>i>=0);
     const TPL_WH=whGroups.filter(g=>g.kind==='3pl').flatMap(g=>whOfGroup(g.id));
-    const AGG_GROUPS=()=>[...whGroups.filter(g=>g.kind==='plant'),{id:'3pl_all',name:'Все склады 3PL',short:'Все склады 3PL',kind:'3pl',color:'#7C3AED'}];
+    const AGG_GROUPS=()=>[...whGroups.filter(g=>g.kind==='plant'),{id:'3pl_all',name:'Все склады 3PL',short:'Все склады 3PL',kind:'3pl',color:'#4528c3'}];
     const whOfAgg=g=>g.id==='3pl_all'?TPL_WH:whOfGroup(g.id);
 
     const resolveFilters=(opts={})=>{
@@ -1838,8 +1838,8 @@ export const PLANS={
           return {data,risks,color:g.color};
         });
         const legendExtra=[];
-        if(hasUnder)legendExtra.push({t:'! Дефицит (ниже страхового)',color:'#D93025'});
-        if(hasOver)legendExtra.push({t:'! Перетовар (+15% к цели и выше)',color:'#E8930C'});
+        if(hasUnder)legendExtra.push({t:'! Дефицит (ниже страхового)',color:'#ff0017'});
+        if(hasOver)legendExtra.push({t:'! Перетовар (+15% к цели и выше)',color:'#ff8c00'});
         return {type:'stacked',labels,series,opts:{height:360,legend:list.map(g=>g.short),yTitle,marks:stopsInRange,
           legendExtra:legendExtra.length?legendExtra:null}};
       }
@@ -1849,7 +1849,7 @@ export const PLANS={
            тонкие индивидуальные линии плана каждого склада.
            Подпись агрегата называет выборку явно (Все склады / Заводы ПС / Склады 3PL / N),
            а не безликое «(выборка)». При показанных индивидуальных линиях агрегаты рисуются
-           утолщёнными тёмными линиями, индивидуальные — тонкими: цвета ПС Волгоград (#20A7C9)
+           утолщёнными тёмными линиями, индивидуальные — тонкими: цвета ПС Волгоград (#4769ff)
            и агрегата плана больше не сливаются. */
         let idxs=f.detWhIdxs;
         if(f.riskOnly){
@@ -1862,9 +1862,9 @@ export const PLANS={
         const hasIndiv=idxs.length>1&&idxs.length<=6;
         const agg=cube=>{const d=[];for(let mi=a;mi<b;mi++)d.push(valConv(sumCells(cube,mi,idxs,ALL_CAT),f.mode));return d;};
         const series=[
-          {data:agg(cubeSafety),color:hasIndiv?'#6b7280':'#8c9bae',dash:true,w:hasIndiv?2.6:2},
-          {data:agg(cubeTarget),color:hasIndiv?'#137333':'#4CAF50',dash:true,w:hasIndiv?2.6:2},
-          {data:agg(cubeActual),color:hasIndiv?'#1a2b4a':'#20A7C9',w:hasIndiv?2.8:2},
+          {data:agg(cubeSafety),color:hasIndiv?'#7b879e':'#989fac',dash:true,w:hasIndiv?2.6:2},
+          {data:agg(cubeTarget),color:hasIndiv?'#08744f':'#0d9f6e',dash:true,w:hasIndiv?2.6:2},
+          {data:agg(cubeActual),color:hasIndiv?'#04143a':'#4769ff',w:hasIndiv?2.8:2},
         ];
         const singleName=idxs.length===1?warehouses[idxs[0]].name:null;
         const suffix=singleName||(isAll?'Все склады':isPlants?'Заводы ПС (5)':is3pl?'Склады 3PL (12)':'Выборка ('+idxs.length+')');
@@ -1878,12 +1878,12 @@ export const PLANS={
         }
         return {type:'line',labels,series,opts:{height:360,legend,yTitle,marks:stopsInRange,
           fillBetween:[
-            {upper:2,lower:1,color:'#D93025',alpha:.16},
-            {upper:0,lower:2,color:'#D93025',alpha:.22},
+            {upper:2,lower:1,color:'#ff0017',alpha:.16},
+            {upper:0,lower:2,color:'#ff0017',alpha:.22},
           ],
           legendExtra:[
-            {t:'Превышение плана над целью',color:'rgba(217,48,37,.35)'},
-            {t:'Падение плана ниже страхового',color:'rgba(217,48,37,.5)'},
+            {t:'Превышение плана над целью',color:'rgba(255,0,23,.28)'},
+            {t:'Падение плана ниже страхового',color:'rgba(255,0,23,.45)'},
           ]}};
       }
       if(f.view==='products'){
@@ -1910,8 +1910,8 @@ export const PLANS={
           return {data,risks,color:x.p.color};
         });
         const legendExtra=[];
-        if(hasUnder)legendExtra.push({t:'! Дефицит (ниже страхового)',color:'#D93025'});
-        if(hasOver)legendExtra.push({t:'! Перетовар (+15% к цели и выше)',color:'#E8930C'});
+        if(hasUnder)legendExtra.push({t:'! Дефицит (ниже страхового)',color:'#ff0017'});
+        if(hasOver)legendExtra.push({t:'! Перетовар (+15% к цели и выше)',color:'#ff8c00'});
         return {type:'stacked',labels,series,opts:{height:360,legend:items.map(x=>x.p.name),yTitle,marks:stopsInRange,
           legendExtra:legendExtra.length?legendExtra:null}};
       }
@@ -1923,17 +1923,17 @@ export const PLANS={
         type:'line',
         labels,
         series:[
-          {data:sSafety,color:'#8c9bae',dash:true},
-          {data:sTarget,color:'#4CAF50',dash:true},
-          {data:sActual,color:'#20A7C9'},
+          {data:sSafety,color:'#989fac',dash:true},
+          {data:sTarget,color:'#0d9f6e',dash:true},
+          {data:sActual,color:'#4769ff'},
         ],
         opts:{
           height:340,
           legend:['Страховой запас','Целевой запас','План запасов IBP'],
           yTitle,
           marks:stopsInRange,
-          fillBetween:{upper:2,lower:1,color:'#D93025',alpha:.16},
-          legendExtra:[{t:'Превышение плана над целью',color:'rgba(217,48,37,.35)'}],
+          fillBetween:{upper:2,lower:1,color:'#ff0017',alpha:.16},
+          legendExtra:[{t:'Превышение плана над целью',color:'rgba(255,0,23,.28)'}],
         }
       };
     };
@@ -2155,7 +2155,7 @@ export const PLANS={
       });
       return {type:'stacked',labels:SL(PLAN_MONTHS,a,b),series,
         opts:{height:340,legend:costItems.map(x=>x[0]),yTitle:'млн руб.',
-          legendExtra:inRange?[{t:'! Аномалия: доля выше среднегодовой',color:'#E8930C'}]:null}};
+          legendExtra:inRange?[{t:'! Аномалия: доля выше среднегодовой',color:'#ff8c00'}]:null}};
     },
     build:(a,b,variant='summary',show=false)=>{
       const rows=[];
@@ -2207,7 +2207,7 @@ export const PLANS={
       return {heads,rows,note:'срез «По статьям» — суммы статей равны сегментам столбцов графика'};
     }},
   revenue:{tab:'Выручка',insight:'<b>📌 Выручка:</b> 18 месяцев — <b>109 523 млн руб.</b> Средняя цена 141 500 руб/т. Рост выручки в 2027 — за счёт возврата доли масел моторных (24,5% → 25,5%) и онлайн-канала.',
-    chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(revenue,a,b),kind:'bar',color:'#4CAF50'},{data:SL(grossProfit,a,b),kind:'line',axis:1,color:'#9000ff'}],opts:{height:340,legend:['Выручка (млн руб.)','Валовая прибыль (млн руб.)'],yTitle:'млн руб.'}}),
+    chart:(a,b)=>({type:'combo',labels:SL(PLAN_MONTHS,a,b),series:[{data:SL(revenue,a,b),kind:'bar',color:'#0d9f6e'},{data:SL(grossProfit,a,b),kind:'line',axis:1,color:'#4528c3'}],opts:{height:340,legend:['Выручка (млн руб.)','Валовая прибыль (млн руб.)'],yTitle:'млн руб.'}}),
     build:(a,b,variant='summary',show=false)=>{
       const rows=[];
       /* Те же mix-матрицы, что и в «Плане продаж» и на графиках «По каналам» /
@@ -2351,7 +2351,7 @@ export function planView(pl,a,b,qlabel,opts={}){
 export const ACTIONS={
   heads:['№','Действие','Владелец','Срок','Приоритет','Статус','Показатель успеха'],
   rows:[['1','Зафиксировать S&OP-план 4 кв. на 129 000 т (сценарий В) с правилами распределения','Генеральный директор','02.11.2026','🔴 Высокий','✅ Выполнено','План зафиксирован в системе'],['2','Ускорить поставку VHVI-4 от ЛУКОЙЛ-ННОС (Кстово), дублирующая закупка на ПНОС (Пермь)','Директор по закупкам','03.11.2026','🔴 Высокий','🟡 В работе','VHVI-4 на складе к 20.10'],['3','Переконтрактовать три дистрибьютора на spot-цену MTO+3%','Коммерческий директор','06.11.2026','🔴 Высокий','🟡 В работе','Маржа контракта ≥23%'],['4','Запустить распродажу рисков списания по пяти неликвидным материалам со скидкой 15%','Директор по маркетингу','06.11.2026','🟡 Средний','🟡 В работе','Продано 80% неликвида до 30.11'],['5','Увеличить смены на Волгоград линия №2 (+2 смены/нед)','Директор по производству','04.11.2026','🔴 Высокий','🟡 В работе','+1 100 т/мес к выпуску'],['6','Перенести запуск синтетика ЕТО-2 на январь 2027','R&D / Маркетинг','07.01.2027','🟡 Средний','⚪ Не начато','План перенесён на янв. 2027'],['7','Обновить прогноз операционной прибыли и ДДС на 4 квартал','Финансовый директор','07.11.2026','🔴 Высокий','⚪ Не начато','Опер. прибыль ≥101% плана'],['8','Проработать возможности по увеличению вместимости на 3PL без доп. костов','Директор по логистике','15.11.2026','🟡 Средний','⚪ Не начато','Предложения по 3PL без +кост'],['9','Внедрить KPI для менеджеров по продажам по точности прогнозирования','Менеджер ОППиУ','30.11.2026','🟡 Средний','⚪ Не начато','KPI WAPE и bias включён в мотивацию']],
-  statusDonut:{labels:['Выполнено','В работе','Не начато'],data:[1,4,4],colors:['#4CAF50','#FF9800','#8c9bae'],insight:'<b>📌 Статус:</b> 1 действие выполнено, 4 в работе, 4 не начаты. Критично завершить №2, №3, №5 до 10.11.',heads:['Статус','Кол-во','Доля %','Критичные действия'],rows:[['✅ Выполнено','1','11%','№1'],['🟡 В работе','4','44%','№2, №3, №4, №5'],['⚪ Не начато','4','44%','№6–9']]},
+  statusDonut:{labels:['Выполнено','В работе','Не начато'],data:[1,4,4],colors:['#0d9f6e','#ff8c00','#989fac'],insight:'<b>📌 Статус:</b> 1 действие выполнено, 4 в работе, 4 не начаты. Критично завершить №2, №3, №5 до 10.11.',heads:['Статус','Кол-во','Доля %','Критичные действия'],rows:[['✅ Выполнено','1','11%','№1'],['🟡 В работе','4','44%','№2, №3, №4, №5'],['⚪ Не начато','4','44%','№6–9']]},
   milestones:[['success','✅ 02–03.11.2026:','фиксация плана 129 000 т (сценарий В), разблокировка VHVI-4 и дубль-закупка'],['warning','🟡 04–06.11.2026:','переконтрактация дистрибьюторов, доп. смены Волгоград, распродажа рисков −15%'],['warning','🟡 07–10.11.2026:','контроль прибытия VHVI-4, обновление операционной прибыли, перенос синтетика ЕТО-2 на янв. 2027'],['primary','🔵 15–30.11.2026:','проработка вместимости 3PL без доп. костов, KPI точности прогноза для продаж']],
   results:[['Операционная прибыль 4 кв.','101% плана','green'],['Выручка распродажи рисков','261,5 млн руб.','green'],['Затраты на хранение','−14 млн','green'],['Уровень сервиса (OTIF) Бриллианта','90%','green'],['Неликвиды продано','80%','green'],['Ошибка прогноза','Цель: −5% в 4 кв.','orange']],
   decision:`<b>🏆 Итоговое решение</b><br><b>Утверждён сценарий В «Фокус на выполнение валовой прибыли 2026 года» как операционный план 4 квартала: 129 000 т / 18 255 млн руб. / валовая прибыль 5 002 млн руб. (27,4%).</b><br>

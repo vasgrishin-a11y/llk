@@ -16,8 +16,8 @@ const MARGIN=56, HEADER_H=132, FOOTER_H=40;
 const CONTENT_W=PAGE_W-MARGIN*2;
 const INNER_H=PAGE_H-HEADER_H-FOOTER_H-MARGIN*0.5;
 const GAP=22;
-const FONT="'Open Sans','Segoe UI',Arial,sans-serif";
-const INK='#1a2b4a', MUTED='#64748b', LINE='#dbe4ef', ACCENT='#7c3aed';
+const FONT="'Manrope',Arial,sans-serif";
+const INK='#04143a', MUTED='#687692', LINE='#dae2ef', ACCENT='#4769ff';
 
 /* ─────────── общие утилиты ─────────── */
 const b64ToBytes=b64=>{
@@ -169,7 +169,7 @@ function drawKpis(ctx,items,y){
   items.forEach((k,i)=>{
     const row=Math.floor(i/per),col=i%per;
     const x=MARGIN+col*(cw+GAP),yy=y+row*(chh+GAP);
-    ctx.fillStyle='#f7f8fc';rr(ctx,x,yy,cw,chh,14);ctx.fill();
+    ctx.fillStyle='#f4f6fa';rr(ctx,x,yy,cw,chh,14);ctx.fill();
     ctx.strokeStyle=LINE;ctx.lineWidth=2;rr(ctx,x,yy,cw,chh,14);ctx.stroke();
     ctx.textAlign='left';
     ctx.fillStyle=MUTED;ctx.font='600 21px '+FONT;
@@ -181,9 +181,9 @@ function drawKpis(ctx,items,y){
     if(k.dev){
       const good=k.devKind==='pos',bad=k.devKind==='neg';
       ctx.font='700 19px '+FONT;const tw=ctx.measureText(k.dev).width;
-      ctx.fillStyle=good?'#e6f4ea':bad?'#fdeaea':'#fdf3e2';
+      ctx.fillStyle=good?'#e7f7f0':bad?'#ffeaed':'#fff4e5';
       rr(ctx,x+22,yy+chh-34,tw+26,26,13);ctx.fill();
-      ctx.fillStyle=good?'#137333':bad?'#D93025':'#b26a00';
+      ctx.fillStyle=good?'#08744f':bad?'#ff0017':'#b26a00';
       ctx.fillText(k.dev,x+35,yy+chh-15);
     }
   });
@@ -193,9 +193,9 @@ function drawInsightBox(ctx,text,y){
   if(!text)return y;
   const lines=wrapLines(text,CONTENT_W-72,'400 24px '+FONT,8);
   const h=26+lines.length*32+18;
-  ctx.fillStyle='#f6f5fb';rr(ctx,MARGIN,y,CONTENT_W,h,10);ctx.fill();
+  ctx.fillStyle='#f4f6fa';rr(ctx,MARGIN,y,CONTENT_W,h,10);ctx.fill();
   ctx.fillStyle=ACCENT;ctx.fillRect(MARGIN,y,6,h);
-  ctx.fillStyle='#3f3f45';ctx.font='400 24px '+FONT;ctx.textAlign='left';
+  ctx.fillStyle='#04143a';ctx.font='400 24px '+FONT;ctx.textAlign='left';
   lines.forEach((l,i)=>ctx.fillText(l,MARGIN+30,y+30+i*32));
   return y+h;
 }
@@ -254,7 +254,7 @@ function drawSegMatrix(ctx,y){
     for(const c of list){
       const r=Math.round(16+Math.sqrt(c.gp/maxGp)*36);
       if(c.review){ /* рамка «на пересмотр»: красная — понижение, зелёная — повышение */
-        ctx.strokeStyle=c.revDir==='down'?'#D93025':'#137333';ctx.lineWidth=5;
+        ctx.strokeStyle=c.revDir==='down'?'#ff0017':'#08744f';ctx.lineWidth=5;
         ctx.beginPath();ctx.arc(x+r,cy,r+7,0,7);ctx.stroke();
       }
       ctx.fillStyle=L.color;ctx.beginPath();ctx.arc(x+r,cy,r,0,7);ctx.fill();
@@ -277,20 +277,20 @@ function drawActions(ctx,y){
   let yy=y+48;
   const cols=[MARGIN,MARGIN+50,MARGIN+1020,MARGIN+1350,MARGIN+1560];
   const heads=['№','Действие','Владелец','Срок','Статус'];
-  ctx.fillStyle='#eef1f7';rr(ctx,MARGIN,yy,CONTENT_W,44,8);ctx.fill();
+  ctx.fillStyle='#eaedf5';rr(ctx,MARGIN,yy,CONTENT_W,44,8);ctx.fill();
   ctx.fillStyle=INK;ctx.font='700 21px '+FONT;
   heads.forEach((h,i)=>ctx.fillText(h,cols[i]+10,yy+29));
   yy+=44;
   ctx.font='400 21px '+FONT;
   ACTIONS.rows.forEach((r,row)=>{
-    if(row%2===0){ctx.fillStyle='#fafbfd';ctx.fillRect(MARGIN,yy,CONTENT_W,64);}
+    if(row%2===0){ctx.fillStyle='#f4f6fa';ctx.fillRect(MARGIN,yy,CONTENT_W,64);}
     ctx.fillStyle=MUTED;ctx.fillText(r[0],cols[0]+10,yy+38);
     ctx.fillStyle=INK;
     wrapLines(r[1],cols[2]-cols[1]-30,'400 21px '+FONT,2).forEach((l,j)=>ctx.fillText(l,cols[1]+10,yy+26+j*25));
     ctx.fillStyle=MUTED;ctx.fillText(r[2],cols[2]+10,yy+38);
     ctx.fillText(r[3],cols[3]+10,yy+38);
     const st=r[5];
-    ctx.fillStyle=/Выполнено/.test(st)?'#137333':/работе/.test(st)?'#b26a00':'#64748b';
+    ctx.fillStyle=/Выполнено/.test(st)?'#08744f':/работе/.test(st)?'#b26a00':'#687692';
     ctx.font='600 20px '+FONT;ctx.fillText(st,cols[4]+10,yy+38);
     ctx.font='400 21px '+FONT;
     yy+=64;
@@ -305,8 +305,8 @@ function drawTextItem(ctx,a,y){
   for(const l of a.lines){
     const lines=wrapLines(l,CONTENT_W-72,'400 24px '+FONT,6);
     const h=lines.length*32+16;
-    ctx.fillStyle='#f7f8fc';rr(ctx,MARGIN,yy,CONTENT_W,h,10);ctx.fill();
-    ctx.fillStyle='#3f3f45';ctx.font='400 24px '+FONT;
+    ctx.fillStyle='#f4f6fa';rr(ctx,MARGIN,yy,CONTENT_W,h,10);ctx.fill();
+    ctx.fillStyle='#04143a';ctx.font='400 24px '+FONT;
     lines.forEach((t,i)=>ctx.fillText(t,MARGIN+24,yy+26+i*32));
     yy+=h+14;
   }
@@ -318,7 +318,10 @@ function renderPage(page,idx,total){
   const ctx=cv.getContext('2d');
   if(!ctx)throw new Error('canvas 2d недоступен');
   ctx.fillStyle='#ffffff';ctx.fillRect(0,0,PAGE_W,PAGE_H);
-  ctx.fillStyle=ACCENT;ctx.fillRect(0,0,PAGE_W,10);
+  const topGrad=typeof ctx.createLinearGradient==='function'?ctx.createLinearGradient(0,0,PAGE_W,0):null;
+  if(topGrad&&typeof topGrad.addColorStop==='function'){topGrad.addColorStop(0,'#1451ff');topGrad.addColorStop(0.55,'#4769ff');topGrad.addColorStop(1,'#88c7ff');ctx.fillStyle=topGrad;}
+  else{ctx.fillStyle=ACCENT;}
+  ctx.fillRect(0,0,PAGE_W,10);
   /* шапка */
   ctx.textAlign='left';ctx.fillStyle=MUTED;ctx.font='600 22px '+FONT;
   ctx.fillText(C.title+' · In.Plan',MARGIN,52);
@@ -424,7 +427,7 @@ export function pptxFromJpegs(jpegs,{w,h}){
     files.push([`ppt/slides/slide${n}.xml`,X(`<p:sld ${NS}><p:cSld><p:spTree>${SP_TREE}<p:pic><p:nvPicPr><p:cNvPr id="2" name="Страница ${n}"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${CX}" cy="${CY}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`)]);
     files.push([`ppt/slides/_rels/slide${n}.xml.rels`,slideRels[i]]);
   });
-  files.unshift(['ppt/theme/theme1.xml',X(`<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="InPlan"><a:themeElements><a:clrScheme name="InPlan"><a:dk1><a:srgbClr val="1A2B4A"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="212529"/></a:dk2><a:lt2><a:srgbClr val="F4F6FA"/></a:lt2><a:accent1><a:srgbClr val="7C3AED"/></a:accent1><a:accent2><a:srgbClr val="20A7C9"/></a:accent2><a:accent3><a:srgbClr val="4CAF50"/></a:accent3><a:accent4><a:srgbClr val="FF9800"/></a:accent4><a:accent5><a:srgbClr val="D93025"/></a:accent5><a:accent6><a:srgbClr val="8C9BAE"/></a:accent6><a:hlink><a:srgbClr val="7C3AED"/></a:hlink><a:folHlink><a:srgbClr val="8C9BAE"/></a:folHlink></a:clrScheme><a:fontScheme name="InPlan"><a:majorFont><a:latin typeface="Open Sans"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Open Sans"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="InPlan"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>`)]);
+  files.unshift(['ppt/theme/theme1.xml',X(`<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="In.Plan"><a:themeElements><a:clrScheme name="In.Plan"><a:dk1><a:srgbClr val="04143A"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="212529"/></a:dk2><a:lt2><a:srgbClr val="F4F6FA"/></a:lt2><a:accent1><a:srgbClr val="4528C3"/></a:accent1><a:accent2><a:srgbClr val="4769FF"/></a:accent2><a:accent3><a:srgbClr val="0D9F6E"/></a:accent3><a:accent4><a:srgbClr val="FF8C00"/></a:accent4><a:accent5><a:srgbClr val="FF0017"/></a:accent5><a:accent6><a:srgbClr val="8C9BAE"/></a:accent6><a:hlink><a:srgbClr val="4528C3"/></a:hlink><a:folHlink><a:srgbClr val="8C9BAE"/></a:folHlink></a:clrScheme><a:fontScheme name="In.Plan"><a:majorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="In.Plan"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>`)]);
   files.unshift(['ppt/slideLayouts/slideLayout1.xml',X(`<p:sldLayout ${NS} type="blank"><p:cSld><p:spTree>${SP_TREE}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`)]);
   files.unshift(['ppt/slideLayouts/_rels/slideLayout1.xml.rels',X(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>`)]);
   files.unshift(['ppt/slideMasters/slideMaster1.xml',X(`<p:sldMaster ${NS}><p:cSld><p:spTree>${SP_TREE}</p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>`)]);
